@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI RevenueOS | AgentDesk Technologies</title>
+    <meta name="description" content="One AI System for Every Customer Interaction - AgentDesk AI RevenueOS" />
+    <script>
+      // Gracefully handle benign development HMR / preview container WebSocket closure events
+      if (typeof window !== 'undefined') {
+        window.addEventListener('unhandledrejection', function(event) {
+          var reason = event.reason;
+          var msg = (reason && reason.message) ? reason.message : String(reason || '');
+          if (
+            msg.indexOf('WebSocket') !== -1 ||
+            msg.indexOf('websocket') !== -1 ||
+            msg.indexOf('closed without opened') !== -1
+          ) {
+            event.preventDefault();
+          }
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

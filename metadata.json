@@ -1,0 +1,6 @@
+{
+  "name": "AI RevenueOS",
+  "description": "One AI system for every customer interaction. Global AI Revenue & Customer Operations Platform with AI Receptionist, Voice AI, CRM, Lead Follow-Up, Re-Engagement, Estimates, and Multi-Currency Localization by AgentDesk Technologies.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

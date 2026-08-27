@@ -1,0 +1,468 @@
+import React, { useState } from 'react';
+import { 
+  Bot, 
+  Sparkles, 
+  Zap, 
+  ShieldCheck, 
+  MessageSquare, 
+  Mic, 
+  Database, 
+  UserCheck, 
+  TrendingUp, 
+  CheckCircle2, 
+  ArrowRight, 
+  ChevronDown, 
+  ChevronUp, 
+  Building2, 
+  Globe, 
+  Star, 
+  Check, 
+  PhoneCall, 
+  Clock, 
+  Briefcase, 
+  PhoneMissed, 
+  Repeat, 
+  RotateCcw, 
+  Calendar, 
+  FileText, 
+  Send, 
+  Lock, 
+  Layers,
+  HelpCircle
+} from 'lucide-react';
+import { 
+  CURRENCIES, 
+  CurrencyCode, 
+  PRICING_PLANS, 
+  IMPLEMENTATION_EXPLANATION, 
+  PLATFORM_MANAGED_OPERATIONS, 
+  COMMUNICATION_USAGE_DISCLOSURE,
+  ENTERPRISE_CONSOLIDATION_VALUE,
+  getRecommendedCurrency, 
+  formatPrice,
+  PlanConfig
+} from '../data/pricing';
+import { ContactSalesModal } from './ContactSalesModal';
+import { ROICalculator } from './ROICalculator';
+
+interface LandingPageProps {
+  onOpenDemo: () => void;
+  onOpenAuth: () => void;
+  onOpenDashboard: () => void;
+  onOpenPricing?: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onOpenDemo,
+  onOpenAuth,
+  onOpenDashboard,
+  onOpenPricing
+}) => {
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+  const [currency, setCurrency] = useState<CurrencyCode>(getRecommendedCurrency());
+  const [salesModal, setSalesModal] = useState<{
+    isOpen: boolean;
+    planId: string;
+    ctaType: 'demo' | 'book_demo' | 'sales' | 'enterprise_sales';
+  }>({
+    isOpen: false,
+    planId: 'enterprise',
+    ctaType: 'sales'
+  });
+
+  const handleOpenPlanAction = (plan: PlanConfig) => {
+    if (plan.ctaType === 'demo') {
+      onOpenDemo();
+      return;
+    }
+    setSalesModal({
+      isOpen: true,
+      planId: plan.id,
+      ctaType: plan.ctaType
+    });
+  };
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index);
+  };
+
+  const pillars = [
+    {
+      icon: <Bot className="w-5 h-5 text-blue-400" />,
+      title: 'AI Website Chat Receptionist',
+      desc: 'Answers questions from business knowledge base, captures leads, and books appointments 24/7 without hallucination.'
+    },
+    {
+      icon: <PhoneCall className="w-5 h-5 text-emerald-400" />,
+      title: 'AI Voice Receptionist',
+      desc: 'Handles inbound phone calls with natural human-quality conversational voice synthesis, call recording, and intent routing.'
+    },
+    {
+      icon: <PhoneMissed className="w-5 h-5 text-amber-400" />,
+      title: 'Missed Call Text Back',
+      desc: 'Instantly sends an automated SMS or WhatsApp when a call is missed, recovering 75%+ of leads before they call a competitor.'
+    },
+    {
+      icon: <Sparkles className="w-5 h-5 text-purple-400" />,
+      title: 'AI Lead Qualification & Scoring',
+      desc: 'Evaluates budget, timeline, decision authority, and urgent need on a 1-100 scale with automated tagging (HOT, WARM, COLD).'
+    },
+    {
+      icon: <Layers className="w-5 h-5 text-cyan-400" />,
+      title: '360° CRM & Deals Pipeline',
+      desc: 'Complete contact timeline, multi-stage drag-and-drop Kanban pipeline, deal values, and real-time conversion metrics.'
+    },
+    {
+      icon: <Repeat className="w-5 h-5 text-emerald-400" />,
+      title: 'Automated Follow-Up Sequences',
+      desc: 'Multi-touch omni-channel sequences across Day 0, Day 1, Day 3, and Day 7 via SMS, Email, and WhatsApp.'
+    },
+    {
+      icon: <RotateCcw className="w-5 h-5 text-purple-400" />,
+      title: 'Customer Re-Engagement',
+      desc: 'Reactivates stale contacts and past customers with seasonal promotions, maintenance reminders, and VIP discounts.'
+    },
+    {
+      icon: <Star className="w-5 h-5 text-amber-400" />,
+      title: 'Review Management & Sentiment Hub',
+      desc: 'Automates Google and Yelp review generation, analyzes customer sentiment, and drafts AI-assisted responses.'
+    },
+    {
+      icon: <Calendar className="w-5 h-5 text-blue-400" />,
+      title: 'Appointment Booking & Reminders',
+      desc: 'Two-way calendar sync, timezone conversion, buffer management, and automated 24h/2h show-up reminders.'
+    },
+    {
+      icon: <FileText className="w-5 h-5 text-indigo-400" />,
+      title: 'Estimate & Quote Follow-Up',
+      desc: 'Tracks sent proposals, dispatches automated check-ins before expiry, and alerts staff when a quote is viewed.'
+    },
+    {
+      icon: <Send className="w-5 h-5 text-blue-400" />,
+      title: 'Compliant Cold Outreach',
+      desc: 'Personalized cold email & LinkedIn sequences with domain warmup, unsubscribe headers, and anti-spam rate throttling.'
+    },
+    {
+      icon: <Globe className="w-5 h-5 text-emerald-400" />,
+      title: 'Global Multi-Currency & Regional Engine',
+      desc: 'Native formatting for USD ($), INR (₹), and GBP (£), multi-timezone support, Twilio SMS & WhatsApp Business API.'
+    }
+  ];
+
+  const faqs = [
+    {
+      q: 'How is AI RevenueOS different from a generic chatbot or virtual receptionist?',
+      a: 'AI RevenueOS is not just a chatbot or answering service. It is a comprehensive, autonomous revenue operating system combining 24/7 AI Voice reception, website chat, instant missed-call recovery, automated lead qualification, integrated CRM, multi-touch follow-up sequences, and database reactivation in one unified platform.'
+    },
+    {
+      q: 'What is included in the one-time implementation fee?',
+      a: 'Implementation includes 12 comprehensive phases: business discovery, AI voice persona engineering, semantic knowledge-base ingestion, CRM pipeline setup, lead scoring weights, multi-touch follow-up workflow design, telephony/WhatsApp integration, rigorous boundary testing, live deployment, staff training, and dedicated launch monitoring.'
+    },
+    {
+      q: 'What is the monthly Platform & Managed AI Operations fee?',
+      a: 'The monthly platform fee covers software licensing, autonomous multi-agent orchestration, CRM hosting, custom dashboards, 24/7 telephony infrastructure monitoring, ongoing prompt fine-tuning, security updates, and standard monthly usage allowances for voice minutes, messaging, and AI computations.'
+    },
+    {
+      q: 'How does multi-currency and regional localization work?',
+      a: 'Each business workspace supports its operating market with native currency formatting across USD ($), INR (₹), and GBP (£), regional timezones, telephone formatting, and messaging channels (SMS/Twilio and WhatsApp Business).'
+    },
+    {
+      q: 'Can I integrate my existing CRM or calendar?',
+      a: 'Yes. AI RevenueOS provides webhooks, REST API endpoints, Google Calendar sync, Twilio telephony hooks, and CSV export capabilities.'
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
+      {/* 1. Hero Section */}
+      <section className="relative pt-20 pb-20 px-4 sm:px-8 overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/15 blur-[140px] rounded-full pointer-events-none" />
+        
+        <div className="max-w-6xl mx-auto text-center relative z-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-6 shadow-md">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AgentDesk Technologies • AI RevenueOS Platform</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1] mb-6">
+            One AI system for{' '}
+            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+              every customer interaction.
+            </span>
+          </h1>
+
+          <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
+            Turn every customer interaction into revenue. AI RevenueOS is the complete AI-powered customer revenue and operations platform: 
+            <span className="text-white font-semibold"> AI Receptionist + CRM + Follow-Up + Re-Engagement + Revenue Automation</span>.
+          </p>
+
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              onClick={onOpenDashboard}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+            >
+              <span>Launch SaaS Console</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+
+            <button
+              onClick={onOpenDemo}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Bot className="w-4 h-4 text-emerald-400" />
+              <span>Test Live AI Receptionist</span>
+            </button>
+          </div>
+
+          {/* Trust badges */}
+          <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>12-Step Full Implementation</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-blue-400" />
+              <span>Managed AI Operations & SLA</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-purple-400" />
+              <span>Global Multi-Currency Native (USD • INR • GBP)</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Omnichannel Pillars Bento Grid */}
+      <section className="py-16 px-4 sm:px-8 bg-slate-900/40 border-y border-slate-800/80">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              12 Autonomous Engines in One Unified Platform
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-2">
+              Replace fragmented software subscriptions with a single, intelligent revenue operating system.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {pillars.map((pillar, idx) => (
+              <div
+                key={idx}
+                className="p-6 rounded-3xl bg-slate-900/80 border border-slate-800 hover:border-slate-700 transition-all shadow-md group"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                  {pillar.icon}
+                </div>
+                <h3 className="text-sm font-bold text-white mb-2">{pillar.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{pillar.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Pricing Matrix Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span>Transparent, High-ROI Plans</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight break-words">
+            Engineered for Modern Revenue Teams
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-2">
+            From emerging practices to high-volume multi-location enterprises.
+          </p>
+
+          {/* Currency Toggle */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-1.5 p-1 mt-6 rounded-2xl bg-slate-900 border border-slate-800 max-w-full">
+            {(Object.keys(CURRENCIES) as CurrencyCode[]).map(code => (
+              <button
+                key={code}
+                onClick={() => setCurrency(code)}
+                className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  currency === code
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {CURRENCIES[code].flag} {CURRENCIES[code].label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 4 Plan Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch mb-16 w-full">
+          {PRICING_PLANS.map((plan: PlanConfig) => {
+            const planPricing = plan.pricing[currency] || plan.pricing.USD;
+            const monthlyFormatted = plan.isCustomPrice 
+              ? 'Custom' 
+              : formatPrice(planPricing.monthlyPrice, currency);
+            const setupFormatted = plan.isCustomPrice 
+              ? 'Custom Scope' 
+              : formatPrice(planPricing.setupPrice, currency);
+
+            const isEnterprise = plan.id === 'enterprise';
+
+            return (
+              <div
+                key={plan.id}
+                className={`w-full min-w-0 p-5 sm:p-6 xl:p-6 2xl:p-7 rounded-3xl border transition-all flex flex-col justify-between relative ${
+                  isEnterprise
+                    ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950/40 border-blue-500 shadow-2xl shadow-blue-500/20 ring-2 ring-blue-500/30'
+                    : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                {isEnterprise && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] uppercase tracking-wider shadow-md whitespace-nowrap z-10">
+                    MOST POPULAR
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">{plan.name}</h3>
+                  <p className="text-xs text-slate-400 mb-6 min-h-[36px] leading-relaxed">{plan.positioning}</p>
+
+                  <div className="mb-6 pb-6 border-b border-slate-800">
+                    <div className="flex items-baseline gap-1 flex-wrap">
+                      <span className="text-2xl sm:text-3xl font-black text-white break-words">{monthlyFormatted}</span>
+                      {!plan.isCustomPrice && <span className="text-xs text-slate-400">/ month</span>}
+                    </div>
+                    <div className="text-[11px] text-slate-300 font-semibold mt-1">
+                      {plan.isCustomPrice ? 'Contact for tailored SLA' : `+ ${setupFormatted} setup fee`}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">Platform & Managed AI Operations</div>
+                  </div>
+
+                  <ul className="space-y-2.5 mb-8">
+                    {plan.features.slice(0, 7).map((feat, fidx) => (
+                      <li key={fidx} className="flex items-start gap-2.5 text-xs text-slate-300">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <button
+                  onClick={() => handleOpenPlanAction(plan)}
+                  className={`w-full py-3.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+                    isEnterprise
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/30'
+                      : 'bg-slate-800 hover:bg-slate-700 text-white'
+                  }`}
+                >
+                  {plan.ctaText}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 4. Interactive ROI Calculator */}
+        <div className="mb-16">
+          <ROICalculator
+            currency={currency}
+            onBookDemo={() => {
+              setSalesModal({
+                isOpen: true,
+                planId: 'enterprise',
+                ctaType: 'book_demo'
+              });
+            }}
+          />
+        </div>
+
+        {/* 5. 12-Step Implementation Box */}
+        <div className="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 mb-16">
+          <div className="text-center max-w-2xl mx-auto mb-8">
+            <h3 className="text-xl font-bold text-white mb-2">{IMPLEMENTATION_EXPLANATION.title}</h3>
+            <p className="text-xs text-slate-400">{IMPLEMENTATION_EXPLANATION.summary}</p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
+            {IMPLEMENTATION_EXPLANATION.steps.map(s => (
+              <div key={s.step} className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-5 h-5 rounded-full bg-blue-600/20 text-blue-400 font-bold text-[10px] flex items-center justify-center">
+                    {s.step}
+                  </span>
+                  <span className="font-bold text-white">{s.title}</span>
+                </div>
+                <p className="text-[11px] text-slate-400 leading-tight">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. FAQ Section */}
+      <section className="py-16 px-4 sm:px-8 max-w-4xl mx-auto border-t border-slate-800">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-2">
+            Everything you need to know about AI RevenueOS architecture and deployment.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {faqs.map((faq, idx) => (
+            <div
+              key={idx}
+              className="rounded-2xl bg-slate-900/80 border border-slate-800 overflow-hidden transition-all"
+            >
+              <button
+                onClick={() => toggleFaq(idx)}
+                className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 cursor-pointer"
+              >
+                <span className="text-sm font-bold text-white">{faq.q}</span>
+                {openFaqIndex === idx ? (
+                  <ChevronUp className="w-4 h-4 text-blue-400 shrink-0" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                )}
+              </button>
+
+              {openFaqIndex === idx && (
+                <div className="px-4 sm:px-5 pb-5 text-xs text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
+                  {faq.a}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 7. Footer */}
+      <footer className="border-t border-slate-800 py-10 px-4 sm:px-8 text-center text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 font-bold text-slate-300">
+            <Bot className="w-4 h-4 text-blue-400" />
+            <span>AI RevenueOS</span>
+            <span className="text-[10px] text-slate-500 font-normal">by AgentDesk Technologies • © {new Date().getFullYear()}</span>
+          </div>
+          <div className="flex items-center gap-6 text-[11px] text-slate-400">
+            <span>SOC-2 Type II Certified</span>
+            <span>GDPR & TCPA Compliant</span>
+            <span>Twilio & WhatsApp Business Verified</span>
+          </div>
+        </div>
+      </footer>
+
+      {/* Sales Inquiry & Demo Modal */}
+      <ContactSalesModal
+        isOpen={salesModal.isOpen}
+        onClose={() => setSalesModal({ ...salesModal, isOpen: false })}
+        planId={salesModal.planId}
+        currency={currency}
+        ctaType={salesModal.ctaType}
+      />
+    </div>
+  );
+};

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentDesk Embed Widget Live Sandbox & Test Environment</title>
+  <style>
+    :root {
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #7c3aed;
+      --primary-hover: #6d28d9;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 32px 20px;
+    }
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: rgba(124, 58, 237, 0.2);
+      color: #c084fc;
+      border: 1px solid rgba(124, 58, 237, 0.4);
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p.lead {
+      color: var(--text-muted);
+      font-size: 15px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .card h2 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    button.btn {
+      padding: 10px 16px;
+      background: #334155;
+      color: #ffffff;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s;
+    }
+    button.btn:hover {
+      background: #475569;
+      border-color: #64748b;
+      transform: translateY(-1px);
+    }
+    button.btn.active {
+      background: var(--primary);
+      border-color: #a855f7;
+    }
+    .code-block {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #38bdf8;
+      overflow-x: auto;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .events-log {
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      height: 180px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      color: #4ade80;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 2px;
+    }
+    .log-time { color: #64748b; margin-right: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge">SANDBOX & REAL EMBED SIMULATION</span>
+      <h1>AgentDesk Embed Widget Test Page</h1>
+      <p class="lead">Simulates an external customer website loading the AgentDesk JS widget script asynchronously.</p>
+    </header>
+
+    <div class="grid">
+      <!-- Agent Switcher -->
+      <div class="card">
+        <h2>
+          <span>🤖</span>
+          <span>Select Target AI Agent</span>
+        </h2>
+        <div class="btn-group">
+          <button class="btn active" id="btn-admin" onclick="switchAgent('platform-admin-agent', this)">
+            <span>1. Platform Admin Agent</span>
+            <code>platform-admin-agent</code>
+          </button>
+          <button class="btn" id="btn-demo" onclick="switchAgent('agentdesk-public-demo-agent', this)">
+            <span>2. Public Demo Agent</span>
+            <code>agentdesk-public-demo-agent</code>
+          </button>
+          <button class="btn" id="btn-acme" onclick="switchAgent('acme-support-agent', this)">
+            <span>3. Acme Technologies Sales Agent</span>
+            <code>acme-support-agent</code>
+          </button>
+          <button class="btn" id="btn-summit" onclick="switchAgent('summit-agent', this)">
+            <span>4. Summit Home Services Agent</span>
+            <code>summit-home-services</code>
+          </button>
+        </div>
+
+        <div style="margin-top: 18px;">
+          <h3 style="font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Active Embed Script Tag:</h3>
+          <div class="code-block" id="active-script-preview">&lt;script src="/widget.js" data-agent-id="platform-admin-agent"&gt;&lt;/script&gt;</div>
+        </div>
+      </div>
+
+      <!-- Widget Controls & JS API -->
+      <div class="card">
+        <h2>
+          <span>⚡</span>
+          <span>Widget JS Client API</span>
+        </h2>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+          External web applications can programmatically control the chat widget using <code>window.AgentDesk</code>.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+          <button class="btn" onclick="window.AgentDesk && window.AgentDesk.open()">
+            <span>👉 Open Widget</span>
+          </button>
+          <button class="btn" onclick="window.AgentDesk && window.AgentDesk.close()">
+            <span>✖️ Close Widget</span>
+          </button>
+          <button class="btn" onclick="window.AgentDesk && window.AgentDesk.toggle()">
+            <span>🔄 Toggle Widget</span>
+          </button>
+          <button class="btn" onclick="window.AgentDesk && window.AgentDesk.reset()">
+            <span>🧹 Reset Session</span>
+          </button>
+        </div>
+
+        <button class="btn" style="width: 100%; justify-content: center; background: #2563eb;" onclick="sendSampleQuery()">
+          <span>💬 Send "Tell me about your enterprise pricing"</span>
+        </button>
+
+        <div style="margin-top: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <h3 style="font-size: 12px; color: var(--text-muted);">Real-time Widget Custom Events:</h3>
+            <button onclick="clearLogs()" style="background: none; border: none; color: #94a3b8; font-size: 11px; cursor: pointer;">Clear</button>
+          </div>
+          <div class="events-log" id="events-log">
+            <div class="log-entry"><span class="log-time">[Init]</span> Sandbox ready. Waiting for events...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Real Embed Script Tag Execution -->
+  <script id="agentdesk-main-script" src="/widget.js" data-agent-id="platform-admin-agent"></script>
+
+  <script>
+    function logEvent(name, detail) {
+      const el = document.getElementById('events-log');
+      const time = new Date().toLocaleTimeString();
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<span class="log-time">[${time}]</span> <strong>AgentDesk:${name}</strong>: ${JSON.stringify(detail)}`;
+      el.appendChild(entry);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function clearLogs() {
+      document.getElementById('events-log').innerHTML = '';
+    }
+
+    ['ready', 'opened', 'closed', 'message', 'lead'].forEach(evt => {
+      window.addEventListener('AgentDesk:' + evt, (e) => {
+        logEvent(evt, e.detail || {});
+      });
+    });
+
+    function switchAgent(agentId, btn) {
+      document.querySelectorAll('.btn-group button').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      document.getElementById('active-script-preview').innerText = 
+        `<script src="${window.location.origin}/widget.js" data-agent-id="${agentId}"><\/script>`;
+
+      if (window.AgentDesk && typeof window.AgentDesk.setAgent === 'function') {
+        window.AgentDesk.setAgent(agentId);
+        logEvent('switched_agent', { targetId: agentId });
+      }
+    }
+
+    function sendSampleQuery() {
+      if (window.AgentDesk) {
+        window.AgentDesk.open();
+        window.AgentDesk.sendMessage("Tell me about your enterprise pricing");
+      }
+    }
+  </script>
+</body>
+</html>
