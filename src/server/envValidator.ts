@@ -23,8 +23,6 @@
  * Missing integrations are accurately reported as NOT_CONFIGURED.
  */
 
-import crypto from 'crypto';
-
 export type IntegrationStatus = 'CONNECTED' | 'NOT_CONFIGURED' | 'INVALID' | 'DISCONNECTED';
 
 export interface IntegrationStatusDetail {
@@ -82,30 +80,26 @@ export function getCoreEnvironmentStatus(): {
     },
     PLATFORM_ADMIN_EMAIL: {
       configured: Boolean(adminEmail && adminEmail.trim().length > 0),
-      value: adminEmail ? '[CONFIGURED]' : '[CONFIGURED_DEFAULT]'
+      value: adminEmail ? '[CONFIGURED]' : undefined
     },
     PLATFORM_ADMIN_INITIAL_PASSWORD: {
       configured: Boolean(adminPassword && adminPassword.trim().length > 0),
-      value: adminPassword ? '[CONFIGURED_HASHED_ON_BOOT]' : '[CONFIGURED_HASHED_ON_BOOT]'
+      value: adminPassword ? '[CONFIGURED_HASHED_ON_BOOT]' : undefined
     }
   };
 
-  // Ensure default fallbacks are safely set in process.env if missing during initial dev/preview boot
-  if (!process.env.APP_URL) {
-    process.env.APP_URL = 'http://localhost:3000';
-  }
-  if (!process.env.PLATFORM_ADMIN_EMAIL && !process.env.INITIAL_ADMIN_EMAIL) {
-    process.env.PLATFORM_ADMIN_EMAIL = 'admin@agentdesk';
-  }
-  if (!process.env.PLATFORM_ADMIN_INITIAL_PASSWORD && !process.env.INITIAL_ADMIN_PASSWORD) {
-    process.env.PLATFORM_ADMIN_INITIAL_PASSWORD = 'Admin@2613';
-  }
-  if (!process.env.SESSION_SECRET) {
-    process.env.SESSION_SECRET = crypto.randomBytes(48).toString('hex');
+  const missingCore = Object.entries(variables)
+    .filter(([, detail]) => !detail.configured)
+    .map(([name]) => name);
+
+  if (missingCore.length > 0) {
+    console.error(
+      `[SECURITY] Missing required production environment variables: ${missingCore.join(', ')}`
+    );
   }
 
   return {
-    status: 'READY',
+    status: missingCore.length === 0 ? 'READY' : 'DEGRADED',
     variables
   };
 }
