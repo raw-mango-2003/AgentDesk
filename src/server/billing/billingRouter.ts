@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { billingService } from './billingService.js';
 import { payPalWebhookService } from './paypalWebhookService.js';
 import { CurrencyCode } from '../../types.js';
+import { requirePlatformAdmin, requireTenantAccess } from '../auth/authRouter.js';
 
 export const billingRouter = Router();
 
@@ -32,7 +33,7 @@ billingRouter.get('/config', (req: Request, res: Response) => {
 });
 
 // 2. Tenant Billing Info
-billingRouter.get('/tenant/:businessId', (req: Request, res: Response) => {
+billingRouter.get('/tenant/:businessId', requireTenantAccess, (req: Request, res: Response) => {
   try {
     const { businessId } = req.params;
     if (!businessId) {
@@ -119,7 +120,7 @@ billingRouter.get('/providers/health', async (_req: Request, res: Response) => {
 });
 
 // 2.54. Payment Audit Logs Endpoint
-billingRouter.get('/admin/payment-audit-logs', (req: Request, res: Response) => {
+billingRouter.get('/admin/payment-audit-logs', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const tenantId = req.query.tenantId as string;
     const provider = req.query.provider as string;
@@ -167,7 +168,7 @@ billingRouter.get('/currencies', async (_req: Request, res: Response) => {
   }
 });
 
-billingRouter.put('/currencies/:code/toggle', (req: Request, res: Response) => {
+billingRouter.put('/currencies/:code/toggle', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const { code } = req.params;
     const { enabled } = req.body;
@@ -192,7 +193,7 @@ billingRouter.get('/plan-prices', (req: Request, res: Response) => {
   }
 });
 
-billingRouter.put('/plan-prices', (req: Request, res: Response) => {
+billingRouter.put('/plan-prices', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const { planId, currency, setupFee, monthlyFee, active } = req.body;
     if (!planId || !currency) {
@@ -211,7 +212,7 @@ billingRouter.put('/plan-prices', (req: Request, res: Response) => {
   }
 });
 
-billingRouter.get('/revenue-analytics', (_req: Request, res: Response) => {
+billingRouter.get('/revenue-analytics', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const analytics = billingService.getRevenueAnalyticsByCurrency();
     return res.json({ success: true, analytics });
@@ -233,7 +234,7 @@ billingRouter.post('/validate-coupon', (req: Request, res: Response) => {
 });
 
 // 2.7. Platform Admin Promo Codes Management
-billingRouter.get('/promo-codes', (_req: Request, res: Response) => {
+billingRouter.get('/promo-codes', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const codes = billingService.getAllPromoCodes();
     return res.json({ success: true, promoCodes: codes });
@@ -242,7 +243,7 @@ billingRouter.get('/promo-codes', (_req: Request, res: Response) => {
   }
 });
 
-billingRouter.post('/promo-codes', (req: Request, res: Response) => {
+billingRouter.post('/promo-codes', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const newPromo = billingService.createPromoCode(req.body);
     return res.status(201).json({ success: true, promoCode: newPromo });
@@ -251,7 +252,7 @@ billingRouter.post('/promo-codes', (req: Request, res: Response) => {
   }
 });
 
-billingRouter.put('/promo-codes/:code', (req: Request, res: Response) => {
+billingRouter.put('/promo-codes/:code', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const updatedPromo = billingService.updatePromoCode(req.params.code, req.body);
     return res.json({ success: true, promoCode: updatedPromo });
@@ -260,7 +261,7 @@ billingRouter.put('/promo-codes/:code', (req: Request, res: Response) => {
   }
 });
 
-billingRouter.delete('/promo-codes/:code', (req: Request, res: Response) => {
+billingRouter.delete('/promo-codes/:code', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const deleted = billingService.deletePromoCode(req.params.code);
     return res.json({ success: deleted });
@@ -269,7 +270,7 @@ billingRouter.delete('/promo-codes/:code', (req: Request, res: Response) => {
   }
 });
 
-billingRouter.post('/promo-codes/:code/toggle', (req: Request, res: Response) => {
+billingRouter.post('/promo-codes/:code/toggle', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const toggled = billingService.togglePromoCodeActive(req.params.code);
     return res.json({ success: true, promoCode: toggled });
@@ -297,7 +298,7 @@ billingRouter.get('/tax-config', (_req: Request, res: Response) => {
   }
 });
 
-billingRouter.put('/tax-settings', (req: Request, res: Response) => {
+billingRouter.put('/tax-settings', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const updated = billingService.updateTaxConfiguration(req.body, req.body.updatedBy || 'Platform Admin');
     return res.json({ success: true, taxConfig: updated });
@@ -306,7 +307,7 @@ billingRouter.put('/tax-settings', (req: Request, res: Response) => {
   }
 });
 
-billingRouter.put('/tax-config', (req: Request, res: Response) => {
+billingRouter.put('/tax-config', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const updated = billingService.updateTaxConfiguration(req.body, req.body.updatedBy || 'Platform Admin');
     return res.json({ success: true, taxConfig: updated });
