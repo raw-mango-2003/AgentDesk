@@ -21,13 +21,18 @@ class IntegrationStore {
   }
 
   private getEncryptionKey(): Buffer {
-    let secret = process.env.SESSION_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-    if (!secret) {
-      secret = crypto.randomBytes(48).toString('hex');
-      process.env.SESSION_SECRET = secret;
-    }
-    return crypto.createHash('sha256').update(secret).digest();
+    
+  const secret = (process.env.SESSION_SECRET || '').trim();
+
+  if (secret.length < 32) {
+    throw new Error(
+      'SESSION_SECRET must be configured with at least 32 characters.'
+    );
   }
+
+  return crypto.createHash('sha256').update(secret).digest();
+  }
+  
 
   /**
    * Encrypt sensitive credentials using AES-256-GCM
