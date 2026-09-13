@@ -24,6 +24,8 @@ export interface UserProfile {
   organizationId?: string;
   avatarUrl?: string;
   isPlatformAdmin?: boolean;
+  mustChangePassword?: boolean;
+  status?: string;
   createdAt?: string;
 }
 
@@ -103,6 +105,7 @@ export interface KnowledgeItem {
   fileName?: string;
   fileSize?: string;
   chunkCount?: number;
+  tags?: string[];
   lastUpdated?: string;
   createdAt: string;
   updatedAt: string;
@@ -115,7 +118,7 @@ export type AgentStatus = 'DRAFT' | 'TESTING' | 'PUBLISHED' | 'PAUSED' | string;
 export interface LeadQualificationRule {
   id: string;
   question: string;
-  field: 'budget' | 'timeline' | 'service_interest' | 'location' | 'custom';
+  field: 'budget' | 'timeline' | 'service_interest' | 'location' | 'custom' | string;
   required: boolean;
   scoreWeight: number; // 0 - 30
 }
@@ -150,6 +153,9 @@ export interface Business {
   primaryAgentId?: string;
   organizationId?: string;
   name: string;
+  ownerName?: string;
+  customerName?: string;
+  email?: string;
   industry: string;
   description: string;
   website: string;
@@ -200,7 +206,8 @@ export type LeadStatus =
   | 'proposal' 
   | 'won' 
   | 'lost' 
-  | 'nurture';
+  | 'nurture'
+  | 'converted';
 
 export type LeadScoreCategory = 'HOT' | 'WARM' | 'COLD';
 
@@ -684,6 +691,8 @@ export interface AuditLog {
   entity: string;
   details: string;
   timestamp: string;
+  user?: string;
+  target?: string;
 }
 
 export type WidgetType = 
@@ -797,9 +806,16 @@ export interface InvoiceItem {
   currency: 'USD' | 'INR' | string;
   status: 'PAID' | 'PENDING' | 'OVERDUE';
   pdfUrl?: string;
+  invoiceType?: 'ONE_TIME_SETUP' | 'RECURRING_SUBSCRIPTION' | 'INITIAL_BUNDLE';
+  setup_fee?: number;
+  setup_tax?: number;
+  subscription_fee?: number;
+  subscription_tax?: number;
+  total_amount?: number;
+  tax_rate?: number;
 }
 
-export type PaymentProviderName = 'razorpay' | 'paypal';
+export type PaymentProviderName = 'razorpay' | 'paypal' | string;
 
 export interface SafePaymentMethod {
   id: string;
@@ -824,7 +840,7 @@ export interface BillingTransaction {
   provider: PaymentProviderName;
   status: 'pending' | 'authorized' | 'paid' | 'failed' | 'refunded';
   transactionId: string;
-  type: 'implementation_fee' | 'subscription' | 'usage_overage';
+  type: 'implementation_fee' | 'subscription' | 'usage_overage' | 'initial_checkout';
   description: string;
 }
 
@@ -862,5 +878,369 @@ export interface BillingInfo {
     storage: { used: number; included: number; unit: string };
   };
   invoices: InvoiceItem[];
+}
+
+// ----------------------------------------------------
+// PRODUCTION SAAS BILLING & PAYMENT SPECIFICATION
+// ----------------------------------------------------
+
+export type PaymentStatus = 
+  | 'PENDING' 
+  | 'AUTHORIZED' 
+  | 'CAPTURED' 
+  | 'FAILED' 
+  | 'CANCELLED' 
+  | 'REFUNDED';
+
+export type SubscriptionStatus = 
+  | 'PENDING_PAYMENT' 
+  | 'ACTIVE' 
+  | 'PAST_DUE' 
+  | 'CANCELLED' 
+  | 'EXPIRED';
+
+export interface PlanPriceRecord {
+  id: string; // e.g. 'price_starter_INR'
+  plan_id: string;
+  currency: CurrencyCode;
+  setup_fee: number;
+  monthly_fee: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PlatformCurrencyRecord {
+  code: CurrencyCode;
+  name: string;
+  symbol: string;
+  flag: string;
+  enabled: boolean;
+  isDefault: boolean;
+  countryCode: string;
+  countryName: string;
+  supportedProviders: string[];
+  providerStatus?: 'Connected' | 'Configuration Required' | 'Authentication Failed' | 'Unavailable' | 'Error';
+  currencyStatus?: 'Enabled' | 'Disabled for checkout';
+  checkoutAvailability?: 'Available' | 'Unavailable';
+}
+
+export interface PaymentAuditLogEntry {
+  id: string;
+  timestamp: string;
+  action: 
+    | 'order_created' 
+    | 'payment_attempted' 
+    | 'payment_method_selected' 
+    | 'payment_verified' 
+    | 'payment_captured' 
+    | 'webhook_received' 
+    | 'tenant_activated' 
+    | 'payment_failed' 
+    | 'payment_cancelled' 
+    | 'refund_processed';
+  tenantId: string;
+  businessName?: string;
+  customerEmail: string;
+  provider: 'razorpay' | 'paypal' | string;
+  providerOrderId?: string;
+  providerPaymentId?: string;
+  amount?: number;
+  currency?: CurrencyCode;
+  status: string;
+  method?: string;
+  details?: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  userId: string;
+  tenantId?: string;
+  plan: string;
+  amount: number;
+  currency: CurrencyCode;
+  base_amount?: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  final_amount?: number;
+  payment_provider?: 'razorpay' | string;
+  provider?: 'razorpay' | string;
+  provider_order_id?: string;
+  provider_payment_id?: string;
+  razorpayOrderId: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  customer_id?: string;
+  plan_id?: string;
+  coupon_id?: string;
+  status: PaymentStatus;
+  failureReason?: string;
+  
+  // Explicit separated billing components
+  setup_fee?: number;
+  setup_discount?: number;
+  setup_tax?: number;
+  subscription_fee?: number;
+  subscription_discount?: number;
+  subscription_tax?: number;
+  recurring_base_amount?: number;
+  recurring_tax_amount?: number;
+  recurring_total_amount?: number;
+  tax_rate?: number;
+  subscription_tax_rate?: number;
+  setup_tax_rate?: number;
+
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface SubscriptionRecord {
+  id: string;
+  userId: string;
+  tenantId: string;
+  plan: string;
+  status: SubscriptionStatus;
+  billingInterval: 'monthly';
+  amount: number;
+  currency: CurrencyCode;
+  monthly_price?: number;
+  monthlyPrice?: number;
+  baseAmount?: number;
+  base_amount?: number;
+  taxAmount?: number;
+  tax_amount?: number;
+  taxRate?: number;
+  final_amount?: number;
+  setupPayment?: 'ONE_TIME';
+  subscriptionType?: 'RECURRING';
+  provider?: PaymentProviderName;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySubscriptionId?: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, any>;
+}
+
+export enum PaymentLifecycleState {
+  IDLE = 'IDLE',
+  PAYMENT_PENDING = 'PAYMENT_PENDING',
+  PAYMENT_PROCESSING = 'PAYMENT_PROCESSING',
+  PAYMENT_VERIFIED = 'PAYMENT_VERIFIED',
+  PAYMENT_FAILED = 'PAYMENT_FAILED',
+  PAYMENT_CANCELLED = 'PAYMENT_CANCELLED',
+  PAYMENT_EXPIRED = 'PAYMENT_EXPIRED',
+  TENANT_PROVISIONED = 'TENANT_PROVISIONED'
+}
+
+export interface BillingAddressDetails {
+  businessLegalName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  gstin?: string;
+}
+
+export interface TaxConfiguration {
+  enabled: boolean;
+  registration_status: 'NOT_REGISTERED' | 'REGISTERED';
+  gstin: string | null;
+  default_rate: number;          // e.g. 0 or 0.18
+  tax_name: string;              // 'GST'
+  effective_from: string | null; // e.g. '2026-09-12' or null
+  subscription_tax_rate: number; // e.g. 0.00 when disabled, or 0.18
+  setup_tax_rate: number;        // e.g. 0.00
+  tax_label: string;             // e.g. 'GST Disabled (Non-Registered)'
+  tax_disclaimer: string;        // Editable tax disclaimer
+  rule_summary?: string;
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+export interface PlatformPromoCode {
+  id: string;
+  code: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  appliesTo: 'monthly' | 'setup' | 'all' | 'first_month' | 'recurring';
+  currency?: CurrencyCode; // Specified for fixed-value discounts to ensure currency isolation
+  tenantId?: string;
+  customerEmail?: string;
+  planId?: string;
+  expiryDate?: string;
+  usageLimit?: number;
+  usageCount: number;
+  minOrderValue?: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CouponValidationResult {
+  valid: boolean;
+  code: string;
+  description: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  discountAmount: number;
+  currency?: CurrencyCode;
+  appliesTo?: 'monthly' | 'setup' | 'all' | 'first_month' | 'recurring';
+  message?: string;
+}
+
+export interface OrderCalculationResult {
+  planId: string;
+  planName: string;
+  currency: CurrencyCode;
+  
+  // Mandatory separate fields:
+  setup_fee: number;
+  setup_discount: number;
+  setup_tax: number;
+  setup_fee_tax: number;
+  setup_total: number;
+  
+  subscription_fee: number;
+  subscription_discount: number;
+  subscription_tax: number;
+  subscription_total: number;
+  
+  discount: number;
+  total_due_today: number;
+  
+  recurring_base_amount: number;
+  recurring_tax_amount: number;
+  recurring_total_amount: number;
+  
+  subscription_tax_rate: number;
+  setup_tax_rate: number;
+  tax_rate: number;
+  taxRate?: number;
+  
+  // Compatible legacy aliases:
+  monthlyFee: number;
+  setupFee: number;
+  subtotal: number;
+  couponCode: string | null;
+  couponDescription: string | null;
+  discountAmount: number;
+  couponError: string | null;
+  taxAmount: number;
+  taxLabel: string;
+  tax_enabled: boolean;
+  taxEnabled: boolean;
+  tax_registration_status: 'NOT_REGISTERED' | 'REGISTERED';
+  recurringAmount: number;
+  totalDueToday: number;
+  gstin: string | null;
+  taxDisclaimer?: string;
+}
+
+export interface PendingSignup {
+  id: string;
+  tenantId: string;
+  businessName: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  planId: 'starter' | 'growth' | 'scale' | string;
+  planName: string;
+  currency: CurrencyCode;
+  display_currency?: CurrencyCode;
+  display_amount?: number;
+  payment_currency?: CurrencyCode;
+  payment_amount?: number;
+  
+  // Explicit separated amounts
+  setup_fee?: number;
+  setup_discount?: number;
+  setup_tax?: number;
+  setup_fee_tax?: number;
+  setup_total?: number;
+  subscription_fee?: number;
+  subscription_discount?: number;
+  subscription_tax?: number;
+  subscription_total?: number;
+  total_due_today: number;
+  totalDueToday?: number;
+  base_amount?: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  final_amount?: number;
+  recurring_base_amount?: number;
+  recurring_tax_amount?: number;
+  recurring_total_amount?: number;
+  tax_rate?: number;
+  taxRate?: number;
+  subscription_tax_rate?: number;
+  setup_tax_rate?: number;
+
+  monthlyFee: number;
+  setupFee: number;
+  subtotal?: number;
+  couponCode?: string | null;
+  couponDescription?: string | null;
+  discountAmount?: number;
+  taxAmount?: number;
+  taxLabel?: string;
+  payment_provider?: 'razorpay' | string;
+  provider?: 'razorpay' | string;
+  provider_order_id?: string;
+  provider_payment_id?: string;
+  razorpayOrderId: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  status: 'PENDING' | 'CANCELLED' | 'FAILED' | 'VERIFYING' | 'ACTIVATED' | PaymentLifecycleState;
+  failureReason?: string;
+  billingAddress?: BillingAddressDetails;
+  provisioningFailed?: boolean;
+  provisioningError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailablePaymentMethodItem {
+  id: string;
+  name: string;
+  category: 'upi' | 'qr' | 'cards' | 'netbanking' | 'wallets' | 'card' | string;
+  description?: string;
+  popular?: boolean;
+}
+
+export interface AvailablePaymentMethodsResponse {
+  success: boolean;
+  currency: CurrencyCode;
+  country?: string;
+  planId?: string;
+  isPaymentAvailable: boolean;
+  provider: 'razorpay' | string | null;
+  providerName?: string;
+  providerLabel?: string;
+  providerStatus?: string;
+  checkoutAvailability?: string;
+  methods: AvailablePaymentMethodItem[];
+  unavailableMessage?: string;
+  allowsINRFallback: boolean;
+  inrFallback?: {
+    paymentCurrency: 'INR';
+    provider: 'razorpay';
+    providerName: string;
+    providerLabel: string;
+    methods: AvailablePaymentMethodItem[];
+    notice: string;
+  };
 }
 

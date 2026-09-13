@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, 
   ShieldCheck, 
-  CreditCard, 
   AlertCircle, 
   CheckCircle2, 
-  ExternalLink, 
   Lock,
-  Zap,
-  Clock
+  Loader2,
+  QrCode,
+  CreditCard,
+  Building
 } from 'lucide-react';
 import { CurrencyCode, formatPrice } from '../data/pricing.js';
-import { PaymentProviderName, SafePaymentMethod } from '../types.js';
 
 interface PaymentCheckoutModalProps {
   isOpen: boolean;
@@ -32,51 +31,50 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
   planId,
   planName,
   amount,
-  currency,
+  currency = 'INR',
   type,
   onSuccess
 }) => {
-  const [selectedProvider, setSelectedProvider] = useState<PaymentProviderName>(
-    currency === 'INR' ? 'razorpay' : 'paypal'
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [cardHolder, setCardHolder] = useState('');
-  const [upiId, setUpiId] = useState('');
-  const [paymentMode, setPaymentMode] = useState<'card' | 'upi' | 'paypal_wallet'>('card');
   const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
 
   useEffect(() => {
-    if (currency === 'INR') {
-      setSelectedProvider('razorpay');
-      setPaymentMode('card');
-    } else {
-      setSelectedProvider('paypal');
-      setPaymentMode('paypal_wallet');
-    }
     setError(null);
     setStep('details');
-  }, [currency, isOpen]);
+  }, [isOpen, currency]);
 
   if (!isOpen) return null;
+
+  const ensureRazorpayLoaded = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof (window as any).Razorpay === 'function') {
+        resolve(true);
+        return;
+      }
+      const existing = document.querySelector('script[src*="checkout.razorpay.com"]');
+      if (existing) {
+        existing.addEventListener('load', () => resolve(true));
+        setTimeout(() => resolve(typeof (window as any).Razorpay === 'function'), 1500);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
 
   const handleProcessPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    setStep('processing');
 
     try {
-      // 1. Check strict PayPal INR restriction
-      if (selectedProvider === 'paypal' && currency === 'INR') {
-        throw new Error('PayPal does not support INR subscriptions. Please select Razorpay for INR transactions.');
-      }
-
-      // 2. Request Server Checkout Session
+      // 1. Request Server Checkout Session
       const sessionRes = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,72 +82,100 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
           businessId,
           planId,
           type: type === 'add_payment_method' ? 'subscription' : type,
-          currency,
-          provider: selectedProvider,
-          customerName: cardHolder || 'Corporate Account'
+          currency: 'INR',
+          provider: 'razorpay'
         })
       });
 
       const sessionData = await sessionRes.json();
-      if (!sessionRes.ok || sessionData.error) {
-        throw new Error(sessionData.error || 'Failed to initialize payment session with provider');
+      if (!sessionRes.ok || !sessionData.orderId) {
+        throw new Error(sessionData.error || 'Failed to initialize payment session with Razorpay');
       }
 
-      // 3. Simulate provider checkout authorization / signature
-      const paymentId = selectedProvider === 'razorpay'
-        ? `pay_rzp_${Date.now().toString().slice(-8)}`
-        : `PAY-PP-${Date.now().toString().slice(-8)}`;
+      const orderId = sessionData.orderId;
+      const rzpKey = sessionData.keyId || sessionData.payment?.raw?.key || '';
 
-      const last4 = paymentMode === 'paypal_wallet'
-        ? 'PayPal Account'
-        : cardNumber.replace(/\s+/g, '').slice(-4) || '8892';
+      const rzpReady = await ensureRazorpayLoaded();
+      if (!rzpReady || typeof (window as any).Razorpay !== 'function') {
+        throw new Error('Razorpay SDK failed to load. Please check your connection.');
+      }
 
-      const brand = paymentMode === 'paypal_wallet'
-        ? 'PayPal Account'
-        : cardNumber.startsWith('4') ? 'Visa' : cardNumber.startsWith('5') ? 'Mastercard' : 'Amex';
-
-      // 4. Verify & Activate on Server
-      const verifyRes = await fetch('/api/billing/verify-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessId,
-          provider: selectedProvider,
-          paymentId,
-          orderId: sessionData.payment?.orderId || `ord_${Date.now()}`,
-          subscriptionId: sessionData.subscription?.providerSubscriptionId || `sub_${Date.now()}`,
-          type: type === 'add_payment_method' ? 'subscription' : type,
-          planId,
-          currency,
-          amount,
-          paymentMethodData: {
-            brand,
-            last4,
-            expiry: cardExpiry || '09/28'
+      const options = {
+        key: rzpKey,
+        amount: Math.round(amount * 100),
+        currency: 'INR',
+        name: 'AgentDesk',
+        description: type === 'implementation_fee' 
+          ? `${planName} Implementation Setup Fee` 
+          : `${planName} Monthly Subscription`,
+        order_id: orderId,
+        theme: {
+          color: '#2563EB'
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            setStep('details');
           }
-        })
+        },
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            setStep('processing');
+            const verifyRes = await fetch('/api/billing/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                businessId,
+                provider: 'razorpay',
+                paymentId: response.razorpay_payment_id,
+                orderId: response.razorpay_order_id || orderId,
+                signature: response.razorpay_signature,
+                type: type === 'add_payment_method' ? 'subscription' : type,
+                planId,
+                currency: 'INR',
+                amount
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok || !verifyData.success) {
+              throw new Error(verifyData.error || 'Payment verification failed on server');
+            }
+
+            setTransactionDetails(verifyData);
+            setStep('success');
+            setTimeout(() => {
+              onSuccess(verifyData);
+            }, 1200);
+          } catch (err: any) {
+            setError(err.message || 'Payment verification failed');
+            setStep('details');
+          } finally {
+            setLoading(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', (resp: any) => {
+        setError(resp.error?.description || 'Payment was declined.');
+        setStep('details');
+        setLoading(false);
       });
-
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok || !verifyData.success) {
-        throw new Error(verifyData.error || 'Payment verification failed');
-      }
-
-      setTransactionDetails(verifyData);
-      setStep('success');
-      setTimeout(() => {
-        onSuccess(verifyData);
-      }, 1200);
+      rzp.open();
     } catch (err: any) {
       setError(err.message || 'Payment transaction failed');
       setStep('details');
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-lg rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl p-6 sm:p-8 text-white">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-800">
@@ -163,7 +189,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Secure 256-bit encrypted checkout via {selectedProvider === 'razorpay' ? 'Razorpay' : 'PayPal'}
+              Secure payment powered by Razorpay
             </p>
           </div>
           <button
@@ -184,8 +210,8 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         {step === 'processing' && (
           <div className="py-12 text-center space-y-4">
             <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-sm font-bold text-white">Processing secure payment with {selectedProvider.toUpperCase()}...</p>
-            <p className="text-xs text-slate-400">Verifying tokens and issuing billing statement...</p>
+            <p className="text-sm font-bold text-white">Verifying payment with Razorpay...</p>
+            <p className="text-xs text-slate-400">Securing workspace activation and transaction logs...</p>
           </div>
         )}
 
@@ -194,200 +220,53 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
             <div className="w-14 h-14 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/40">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-base font-bold text-white">Payment & Billing Activated!</h3>
+            <h3 className="text-base font-bold text-white">Payment Verified & Activated!</h3>
             <p className="text-xs text-slate-300">
-              Transaction ID: <span className="font-mono text-emerald-400">{transactionDetails?.transactionId}</span>
+              Transaction ID: <span className="font-mono text-emerald-400">{transactionDetails?.transactionId || 'Verified'}</span>
             </p>
             <p className="text-[11px] text-slate-500">Updating tenant dashboard...</p>
           </div>
         )}
 
         {step === 'details' && (
-          <form onSubmit={handleProcessPayment} className="space-y-4">
+          <form onSubmit={handleProcessPayment} className="space-y-5">
             {/* Amount Summary */}
-            {type !== 'add_payment_method' && (
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] uppercase font-bold text-slate-400">
-                    {type === 'implementation_fee' ? 'One-time Setup Fee' : 'Monthly Recurring Charge'}
-                  </div>
-                  <div className="text-xs font-semibold text-slate-200">{planName} Platform Tier</div>
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+              <div>
+                <div className="text-[10px] uppercase font-bold text-slate-400">
+                  {type === 'implementation_fee' ? 'One-time Setup Fee' : 'Monthly Recurring Charge'}
                 </div>
-                <div className="text-xl font-black text-white">
-                  {formatPrice(amount, currency)}
-                  <span className="text-xs text-slate-400 font-normal">
-                    {type === 'subscription' ? '/mo' : ''}
-                  </span>
-                </div>
+                <div className="text-xs font-semibold text-slate-200">{planName} Tier</div>
               </div>
-            )}
-
-            {/* Provider Selection */}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-2">
-                Select Payment Provider
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedProvider('razorpay');
-                    setPaymentMode('card');
-                  }}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    selectedProvider === 'razorpay'
-                      ? 'bg-blue-600/10 border-blue-500 text-white'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold">Razorpay</span>
-                    {currency === 'INR' && (
-                      <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[9px] font-bold">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[10px] text-slate-400">Cards, UPI, NetBanking (INR, USD, GBP)</div>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={currency === 'INR'}
-                  onClick={() => {
-                    if (currency !== 'INR') {
-                      setSelectedProvider('paypal');
-                      setPaymentMode('paypal_wallet');
-                    }
-                  }}
-                  className={`p-3 rounded-2xl border text-left transition-all ${
-                    currency === 'INR'
-                      ? 'opacity-40 cursor-not-allowed bg-slate-950 border-slate-800 text-slate-500'
-                      : selectedProvider === 'paypal'
-                      ? 'bg-blue-600/10 border-blue-500 text-white cursor-pointer'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700 cursor-pointer'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold">PayPal</span>
-                    {currency === 'INR' ? (
-                      <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[9px] font-bold">
-                        No INR
-                      </span>
-                    ) : (
-                      <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[9px] font-bold">
-                        Global
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[10px] text-slate-400">
-                    {currency === 'INR' ? 'PayPal recurring disabled for INR' : 'PayPal Wallet & Cards (USD, GBP)'}
-                  </div>
-                </button>
+              <div className="text-xl font-black text-white">
+                {formatPrice(amount, 'INR')}
+                <span className="text-xs text-slate-400 font-normal">
+                  {type === 'subscription' ? '/mo' : ''}
+                </span>
               </div>
             </div>
 
-            {/* Provider Form Fields */}
-            {selectedProvider === 'razorpay' ? (
-              <div className="space-y-3 p-4 rounded-2xl bg-slate-950/80 border border-slate-800">
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                  <span className="text-[11px] font-bold text-slate-300">Razorpay Payment Details</span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMode('card')}
-                      className={`text-[10px] px-2 py-0.5 rounded ${paymentMode === 'card' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
-                    >
-                      Card
-                    </button>
-                    {currency === 'INR' && (
-                      <button
-                        type="button"
-                        onClick={() => setPaymentMode('upi')}
-                        className={`text-[10px] px-2 py-0.5 rounded ${paymentMode === 'upi' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
-                      >
-                        UPI
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {paymentMode === 'card' ? (
-                  <>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Card Number</label>
-                      <input
-                        type="text"
-                        placeholder="4532 8892 1092 3341"
-                        value={cardNumber}
-                        onChange={e => setCardNumber(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Expiry (MM/YY)</label>
-                        <input
-                          type="text"
-                          placeholder="09/28"
-                          value={cardExpiry}
-                          onChange={e => setCardExpiry(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">CVV</label>
-                        <input
-                          type="password"
-                          maxLength={4}
-                          placeholder="•••"
-                          value={cardCvv}
-                          onChange={e => setCardCvv(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cardholder Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. John Doe / Business Corp"
-                        value={cardHolder}
-                        onChange={e => setCardHolder(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-blue-500"
-                        required
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">UPI ID / VPA</label>
-                    <input
-                      type="text"
-                      placeholder="business@okaxis / user@upi"
-                      value={upiId}
-                      onChange={e => setUpiId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono focus:outline-none focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                )}
+            {/* Razorpay Features Callout */}
+            <div className="p-4 rounded-2xl bg-blue-950/30 border border-blue-800/40 space-y-2">
+              <div className="text-xs font-bold text-white flex items-center justify-between">
+                <span>Supported Payment Methods in Razorpay</span>
+                <span className="text-[10px] text-blue-300 font-mono">INR (₹)</span>
               </div>
-            ) : (
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-3">
-                <div className="text-[11px] font-bold text-slate-300">PayPal Express Checkout</div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  You will connect your verified PayPal corporate account or international credit card. Auto-renewals and invoices will be billed in {currency}.
-                </p>
-                <div className="p-3 rounded-xl bg-blue-950/40 border border-blue-900/40 text-blue-300 text-xs flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-blue-400 shrink-0" />
-                  <span>Tokenized billing agreement through PayPal Vault</span>
+              <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
+                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <QrCode className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Instant UPI QR</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Cards / RuPay</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <Building className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>NetBanking</span>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Action Buttons */}
             <div className="pt-2 flex items-center justify-end gap-3">
@@ -401,14 +280,19 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer"
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>
-                  {type === 'implementation_fee' && `Authorize ${formatPrice(amount, currency)} Setup`}
-                  {type === 'subscription' && `Subscribe ${formatPrice(amount, currency)}/mo`}
-                  {type === 'add_payment_method' && 'Save & Authorize Payment Method'}
-                </span>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Connecting to Razorpay...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Pay {formatPrice(amount, 'INR')} with Razorpay</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

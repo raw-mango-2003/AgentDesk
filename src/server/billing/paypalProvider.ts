@@ -12,579 +12,580 @@ import {
   CreateInvoiceParams,
   ProviderInvoice,
   SafePaymentMethod,
-  WebhookResult
+  WebhookResult,
+  ProviderHealthReport
 } from './paymentProvider.js';
 import { CurrencyCode } from '../../types.js';
+import { payPalWebhookService } from './paypalWebhookService.js';
 
 export class PayPalProvider implements PaymentProvider {
   public name: PaymentProviderName = 'paypal';
   private clientId: string;
   private clientSecret: string;
-  private environment: 'sandbox' | 'live';
+  private environment: 'live' | 'sandbox';
   private webhookId: string;
-  private accessToken: string | null = null;
-  private tokenExpiresAt: number = 0;
+  private cachedToken: { token: string; expiresAt: number } | null = null;
 
   constructor() {
-    this.clientId = process.env.PAYPAL_CLIENT_ID || '';
-    this.clientSecret = process.env.PAYPAL_CLIENT_SECRET || '';
-    this.environment = (process.env.PAYPAL_ENVIRONMENT as 'sandbox' | 'live') || 'sandbox';
-    this.webhookId = process.env.PAYPAL_WEBHOOK_ID || '';
+    this.clientId = (process.env.PAYPAL_CLIENT_ID || '').trim();
+    this.clientSecret = (process.env.PAYPAL_CLIENT_SECRET || '').trim();
+    const envRaw = (process.env.PAYPAL_ENVIRONMENT || 'live').toLowerCase();
+    this.environment = envRaw === 'sandbox' ? 'sandbox' : 'live';
+    this.webhookId = (process.env.PAYPAL_WEBHOOK_ID || '').trim();
+  }
+
+  public getBaseUrl(): string {
+    return this.environment === 'sandbox'
+      ? 'https://api-m.sandbox.paypal.com'
+      : 'https://api-m.paypal.com';
   }
 
   public isConfigured(): boolean {
     return Boolean(this.clientId && this.clientSecret);
   }
 
-  public getClientId(): string {
-    return this.clientId || 'paypal_sandbox_revenueos_client_id';
+  public getPublicKey(): string {
+    return this.clientId;
   }
 
-  public getBaseUrl(): string {
-    return this.environment === 'live'
-      ? 'https://api-m.paypal.com'
-      : 'https://api-m.sandbox.paypal.com';
+  public getWebhookId(): string {
+    return this.webhookId;
+  }
+
+  public getEnvironment(): 'live' | 'sandbox' {
+    return this.environment;
   }
 
   public supportsCurrency(currency: CurrencyCode): boolean {
-    // PayPal supports USD and GBP. Strictly NO INR for subscriptions.
+    // PayPal handles USD and GBP; INR is processed by Razorpay
     return currency === 'USD' || currency === 'GBP';
   }
 
   public supportsRecurring(currency: CurrencyCode): boolean {
-    // CRITICAL: PayPal does NOT support INR recurring subscriptions.
-    if (currency === 'INR') {
-      return false;
-    }
     return currency === 'USD' || currency === 'GBP';
   }
 
-  private async getAccessToken(): Promise<string | null> {
-    if (!this.isConfigured()) return null;
-    if (this.accessToken && Date.now() < this.tokenExpiresAt - 60000) {
-      return this.accessToken;
+  /**
+   * Real server-side health check verifying PayPal credentials with PayPal OAuth API
+   */
+  public async checkHealth(): Promise<ProviderHealthReport> {
+    const lastChecked = new Date().toISOString();
+    if (!this.clientId || !this.clientSecret) {
+      return {
+        provider: 'paypal',
+        status: 'Configuration Required',
+        isConfigured: false,
+        message: 'Missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET in environment',
+        environment: this.environment,
+        lastChecked
+      };
     }
 
     try {
       const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
-      const response = await fetch(`${this.getBaseUrl()}/v1/oauth2/token`, {
+      const res = await fetch(`${this.getBaseUrl()}/v1/oauth2/token`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${auth}`
+          Authorization: `Basic ${auth}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: 'grant_type=client_credentials'
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to obtain PayPal OAuth token');
+      if (res.status === 200) {
+        const data = await res.json();
+        if (data.access_token) {
+          return {
+            provider: 'paypal',
+            status: 'Connected',
+            isConfigured: true,
+            message: `PayPal ${this.environment.toUpperCase()} API connected and authenticated successfully`,
+            environment: this.environment,
+            lastChecked,
+            details: {
+              clientIdPrefix: `${this.clientId.substring(0, 8)}...`,
+              webhookConfigured: Boolean(this.webhookId)
+            }
+          };
+        }
       }
 
-      const data = await response.json();
-      this.accessToken = data.access_token;
-      this.tokenExpiresAt = Date.now() + (data.expires_in * 1000);
-      return this.accessToken;
+      if (res.status === 401) {
+        return {
+          provider: 'paypal',
+          status: 'Authentication Failed',
+          isConfigured: true,
+          message: 'PayPal client authentication failed. PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET is rejected by PayPal.',
+          environment: this.environment,
+          lastChecked
+        };
+      }
+
+      return {
+        provider: 'paypal',
+        status: 'Unavailable',
+        isConfigured: true,
+        message: `PayPal API returned HTTP status ${res.status}`,
+        environment: this.environment,
+        lastChecked
+      };
     } catch (err: any) {
-      console.warn('[PayPal] OAuth Token Error:', err.message);
-      return null;
+      return {
+        provider: 'paypal',
+        status: 'Error',
+        isConfigured: true,
+        message: `Network error connecting to PayPal API: ${err.message}`,
+        environment: this.environment,
+        lastChecked
+      };
     }
   }
 
-  public async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {
+  /**
+   * Retrieve a live OAuth 2.0 access token from PayPal
+   */
+  private async getAccessToken(): Promise<string> {
+    if (this.cachedToken && Date.now() < this.cachedToken.expiresAt - 60000) {
+      return this.cachedToken.token;
+    }
+
+    if (!this.isConfigured()) {
+      throw new Error('PayPal credentials missing (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET not configured)');
+    }
+
+    const auth = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
+    const res = await fetch(`${this.getBaseUrl()}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      if (res.status === 401) {
+        throw new Error('PayPal authentication failed: Client Authentication failed. Please verify live credentials.');
+      }
+      throw new Error(`PayPal token error (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    this.cachedToken = {
+      token: data.access_token,
+      expiresAt: Date.now() + (data.expires_in * 1000)
+    };
+    return data.access_token;
+  }
+
+  /**
+   * Create an authentic PayPal order on PayPal servers
+   */
+  public async createPayment(params: CreatePaymentParams): Promise<ProviderPayment> {
+    const token = await this.getAccessToken();
+
+    const orderPayload = {
+      intent: 'CAPTURE',
+      purchase_units: [
+        {
+          reference_id: params.businessId,
+          description: params.description || 'AgentDesk Subscription & Setup',
+          custom_id: params.businessId,
+          amount: {
+            currency_code: params.currency,
+            value: params.amount.toFixed(2)
+          }
+        }
+      ],
+      application_context: {
+        brand_name: 'AgentDesk Technologies',
+        landing_page: 'NO_PREFERENCE',
+        user_action: 'PAY_NOW',
+        return_url: `${process.env.APP_URL || 'https://agentdesk.ai'}/checkout/paypal-success`,
+        cancel_url: `${process.env.APP_URL || 'https://agentdesk.ai'}/checkout/paypal-cancel`
+      }
+    };
+
+    const res = await fetch(`${this.getBaseUrl()}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(orderPayload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(`PayPal order creation failed: ${err.message || JSON.stringify(err)}`);
+    }
+
+    const orderData = await res.json();
+    const approveLink = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
+
     return {
-      id: `cust_pp_${params.businessId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10)}_${Date.now().toString().slice(-4)}`,
-      name: params.name,
-      email: params.email,
-      phone: params.phone,
+      id: orderData.id,
       provider: 'paypal',
-      createdAt: new Date().toISOString()
+      amount: params.amount,
+      currency: params.currency,
+      status: 'pending',
+      orderId: orderData.id,
+      raw: {
+        orderId: orderData.id,
+        approveUrl: approveLink,
+        status: orderData.status,
+        links: orderData.links
+      }
     };
   }
 
-  public async createPayment(params: CreatePaymentParams): Promise<ProviderPayment> {
-    if (params.currency === 'INR') {
-      throw new Error('PayPal does not support INR payments in AI RevenueOS. Please use Razorpay for INR.');
-    }
-
-    const orderId = `PAYPAL-ORD-${Date.now()}`;
-    const token = await this.getAccessToken();
-
-    if (!token) {
-      return {
-        id: orderId,
-        provider: 'paypal',
-        amount: params.amount,
-        currency: params.currency,
-        status: 'pending',
-        orderId,
-        checkoutUrl: `https://www.sandbox.paypal.com/checkoutnow?token=${orderId}`,
-        raw: {
-          clientId: this.getClientId(),
-          currency: params.currency,
-          amount: params.amount.toFixed(2),
-          description: params.description
-        }
-      };
-    }
-
-    try {
-      const response = await fetch(`${this.getBaseUrl()}/v2/checkout/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          intent: 'CAPTURE',
-          purchase_units: [
-            {
-              reference_id: `pu_${params.businessId}`,
-              description: params.description,
-              amount: {
-                currency_code: params.currency,
-                value: params.amount.toFixed(2)
-              },
-              custom_id: params.businessId
-            }
-          ]
-        })
-      });
-
-      const orderData = await response.json();
-      const approveLink = orderData.links?.find((l: any) => l.rel === 'approve')?.href;
-
-      return {
-        id: orderData.id,
-        provider: 'paypal',
-        amount: params.amount,
-        currency: params.currency,
-        status: 'pending',
-        orderId: orderData.id,
-        checkoutUrl: approveLink,
-        raw: orderData
-      };
-    } catch (err: any) {
-      console.warn('[PayPal] createPayment API error, using fallback:', err.message);
-      return {
-        id: orderId,
-        provider: 'paypal',
-        amount: params.amount,
-        currency: params.currency,
-        status: 'pending',
-        orderId
-      };
-    }
-  }
-
+  /**
+   * Capture a verified PayPal order after user approval
+   */
   public async verifyPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResult> {
-    const { paymentId, orderId } = params;
-    const targetId = orderId || paymentId;
-
-    if (!targetId) {
+    const orderId = params.orderId || params.paymentId;
+    if (!orderId) {
       return {
         verified: false,
         paymentId: '',
         transactionId: '',
         status: 'failed',
-        message: 'Missing PayPal Order ID / Payment ID'
-      };
-    }
-
-    const token = await this.getAccessToken();
-    if (token && orderId) {
-      try {
-        const response = await fetch(`${this.getBaseUrl()}/v2/checkout/orders/${orderId}/capture`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
-        });
-
-        const data = await response.json();
-        if (data.status === 'COMPLETED') {
-          const captureId = data.purchase_units?.[0]?.payments?.captures?.[0]?.id || orderId;
-          return {
-            verified: true,
-            paymentId: captureId,
-            transactionId: `PAY-PP-${captureId}`,
-            status: 'paid',
-            message: 'PayPal payment captured successfully'
-          };
-        }
-      } catch (err: any) {
-        console.warn('[PayPal] verifyPayment capture error:', err.message);
-      }
-    }
-
-    // Sandbox / Test Validation
-    const isTestValid = targetId.length > 5;
-    return {
-      verified: isTestValid,
-      paymentId: targetId,
-      transactionId: targetId.startsWith('PAY-') ? targetId : `PAY-PP-${targetId}`,
-      status: isTestValid ? 'paid' : 'failed',
-      message: isTestValid ? 'PayPal payment verified' : 'Invalid payment ID'
-    };
-  }
-
-  public async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
-    // CRITICAL PAYPAL INR RULE: PayPal does not support INR subscriptions
-    if (params.currency === 'INR') {
-      throw new Error(
-        'PayPal recurring subscriptions do NOT support INR. For Indian Rupee billing, Razorpay is strictly required.'
-      );
-    }
-
-    const subId = `I-PP-SUB-${Date.now()}`;
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
-
-    const token = await this.getAccessToken();
-    if (!token) {
-      return {
-        id: subId,
-        provider: 'paypal',
-        providerSubscriptionId: subId,
-        customerId: params.customerId || `cust_pp_${params.businessId}`,
-        planId: params.planId,
-        currency: params.currency,
-        amount: params.monthlyAmount,
-        status: 'active',
-        currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: nextDate.toISOString(),
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        approvalUrl: `https://www.sandbox.paypal.com/checkoutnow?subscription_id=${subId}`
+        message: 'Missing PayPal order ID for payment verification and capture'
       };
     }
 
     try {
-      // In live mode with token, call PayPal Subscriptions API
-      // Create product & plan if needed or use mapped plan ID
-      const response = await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          plan_id: `P-REVOS-${params.planId.toUpperCase()}-${params.currency}`,
-          custom_id: params.businessId,
-          application_context: {
-            brand_name: 'AI RevenueOS • AgentDesk Technologies',
-            locale: params.currency === 'GBP' ? 'en-GB' : 'en-US',
-            user_action: 'SUBSCRIBE_NOW',
-            return_url: params.returnUrl || 'https://ai-revenueos.internal/billing/success',
-            cancel_url: params.cancelUrl || 'https://ai-revenueos.internal/billing/cancel'
-          }
-        })
+      const token = await this.getAccessToken();
+
+      // First check order status
+      const getRes = await fetch(`${this.getBaseUrl()}/v2/checkout/orders/${orderId}`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      const data = await response.json();
-      const approveLink = data.links?.find((l: any) => l.rel === 'approve')?.href;
+      if (!getRes.ok) {
+        throw new Error(`Failed to retrieve PayPal order ${orderId}`);
+      }
+
+      const orderInfo = await getRes.json();
+      
+      let captureId = '';
+      let isCompleted = false;
+
+      // If already captured
+      const existingCapture = orderInfo.purchase_units?.[0]?.payments?.captures?.[0];
+      if (existingCapture && existingCapture.status === 'COMPLETED') {
+        captureId = existingCapture.id;
+        isCompleted = true;
+      } else if (orderInfo.status === 'APPROVED') {
+        // Capture the order
+        const captureRes = await fetch(`${this.getBaseUrl()}/v2/checkout/orders/${orderId}/capture`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!captureRes.ok) {
+          const capErr = await captureRes.json();
+          throw new Error(`PayPal capture error: ${capErr.message || JSON.stringify(capErr)}`);
+        }
+
+        const captureData = await captureRes.json();
+        const cap = captureData.purchase_units?.[0]?.payments?.captures?.[0];
+        if (cap && cap.status === 'COMPLETED') {
+          captureId = cap.id;
+          isCompleted = true;
+        } else if (captureData.status === 'COMPLETED') {
+          captureId = captureData.id;
+          isCompleted = true;
+        }
+      }
+
+      if (isCompleted) {
+        return {
+          verified: true,
+          paymentId: captureId || orderId,
+          transactionId: orderId,
+          status: 'paid',
+          message: 'PayPal payment successfully captured and verified on server.'
+        };
+      }
 
       return {
-        id: data.id || subId,
-        provider: 'paypal',
-        providerSubscriptionId: data.id || subId,
-        customerId: params.customerId,
-        planId: params.planId,
-        currency: params.currency,
-        amount: params.monthlyAmount,
-        status: data.status === 'ACTIVE' ? 'active' : 'pending',
-        currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: nextDate.toISOString(),
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        approvalUrl: approveLink,
-        raw: data
+        verified: false,
+        paymentId: orderId,
+        transactionId: orderId,
+        status: 'pending',
+        message: `PayPal order status is ${orderInfo.status}; payment has not been captured.`
       };
     } catch (err: any) {
-      console.warn('[PayPal] createSubscription error:', err.message);
       return {
-        id: subId,
-        provider: 'paypal',
-        providerSubscriptionId: subId,
-        customerId: params.customerId,
-        planId: params.planId,
-        currency: params.currency,
-        amount: params.monthlyAmount,
-        status: 'active',
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        verified: false,
+        paymentId: orderId,
+        transactionId: orderId,
+        status: 'failed',
+        message: `PayPal capture and verification failed: ${err.message}`
       };
     }
+  }
+
+  public async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {
+    return {
+      id: `paypal_cust_${Date.now()}`,
+      provider: 'paypal',
+      name: params.name,
+      email: params.email,
+      phone: params.phone,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  public async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
+    const token = await this.getAccessToken();
+
+    const subPayload = {
+      plan_id: params.planId,
+      custom_id: params.businessId,
+      application_context: {
+        brand_name: 'AgentDesk Technologies',
+        user_action: 'SUBSCRIBE_NOW'
+      }
+    };
+
+    const res = await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(subPayload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(`PayPal subscription creation failed: ${err.message || JSON.stringify(err)}`);
+    }
+
+    const subData = await res.json();
+    const nextBill = subData.billing_info?.next_billing_time || new Date(Date.now() + 30 * 86400000).toISOString();
+    return {
+      id: subData.id,
+      provider: 'paypal',
+      providerSubscriptionId: subData.id,
+      planId: params.planId,
+      currency: params.currency,
+      amount: params.monthlyAmount,
+      status: 'pending',
+      businessId: params.businessId,
+      currentPeriodStart: subData.create_time,
+      currentPeriodEnd: nextBill,
+      nextBillingDate: nextBill,
+      raw: subData
+    };
   }
 
   public async getSubscription(subscriptionId: string): Promise<ProviderSubscription> {
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 28);
     const token = await this.getAccessToken();
+    const res = await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
-    if (token) {
-      try {
-        const res = await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        const statusMap: Record<string, any> = {
-          ACTIVE: 'active',
-          APPROVAL_PENDING: 'pending',
-          APPROVED: 'pending',
-          SUSPENDED: 'paused',
-          CANCELLED: 'cancelled',
-          EXPIRED: 'expired'
-        };
-
-        return {
-          id: data.id,
-          provider: 'paypal',
-          providerSubscriptionId: data.id,
-          planId: 'growth',
-          currency: 'USD',
-          amount: 1497,
-          status: statusMap[data.status] || 'active',
-          nextBillingDate: data.billing_info?.next_billing_time ? new Date(data.billing_info.next_billing_time).toLocaleDateString('en-US') : nextDate.toLocaleDateString('en-US')
-        };
-      } catch (err: any) {
-        console.warn('[PayPal] getSubscription error:', err.message);
-      }
+    if (!res.ok) {
+      throw new Error(`Failed to fetch PayPal subscription ${subscriptionId}`);
     }
 
+    const data = await res.json();
+    const nextBilling = data.billing_info?.next_billing_time || new Date(Date.now() + 30 * 86400000).toISOString();
     return {
-      id: subscriptionId,
+      id: data.id,
       provider: 'paypal',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 1497,
-      status: 'active',
-      nextBillingDate: nextDate.toLocaleDateString('en-US')
+      providerSubscriptionId: data.id,
+      planId: data.plan_id,
+      currency: (data.billing_info?.last_payment?.amount?.currency_code as CurrencyCode) || 'USD',
+      amount: parseFloat(data.billing_info?.last_payment?.amount?.value || '0'),
+      status: data.status === 'ACTIVE' ? 'active' : (data.status === 'CANCELLED' ? 'cancelled' : 'pending'),
+      businessId: data.custom_id || '',
+      currentPeriodStart: data.start_time || new Date().toISOString(),
+      currentPeriodEnd: nextBilling,
+      nextBillingDate: nextBilling,
+      raw: data
     };
   }
 
-  public async updateSubscription(subscriptionId: string, planId: string, customPrice?: number): Promise<ProviderSubscription> {
-    const token = await this.getAccessToken();
-    if (token) {
-      try {
-        await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/revise`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            plan_id: `P-REVOS-${planId.toUpperCase()}-USD`
-          })
-        });
-      } catch (err: any) {
-        console.warn('[PayPal] updateSubscription revise error:', err.message);
-      }
-    }
-
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
-    return {
-      id: subscriptionId,
-      provider: 'paypal',
-      providerSubscriptionId: subscriptionId,
-      planId,
-      currency: 'USD',
-      amount: customPrice || 1497,
-      status: 'active',
-      nextBillingDate: nextDate.toLocaleDateString('en-US')
-    };
+  public async updateSubscription(subscriptionId: string, planId: string): Promise<ProviderSubscription> {
+    return this.getSubscription(subscriptionId);
   }
 
   public async pauseSubscription(subscriptionId: string): Promise<ProviderSubscription> {
     const token = await this.getAccessToken();
-    if (token) {
-      try {
-        await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/suspend`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ reason: 'Customer requested pause via AI RevenueOS portal' })
-        });
-      } catch (err: any) {
-        console.warn('[PayPal] pauseSubscription error:', err.message);
-      }
-    }
-
-    return {
-      id: subscriptionId,
-      provider: 'paypal',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 1497,
-      status: 'paused',
-      nextBillingDate: 'Paused'
-    };
+    await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/suspend`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ reason: 'Customer requested suspension' })
+    });
+    return this.getSubscription(subscriptionId);
   }
 
   public async resumeSubscription(subscriptionId: string): Promise<ProviderSubscription> {
     const token = await this.getAccessToken();
-    if (token) {
-      try {
-        await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/activate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ reason: 'Customer resumed subscription via AI RevenueOS portal' })
-        });
-      } catch (err: any) {
-        console.warn('[PayPal] resumeSubscription error:', err.message);
-      }
-    }
-
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
-    return {
-      id: subscriptionId,
-      provider: 'paypal',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 1497,
-      status: 'active',
-      nextBillingDate: nextDate.toLocaleDateString('en-US')
-    };
+    await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/activate`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ reason: 'Reactivation' })
+    });
+    return this.getSubscription(subscriptionId);
   }
 
-  public async cancelSubscription(subscriptionId: string, cancelImmediately = false): Promise<ProviderSubscription> {
+  public async cancelSubscription(subscriptionId: string): Promise<ProviderSubscription> {
     const token = await this.getAccessToken();
-    if (token) {
-      try {
-        await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/cancel`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({ reason: 'Customer cancelled subscription via portal' })
-        });
-      } catch (err: any) {
-        console.warn('[PayPal] cancelSubscription error:', err.message);
+    await fetch(`${this.getBaseUrl()}/v1/billing/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ reason: 'Customer cancelled subscription' })
+    });
+    return this.getSubscription(subscriptionId);
+  }
+
+  public async listPaymentMethods(_customerId: string, _businessId: string): Promise<SafePaymentMethod[]> {
+    return [];
+  }
+
+  public async setPrimaryPaymentMethod(_businessId: string, _paymentMethodId: string): Promise<boolean> {
+    return true;
+  }
+
+  public async removePaymentMethod(_businessId: string, _paymentMethodId: string): Promise<boolean> {
+    return true;
+  }
+
+  /**
+   * Real PayPal Invoicing API v2 integration
+   */
+  public async createInvoice(params: CreateInvoiceParams): Promise<ProviderInvoice> {
+    const token = await this.getAccessToken();
+
+    // 1. Generate invoice number
+    const numRes = await fetch(`${this.getBaseUrl()}/v2/invoicing/generate-next-invoice-number`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
+    });
+    let invoiceNumber = `INV-${Date.now()}`;
+    if (numRes.ok) {
+      const numData = await numRes.json();
+      invoiceNumber = numData.invoice_number || invoiceNumber;
     }
 
-    return {
-      id: subscriptionId,
-      provider: 'paypal',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 0,
-      status: 'cancelled',
-      nextBillingDate: 'None'
+    // 2. Draft invoice payload
+    const items = params.items && params.items.length > 0
+      ? params.items.map(it => ({
+          name: it.name,
+          quantity: it.quantity.toString(),
+          unit_amount: {
+            currency_code: params.currency,
+            value: it.amount.toFixed(2)
+          }
+        }))
+      : [
+          {
+            name: params.description || 'AgentDesk Platform Fee',
+            quantity: '1',
+            unit_amount: {
+              currency_code: params.currency,
+              value: params.amount.toFixed(2)
+            }
+          }
+        ];
+
+    const invoicePayload = {
+      detail: {
+        invoice_number: invoiceNumber,
+        invoice_date: new Date().toISOString().split('T')[0],
+        currency_code: params.currency,
+        note: 'Thank you for choosing AgentDesk AI RevenueOS.'
+      },
+      invoicer: {
+        name: { given_name: 'AgentDesk Technologies Inc.' }
+      },
+      items
     };
-  }
 
-  public async listPaymentMethods(customerId: string, businessId: string): Promise<SafePaymentMethod[]> {
-    return [
-      {
-        id: `pm_pp_${businessId.slice(0, 6)}_01`,
-        businessId,
-        provider: 'paypal',
-        providerPaymentMethodId: `vault_pp_${Date.now().toString().slice(-6)}`,
-        brand: 'PayPal Account',
-        last4: 'Primary PayPal Wallet',
-        isPrimary: true,
-        createdAt: new Date().toISOString()
-      }
-    ];
-  }
+    const invRes = await fetch(`${this.getBaseUrl()}/v2/invoicing/invoices`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(invoicePayload)
+    });
 
-  public async setPrimaryPaymentMethod(businessId: string, paymentMethodId: string): Promise<boolean> {
-    return true;
-  }
+    if (!invRes.ok) {
+      const err = await invRes.json();
+      throw new Error(`PayPal invoice creation failed: ${err.message || JSON.stringify(err)}`);
+    }
 
-  public async removePaymentMethod(businessId: string, paymentMethodId: string): Promise<boolean> {
-    return true;
-  }
+    const invData = await invRes.json();
+    const invoiceId = invData.id || invData.rel;
+    const viewUrl = invData.href || `https://www.paypal.com/invoice/p/#${invoiceId}`;
 
-  public async createInvoice(params: CreateInvoiceParams): Promise<ProviderInvoice> {
-    const invNum = `INV-PP-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     return {
-      id: `inv_pp_${Date.now()}`,
-      invoiceNumber: invNum,
+      id: invoiceId,
+      invoiceNumber,
       amount: params.amount,
       currency: params.currency,
-      status: 'PAID',
+      status: 'PENDING',
       provider: 'paypal',
-      hostedInvoiceUrl: `https://www.paypal.com/invoice/p/#${invNum}`,
+      hostedInvoiceUrl: viewUrl,
       createdAt: new Date().toISOString()
     };
   }
 
   public async getInvoice(invoiceId: string): Promise<ProviderInvoice> {
+    const token = await this.getAccessToken();
+    const res = await fetch(`${this.getBaseUrl()}/v2/invoicing/invoices/${invoiceId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to retrieve PayPal invoice ${invoiceId}`);
+    }
+
+    const data = await res.json();
     return {
-      id: invoiceId,
-      invoiceNumber: `INV-PP-${new Date().getFullYear()}-0001`,
-      amount: 1497,
-      currency: 'USD',
-      status: 'PAID',
+      id: data.id,
+      invoiceNumber: data.detail?.invoice_number || invoiceId,
+      amount: parseFloat(data.amount?.value || '0'),
+      currency: (data.amount?.currency_code as CurrencyCode) || 'USD',
+      status: data.status === 'PAID' ? 'PAID' : 'PENDING',
       provider: 'paypal',
-      createdAt: new Date().toISOString()
+      hostedInvoiceUrl: data.detail?.metadata?.recipient_view_url,
+      createdAt: data.detail?.invoice_date || new Date().toISOString()
     };
   }
 
   public async handleWebhook(body: any, headers: Record<string, string | string[] | undefined>): Promise<WebhookResult> {
-    const eventType = body.event_type;
-    const resource = body.resource;
-    const businessId = resource?.custom_id || resource?.custom;
-
-    if (eventType === 'PAYMENT.CAPTURE.COMPLETED' || eventType === 'CHECKOUT.ORDER.APPROVED') {
-      return {
-        handled: true,
-        event: eventType,
-        businessId,
-        paymentId: resource?.id,
-        status: 'paid',
-        data: resource
-      };
-    }
-
-    if (eventType === 'BILLING.SUBSCRIPTION.ACTIVATED' || eventType === 'BILLING.SUBSCRIPTION.RE-ACTIVATED') {
-      return {
-        handled: true,
-        event: eventType,
-        businessId,
-        subscriptionId: resource?.id,
-        status: 'active',
-        data: resource
-      };
-    }
-
-    if (eventType === 'BILLING.SUBSCRIPTION.SUSPENDED') {
-      return {
-        handled: true,
-        event: eventType,
-        businessId,
-        subscriptionId: resource?.id,
-        status: 'paused',
-        data: resource
-      };
-    }
-
-    if (eventType === 'BILLING.SUBSCRIPTION.CANCELLED' || eventType === 'BILLING.SUBSCRIPTION.EXPIRED') {
-      return {
-        handled: true,
-        event: eventType,
-        businessId,
-        subscriptionId: resource?.id,
-        status: 'cancelled',
-        data: resource
-      };
-    }
-
+    const rawBody = typeof body === 'string' ? body : JSON.stringify(body);
+    const result = await payPalWebhookService.handleWebhook(rawBody, body, headers);
     return {
-      handled: true,
-      event: eventType || 'paypal.event',
-      message: 'PayPal webhook received'
+      handled: result.status === 200,
+      event: body?.event_type || 'PAYPAL_EVENT',
+      status: result.status === 200 ? 'SUCCESS' : 'FAILED',
+      data: result.body
     };
   }
 }
+
+export const paypalProvider = new PayPalProvider();

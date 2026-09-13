@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Bot, 
-  LayoutDashboard, 
-  Sparkles, 
-  User, 
-  ShieldCheck, 
-  LogOut, 
   LogIn, 
-  Briefcase,
-  Building2,
-  ChevronDown,
+  LogOut, 
+  User, 
+  Sparkles, 
+  LayoutDashboard, 
+  ChevronDown, 
+  Building2, 
+  Briefcase, 
+  Tag, 
+  CreditCard,
+  ShieldAlert,
   Bell,
-  Globe
+  Check,
+  ArrowRight,
+  Menu,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Business, AppNotification } from '../types';
@@ -39,17 +44,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNotifications,
   unreadNotificationsCount = 0
 }) => {
-  const { currentUser, activeBusinessId, logout, switchRoleForDemo } = useAuth();
-  const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const { currentUser, currentTenant, activeBusinessId, setActiveBusinessId, logout, isPlatformAdmin } = useAuth();
   const [showTenantModal, setShowTenantModal] = useState(false);
   const [activeBusiness, setActiveBusiness] = useState<Business | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     const loadActiveBiz = async () => {
-      if (activeBusinessId) {
+      if (activeBusinessId && activeBusinessId !== 'platform') {
         const biz = await getBusinessById(activeBusinessId);
         if (isMounted) setActiveBusiness(biz);
+      } else {
+        if (isMounted) setActiveBusiness(null);
       }
     };
     loadActiveBiz();
@@ -63,79 +70,82 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [activeBusinessId]);
 
   const handleSelectBusinessFromModal = (selectedBiz: Business) => {
-    switchRoleForDemo(
-      'BUSINESS_ADMIN', 
-      selectedBiz.id, 
-      `${selectedBiz.name} Admin`, 
-      selectedBiz.supportEmail || `admin@${selectedBiz.id}.com`
-    );
+    setActiveBusinessId(selectedBiz.id);
     setShowTenantModal(false);
     onNavigate('dashboard');
   };
 
-  const isPlatformAdmin = currentUser?.role === 'PLATFORM_ADMIN';
+  const handleLogout = async () => {
+    await logout();
+    onNavigate('login');
+  };
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-slate-950/90 backdrop-blur-md border-b border-slate-800/80 text-white px-4 sm:px-8 py-3 transition-all">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Brand Logo */}
-          <div 
-            onClick={() => onNavigate('landing')}
-            className="flex items-center gap-3 cursor-pointer group"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-105 transition-transform">
-              <Bot className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-100 to-blue-200 bg-clip-text text-transparent">
-                  AI RevenueOS
-                </span>
-              </div>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block -mt-0.5">
-                ONE AI SYSTEM FOR EVERY CUSTOMER INTERACTION
-              </span>
-            </div>
-          </div>
-
-          {/* Center Nav Links - Bento Pill Bar */}
-          <nav className="hidden lg:flex items-center gap-1.5 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800/90 shadow-inner">
+      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 transition-all font-sans">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          {/* Logo & Platform Name */}
+          <div className="flex items-center gap-3">
             <button
               onClick={() => onNavigate('landing')}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                currentView === 'landing' 
-                  ? 'bg-blue-600 text-white shadow-md' 
+              className="flex items-center gap-2.5 text-left group cursor-pointer"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
+                  AgentDesk
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wide">
+                    RevenueOS
+                  </span>
+                </span>
+                <span className="text-[10px] text-slate-400 block -mt-0.5">Autonomous Receptionist & CRM</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="hidden md:flex items-center gap-1">
+            <button
+              onClick={() => onNavigate('landing')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                currentView === 'landing'
+                  ? 'text-white bg-slate-800'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              Overview
+              Home
             </button>
             <button
               onClick={() => onNavigate('pricing')}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
-                currentView === 'pricing' 
-                  ? 'bg-blue-600 text-white shadow-md' 
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                currentView === 'pricing'
+                  ? 'text-white bg-slate-800'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-              <span>Plans & Pricing</span>
+              Pricing
             </button>
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'dashboard' 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              <span>SaaS Console</span>
-            </button>
+
+            {/* If logged in, show Dashboard link */}
+            {currentUser && (
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
+                  currentView === 'dashboard'
+                    ? 'text-white bg-slate-800'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" />
+                <span>{isPlatformAdmin ? 'Platform Control Plane' : 'Business Console'}</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenDemoWidget}
-              className="px-4 py-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
               <span>Test AI Receptionist</span>
@@ -148,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onOpenCopilot && (
               <button
                 onClick={onOpenCopilot}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                 <span className="hidden sm:inline">AI Copilot</span>
@@ -171,149 +181,148 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Scope / Role Switcher Menu */}
-            <div className="relative">
-              <button
-                onClick={() => setShowRoleMenu(!showRoleMenu)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-xl border flex items-center gap-2 transition-all cursor-pointer ${
-                  isPlatformAdmin
-                    ? 'bg-purple-950/60 hover:bg-purple-900/60 text-purple-200 border-purple-800/80 shadow-xs'
-                    : 'bg-slate-800 hover:bg-slate-700 text-blue-300 border-slate-700 shadow-xs'
-                }`}
-                title="Change Admin Scope"
-              >
-                {isPlatformAdmin ? (
-                  <Briefcase className="w-3.5 h-3.5 text-purple-400" />
-                ) : (
-                  <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                )}
-                
-                <div className="flex items-center gap-1 text-left">
-                  <span className="font-bold text-white">
-                    {isPlatformAdmin ? 'Platform Admin' : 'Business Admin'}
-                  </span>
-                  {!isPlatformAdmin && activeBusiness?.name && (
-                    <span className="hidden sm:inline text-slate-300 text-[11px] font-normal truncate max-w-[110px]">
-                      • {activeBusiness.name}
-                    </span>
-                  )}
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
-              </button>
-
-              {showRoleMenu && (
-                <div 
-                  className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 text-xs animate-fadeIn"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div className="px-2.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 mb-1.5">
-                    Select Admin Scope
-                  </div>
-                  
-                  {/* Option 1: Platform Admin */}
-                  <button
-                    onClick={() => {
-                      switchRoleForDemo('PLATFORM_ADMIN');
-                      setShowRoleMenu(false);
-                      onNavigate('dashboard');
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer ${
-                      isPlatformAdmin 
-                        ? 'bg-purple-600/20 text-purple-200 border border-purple-500/30' 
-                        : 'hover:bg-slate-800 text-slate-200'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
-                      <Briefcase className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-100 flex items-center gap-1.5">
-                        <span>Platform Admin</span>
-                        {isPlatformAdmin && (
-                          <span className="text-[9px] bg-purple-500/30 text-purple-300 px-1.5 py-0.2 rounded-full font-medium">Active</span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-400">SaaS Owner • All Workspaces</div>
-                    </div>
-                  </button>
-
-                  <div className="my-1 border-t border-slate-800/80" />
-
-                  {/* Option 2: Business Admin */}
-                  <button
-                    onClick={() => {
-                      setShowRoleMenu(false);
-                      if (onOpenTenantSelect) {
-                        onOpenTenantSelect();
-                      } else {
-                        setShowTenantModal(true);
-                      }
-                    }}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 transition-all cursor-pointer ${
-                      !isPlatformAdmin 
-                        ? 'bg-blue-600/20 text-blue-200 border border-blue-500/30' 
-                        : 'hover:bg-slate-800 text-slate-200'
-                    }`}
-                  >
-                    <div className="w-8 h-8 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-100 flex items-center gap-1.5">
-                        <span>Business Admin</span>
-                        {!isPlatformAdmin && (
-                          <span className="text-[9px] bg-blue-500/30 text-blue-300 px-1.5 py-0.2 rounded-full font-medium">Active</span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        {!isPlatformAdmin && activeBusiness?.name ? `Tenant: ${activeBusiness.name}` : 'Select Business...'}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              )}
-            </div>
-
+            {/* Authenticated User Status vs Public Auth CTAs */}
             {currentUser ? (
               <div className="flex items-center gap-2">
+                {/* Role & Workspace Badge */}
+                <div className={`px-2.5 py-1.5 text-xs font-medium rounded-xl border flex items-center gap-2 ${
+                  isPlatformAdmin
+                    ? 'bg-purple-950/60 text-purple-200 border-purple-800/80 shadow-xs'
+                    : 'bg-slate-800 text-blue-300 border-slate-700 shadow-xs'
+                }`}>
+                  {isPlatformAdmin ? (
+                    <Briefcase className="w-3.5 h-3.5 text-purple-400" />
+                  ) : (
+                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                  )}
+                  <span className="font-bold text-white text-[11px]">
+                    {isPlatformAdmin ? 'Platform Admin' : (activeBusiness?.name || currentUser.displayName || 'Business User')}
+                  </span>
+
+                  {/* If Platform Admin, allow opening Tenant Workspace inspector */}
+                  {isPlatformAdmin && onOpenTenantSelect && (
+                    <button
+                      onClick={onOpenTenantSelect}
+                      title="Inspect Specific Tenant Workspace"
+                      className="ml-1 text-[10px] bg-purple-900 hover:bg-purple-800 text-purple-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                    >
+                      Inspect Tenant
+                    </button>
+                  )}
+                </div>
+
+                {/* Sign Out Button */}
                 <button
-                  onClick={() => onNavigate('dashboard')}
-                  className="hidden sm:flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg border border-slate-700 text-slate-200 cursor-pointer"
+                  onClick={handleLogout}
+                  title="Sign out of AgentDesk"
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
                 >
-                  <User className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="max-w-[120px] truncate">{currentUser.displayName}</span>
-                </button>
-                <button
-                  onClick={() => logout()}
-                  title="Log out"
-                  className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign Out</span>
                 </button>
               </div>
             ) : (
-              <button
-                onClick={onOpenAuth}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-4 py-2 rounded-lg shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Sign In / Register</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onNavigate('login')}
+                  className="px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/70 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+
+                <button
+                  onClick={() => onNavigate('get-started')}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             )}
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Toggle Navigation Menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-800 bg-slate-900/95 backdrop-blur-md px-4 py-3 space-y-2">
+            <button
+              onClick={() => { onNavigate('landing'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                currentView === 'landing' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              Home
+            </button>
+            <button
+              onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                currentView === 'pricing' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              Pricing
+            </button>
+            {currentUser && (
+              <button
+                onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                  currentView === 'dashboard' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <LayoutDashboard className="w-4 h-4" />
+                <span>{isPlatformAdmin ? 'Platform Control Plane' : 'Business Console'}</span>
+              </button>
+            )}
+            <button
+              onClick={() => { onOpenDemoWidget(); setMobileMenuOpen(false); }}
+              className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-400" />
+              <span>Test AI Receptionist</span>
+            </button>
+            {currentUser ? (
+              <button
+                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out ({isPlatformAdmin ? 'Platform Admin' : currentUser.email})</span>
+              </button>
+            ) : (
+              <div className="pt-2 border-t border-slate-800/80 flex gap-2">
+                <button
+                  onClick={() => { onNavigate('login'); setMobileMenuOpen(false); }}
+                  className="flex-1 py-2 text-center text-xs font-bold text-slate-300 bg-slate-800 rounded-xl"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => { onNavigate('get-started'); setMobileMenuOpen(false); }}
+                  className="flex-1 py-2 text-center text-xs font-bold text-white bg-blue-600 rounded-xl"
+                >
+                  Get Started
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
-      {/* Tenant Selection Modal */}
+      {/* Tenant Selection Modal (Only when explicitly opened by Platform Admin or explicit action) */}
       <TenantSelectModal
         isOpen={showTenantModal}
         onClose={() => setShowTenantModal(false)}
         onSelectBusiness={handleSelectBusinessFromModal}
         currentBusinessId={activeBusinessId}
-        isPlatformAdmin={isPlatformAdmin}
       />
     </>
   );
 };
-
-

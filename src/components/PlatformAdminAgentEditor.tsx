@@ -398,7 +398,7 @@ export const PlatformAdminAgentEditor: React.FC<PlatformAdminAgentEditorProps> =
       // 5. Audit Log
       await addAuditLog({
         businessId: PLATFORM_ADMIN_TENANT_ID,
-        actorEmail: 'superadmin@agentdesk.ai',
+        actorEmail: 'admin',
         action: 'UPDATE_PLATFORM_ADMIN_AGENT',
         entity: 'AgentDesk Super Admin Agent',
         details: `Updated Platform Admin Agent "${agentName}" settings, instructions, personality, and platform metadata.`

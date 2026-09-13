@@ -1,8 +1,8 @@
-# AI RevenueOS — Real Billing & Payment Architecture Documentation
+# AgentDesk — Billing & Payment Architecture Documentation
 
 ## 1. Executive Summary
 
-AI RevenueOS provides an enterprise-grade, multi-tenant billing and payment system integrating **Razorpay** and **PayPal** for international recurring subscriptions and one-time implementation setup fees.
+AgentDesk provides an enterprise-grade, multi-tenant billing and payment system integrating **Razorpay** as the sole payment gateway for international recurring subscriptions and one-time implementation setup fees across INR, USD, and GBP.
 
 ### Supported Currencies
 The billing system strictly enforces support for three primary operational currencies:
@@ -10,7 +10,7 @@ The billing system strictly enforces support for three primary operational curre
 2. **INR (₹)** — Indian Rupee
 3. **GBP (£)** — British Pound Sterling
 
-> **Currency Restriction Directive**: AI RevenueOS strictly forbids adding unsupported currencies (such as EUR, CAD, AUD, AED, SAR, SGD, NZD). All pricing models and invoice ledgers operate exclusively in USD, INR, and GBP.
+> **Currency Restriction Directive**: AgentDesk strictly forbids adding unsupported currencies. All pricing models and invoice ledgers operate exclusively in USD, INR, and GBP.
 
 ---
 
@@ -18,14 +18,7 @@ The billing system strictly enforces support for three primary operational curre
 
 | Provider | Supported Currencies | Recurring Subscriptions | One-Time Payments | Key Mechanism |
 | :--- | :--- | :--- | :--- | :--- |
-| **Razorpay** | `INR`, `USD`, `GBP` | **Supported** (e-Mandates, Cards) | **Supported** (Cards, UPI, NetBanking) | HTTP Basic Auth, HMAC-SHA256 Signatures |
-| **PayPal** | `USD`, `GBP` | **Supported** (Vault Billing Agreements) | **Supported** (Orders API v2) | OAuth2 Client Credentials Bearer Tokens |
-
-### ⚠️ Strict PayPal INR Rule
-**PayPal recurring subscriptions do NOT support INR**.
-- Any attempt to create an INR subscription or transaction via PayPal is rejected by the server with an explicit validation error:
-  `"PayPal does not support INR subscriptions. Please select Razorpay for INR billing."`
-- In the user interface, selecting `INR` dynamically recommends Razorpay and disables PayPal recurring options.
+| **Razorpay** | `INR`, `USD`, `GBP` | **Supported** (e-Mandates, International Cards) | **Supported** (Cards, UPI, NetBanking) | HTTP Basic Auth, HMAC-SHA256 Signatures |
 
 ---
 
@@ -35,13 +28,12 @@ The billing system strictly enforces support for three primary operational curre
 ├── /src/server/billing/
 │   ├── paymentProvider.ts     # Provider abstraction interface and shared data models
 │   ├── razorpayProvider.ts    # Razorpay API client with HMAC-SHA256 signature verification
-│   ├── paypalProvider.ts      # PayPal v2 API client with OAuth2 token caching and INR guards
 │   ├── billingService.ts      # Multi-tenant state engine, transaction ledger, and idempotency store
 │   └── billingRouter.ts       # Express router mounting /api/billing/* and /api/webhooks/*
 ├── /src/components/
 │   ├── BillingDashboard.tsx   # Live subscription overview, usage tracking, statements & payment methods
 │   └── PaymentCheckoutModal.tsx # Interactive tokenized checkout for setup fees and plan changes
-└── /.env.example              # Credentials reference for Razorpay & PayPal production keys
+└── /.env.example              # Credentials reference for Razorpay production keys
 ```
 
 ---
@@ -56,11 +48,11 @@ The billing system strictly enforces support for three primary operational curre
 
 ### Checkout & Subscription Lifecycle
 - `POST /api/billing/create-checkout-session`
-  - Initializes an implementation fee order or monthly subscription stream with the chosen provider.
+  - Initializes an implementation fee order or monthly subscription stream with Razorpay.
 - `POST /api/billing/verify-payment`
   - Server-side verification of payment tokens and signatures; activates subscription and issues an invoice ledger entry.
 - `POST /api/billing/subscription/update`
-  - Upgrades or downgrades tenant plan tier (Starter, Growth, Enterprise, Enterprise Custom).
+  - Upgrades or downgrades tenant plan tier (Starter, Growth, Scale, Enterprise, Enterprise Custom).
 - `POST /api/billing/subscription/pause`
   - Pauses automated recurring fee collection.
 - `POST /api/billing/subscription/resume`
@@ -79,17 +71,15 @@ The billing system strictly enforces support for three primary operational curre
 ### Webhook Ingestion
 - `POST /api/webhooks/razorpay` (or `POST /api/billing/webhooks/razorpay`)
   - Handles `payment.captured`, `subscription.activated`, `subscription.paused`, `subscription.cancelled` with HMAC signature verification and idempotency check.
-- `POST /api/webhooks/paypal` (or `POST /api/billing/webhooks/paypal`)
-  - Handles `PAYMENT.CAPTURE.COMPLETED`, `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.CANCELLED`.
 
 ---
 
 ## 5. Security & Multi-Tenant Isolation
 
 1. **Zero Raw Card Storage**:
-   AI RevenueOS strictly adheres to PCI-DSS Level 1 principles. The database and client application never store raw credit card numbers, CVVs, or bank credentials. All payment methods are referenced using provider vault tokens (`tok_...`, `vault_...`).
+   AgentDesk strictly adheres to PCI-DSS Level 1 principles. The database and client application never store raw credit card numbers, CVVs, or bank credentials. All payment methods are referenced using provider vault tokens (`tok_...`, `vault_...`).
 2. **Secret Isolation**:
-   `RAZORPAY_KEY_SECRET` and `PAYPAL_CLIENT_SECRET` are strictly kept server-side inside `server.ts` and `billingService.ts` and are never exposed to the client.
+   `RAZORPAY_KEY_SECRET` is strictly kept server-side inside `server.ts` and `billingService.ts` and is never exposed to the client.
 3. **Multi-Tenant Scoping**:
    All billing records, transactions, payment methods, and invoices are strictly indexed and partitioned by `businessId`.
 4. **Idempotent Webhooks**:
@@ -106,12 +96,6 @@ Add the following environment variables to your Cloud Run container or `.env` co
 RAZORPAY_KEY_ID="rzp_live_..."
 RAZORPAY_KEY_SECRET="..."
 RAZORPAY_WEBHOOK_SECRET="..."
-
-# PayPal Credentials
-PAYPAL_CLIENT_ID="A..."
-PAYPAL_CLIENT_SECRET="..."
-PAYPAL_ENVIRONMENT="live" # or "sandbox"
-PAYPAL_WEBHOOK_ID="..."
 ```
 
-When credentials are not set, AI RevenueOS automatically activates its **Sandbox Simulation Mode**, allowing end-to-end testing of payments, subscriptions, and invoice generation without connecting to live bank rails.
+When credentials are not set, AgentDesk automatically activates its **Sandbox Simulation Mode**, allowing end-to-end testing of payments, subscriptions, and invoice generation without connecting to live bank rails.

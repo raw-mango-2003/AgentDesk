@@ -26,6 +26,15 @@ import { BillingDashboard } from './components/BillingDashboard';
 import { PlanUpgradeModal } from './components/PlanUpgradeModal';
 import { LocalizationSettings } from './components/LocalizationSettings';
 import { WidgetSnippetDashboard } from './components/WidgetSnippetDashboard';
+import { BusinessLoginPage } from './components/auth/BusinessLoginPage';
+import { PlatformAdminLoginPage } from './components/auth/PlatformAdminLoginPage';
+import { BusinessOnboardingFunnel } from './components/auth/BusinessOnboardingFunnel';
+import { AgentDeskCheckout } from './components/AgentDeskCheckout';
+import { BusinessAccountSettings } from './components/auth/BusinessAccountSettings';
+import { ForcedPasswordChangePage } from './components/auth/ForcedPasswordChangePage';
+import { AccountSetupPage } from './components/auth/AccountSetupPage';
+import { PasswordResetPage } from './components/auth/PasswordResetPage';
+import { EmailVerificationPage } from './components/auth/EmailVerificationPage';
 import { Business, AppNotification } from './types';
 import { getCountryMetadata } from './lib/localization';
 import { 
@@ -62,7 +71,8 @@ import {
   Bot,
   Globe,
   CreditCard,
-  Code
+  Code,
+  KeyRound
 } from 'lucide-react';
 
 export type SaaSNavTab = 
@@ -83,17 +93,26 @@ export type SaaSNavTab =
   | 'billing'
   | 'localization'
   | 'embed'
-  | 'admin';
+  | 'admin'
+  | 'account_credentials';
+
+export type AppView = 'landing' | 'pricing' | 'login' | 'platform_login' | 'onboarding' | 'checkout' | 'dashboard' | 'setup_account' | 'reset_password' | 'verify_email';
 
 export default function App() {
-  const { currentUser, activeBusinessId, setActiveBusinessId } = useAuth();
+  const { currentUser, activeBusinessId, setActiveBusinessId, refreshAuth } = useAuth();
   
-  // Initialize view from URL if /pricing, /billing, /admin, or /embed
-  const getInitialView = (): 'landing' | 'pricing' | 'dashboard' => {
+  // Initialize view from URL
+  const getInitialView = (): AppView => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
+      if (path === '/setup-account' || hash.startsWith('#setup-account') || hash.startsWith('#/setup-account')) return 'setup_account';
+      if (path === '/reset-password' || hash.startsWith('#reset-password') || hash.startsWith('#/reset-password')) return 'reset_password';
+      if (path === '/verify-email' || hash.startsWith('#verify-email') || hash.startsWith('#/verify-email')) return 'verify_email';
       if (path === '/pricing' || hash === '#pricing') return 'pricing';
+      if (path === '/login' || hash === '#login') return 'login';
+      if (path === '/platform/login' || hash === '#platform-login' || hash === '#platform/login') return 'platform_login';
+      if (path === '/get-started' || path === '/signup' || path === '/checkout' || hash === '#get-started' || hash === '#signup' || hash === '#checkout') return 'checkout';
       if (path === '/billing' || hash === '#billing' || path.startsWith('/dashboard') || path.startsWith('/admin') || hash.startsWith('#admin') || path === '/embed' || hash === '#embed') return 'dashboard';
     }
     return 'landing';
@@ -121,7 +140,7 @@ export default function App() {
     return 'workspaces';
   };
 
-  const [currentView, setCurrentView] = useState<'landing' | 'pricing' | 'dashboard'>(getInitialView);
+  const [currentView, setCurrentView] = useState<AppView>(getInitialView);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
   const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs'>(getInitialAdminSubTab);
   
@@ -152,6 +171,12 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       if (path === '/pricing' || hash === '#pricing') {
         setCurrentView('pricing');
+      } else if (path === '/login' || hash === '#login') {
+        setCurrentView('login');
+      } else if (path === '/platform/login' || hash === '#platform-login' || hash === '#platform/login') {
+        setCurrentView('platform_login');
+      } else if (path === '/get-started' || path === '/signup' || hash === '#get-started' || hash === '#signup') {
+        setCurrentView('onboarding');
       } else if (path === '/billing' || hash === '#billing') {
         setCurrentView('dashboard');
         setActiveTab('billing');
@@ -165,8 +190,10 @@ export default function App() {
       } else if (path.startsWith('/admin') || hash.startsWith('#admin')) {
         setCurrentView('dashboard');
         setActiveTab('admin');
+      } else if (path.startsWith('/dashboard') || hash.startsWith('#dashboard')) {
+        setCurrentView('dashboard');
       } else if (path === '/' || path === '') {
-        // preserve current or default to landing
+        setCurrentView('landing');
       }
     };
 
@@ -186,6 +213,18 @@ export default function App() {
     let isMounted = true;
     async function loadWorkspaceData() {
       if (!activeBusinessId) return;
+
+      if (activeBusinessId === 'platform') {
+        const list = await getAllBusinesses();
+        if (isMounted) {
+          setAllBusinesses(list);
+          if (list.length > 0 && !business) {
+            setBusiness(list[0]);
+          }
+        }
+        return;
+      }
+
       const biz = await getBusinessById(activeBusinessId);
       if (isMounted) setBusiness(biz);
       const list = await getAllBusinesses();
@@ -206,11 +245,34 @@ export default function App() {
   }, [activeBusinessId, currentUser]);
 
   const handleNavigate = (view: string) => {
-    if (view === 'landing' || view === 'dashboard' || view === 'pricing') {
-      setCurrentView(view as 'landing' | 'pricing' | 'dashboard');
+    let target = view;
+    if (view === 'get-started' || view === 'signup') target = 'checkout';
+
+    const validViews: AppView[] = ['landing', 'pricing', 'login', 'platform_login', 'onboarding', 'checkout', 'dashboard'];
+    if (validViews.includes(target as AppView)) {
+      if (target === 'dashboard' && !currentUser) {
+        setCurrentView('login');
+        if (typeof window !== 'undefined' && window.history?.pushState) {
+          window.history.pushState(null, '', '/login');
+        }
+        return;
+      }
+
+      setCurrentView(target as AppView);
       if (typeof window !== 'undefined' && window.history?.pushState) {
-        const newPath = view === 'pricing' ? '/pricing' : view === 'landing' ? '/' : '/dashboard';
-        window.history.pushState(null, '', newPath);
+        const pathMap: Record<AppView, string> = {
+          landing: '/',
+          pricing: '/pricing',
+          login: '/login',
+          platform_login: '/platform/login',
+          onboarding: '/get-started',
+          checkout: '/get-started',
+          dashboard: '/dashboard',
+          setup_account: '/setup-account',
+          reset_password: '/reset-password',
+          verify_email: '/verify-email'
+        };
+        window.history.pushState(null, '', pathMap[target as AppView] || '/');
       }
     }
   };
@@ -248,16 +310,140 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {currentView === 'landing' ? (
+        {currentView === 'setup_account' ? (
+          <AccountSetupPage
+            onSuccess={(businessId) => {
+              if (businessId) {
+                setActiveBusinessId(businessId);
+              }
+              refreshAuth();
+              handleNavigate('dashboard');
+            }}
+            onNavigateLogin={() => handleNavigate('login')}
+          />
+        ) : currentView === 'reset_password' ? (
+          <PasswordResetPage
+            onSuccess={() => handleNavigate('login')}
+            onNavigateLogin={() => handleNavigate('login')}
+          />
+        ) : currentView === 'verify_email' ? (
+          <EmailVerificationPage
+            onSuccess={() => handleNavigate('login')}
+            onNavigateLogin={() => handleNavigate('login')}
+          />
+        ) : currentView === 'login' ? (
+          <BusinessLoginPage
+            onLoginSuccess={() => handleNavigate('dashboard')}
+            onNavigateSignup={() => handleNavigate('onboarding')}
+            onNavigatePlatformLogin={() => handleNavigate('platform_login')}
+            onCancel={() => handleNavigate('landing')}
+          />
+        ) : currentView === 'platform_login' ? (
+          <PlatformAdminLoginPage
+            onLoginSuccess={() => {
+              setActiveTab('admin');
+              setAdminSubTab('workspaces');
+              handleNavigate('dashboard');
+            }}
+            onNavigateBusinessLogin={() => handleNavigate('login')}
+            onCancel={() => handleNavigate('landing')}
+          />
+        ) : currentView === 'checkout' || currentView === 'onboarding' ? (
+          <AgentDeskCheckout
+            initialPlanId="starter"
+            isModal={false}
+            onNavigateHome={() => handleNavigate('landing')}
+            onNavigateLogin={() => handleNavigate('login')}
+            onSuccess={async (provisioned) => {
+              const list = await getAllBusinesses();
+              setAllBusinesses(list);
+              setActiveBusinessId(provisioned.tenantId);
+              setCurrentView('dashboard');
+              setActiveTab('overview');
+            }}
+          />
+        ) : currentView === 'landing' ? (
           <LandingPage
             onOpenDemo={() => setShowDemoWidget(true)}
-            onOpenAuth={() => setShowAuthModal(true)}
-            onOpenDashboard={() => setCurrentView('dashboard')}
+            onOpenAuth={() => handleNavigate('login')}
+            onNavigateGetStarted={() => handleNavigate('onboarding')}
+            onNavigateLogin={() => handleNavigate('login')}
+            onNavigatePlatformLogin={() => handleNavigate('platform_login')}
+            onOpenDashboard={(tenantId) => {
+              if (tenantId) {
+                setActiveBusinessId(tenantId);
+              }
+              handleNavigate('dashboard');
+            }}
+            onOpenPricing={() => handleNavigate('pricing')}
+            onWorkspaceCreated={async (tenantId) => {
+              const list = await getAllBusinesses();
+              setAllBusinesses(list);
+              setActiveBusinessId(tenantId);
+              setCurrentView('dashboard');
+              setActiveTab('overview');
+            }}
           />
         ) : currentView === 'pricing' ? (
           <PricingPage
-            onOpenDashboard={() => setCurrentView('dashboard')}
+            onOpenDashboard={(tenantId) => {
+              if (tenantId) {
+                setActiveBusinessId(tenantId);
+              }
+              handleNavigate('dashboard');
+            }}
             onOpenDemo={() => setShowDemoWidget(true)}
+            onWorkspaceCreated={async (tenantId) => {
+              const list = await getAllBusinesses();
+              setAllBusinesses(list);
+              setActiveBusinessId(tenantId);
+              setCurrentView('dashboard');
+              setActiveTab('overview');
+            }}
+          />
+        ) : !currentUser ? (
+          <BusinessLoginPage
+            onLoginSuccess={() => handleNavigate('dashboard')}
+            onNavigateSignup={() => handleNavigate('onboarding')}
+            onNavigatePlatformLogin={() => handleNavigate('platform_login')}
+            onCancel={() => handleNavigate('landing')}
+          />
+        ) : currentUser.mustChangePassword ? (
+          <ForcedPasswordChangePage
+            onSuccess={async () => {
+              await refreshAuth();
+              setCurrentView('dashboard');
+              setActiveTab('overview');
+            }}
+          />
+        ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'admin' ? (
+          <PlatformAdminDashboard
+            initialTab={adminSubTab as any}
+            allBusinesses={allBusinesses}
+            onSelectBusinessWorkspace={(bizId) => {
+              setActiveBusinessId(bizId);
+              setActiveTab('overview');
+            }}
+            onSwitchToBusinessConsole={() => {
+              if (allBusinesses.length > 0 && (!business || business.id === 'platform')) {
+                setActiveBusinessId(allBusinesses[0].id);
+              }
+              setActiveTab('overview');
+            }}
+            onTenantUpdated={(updatedBiz) => {
+              if (activeBusinessId === updatedBiz.id) {
+                setBusiness(updatedBiz);
+              }
+              setAllBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
+            }}
+            onTenantDeleted={async (deletedBizId) => {
+              const list = await getAllBusinesses();
+              setAllBusinesses(list);
+              if (activeBusinessId === deletedBizId) {
+                const nextId = list.length > 0 ? list[0].id : 'summit-home-services';
+                setActiveBusinessId(nextId);
+              }
+            }}
           />
         ) : (
           <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
@@ -625,7 +811,20 @@ export default function App() {
                   <span>Deploy & Embed</span>
                 </button>
 
-                {/* 18. Platform Admin (Only if Platform Admin) */}
+                {/* 18. Account & Credentials (Business Owner Self-Service) */}
+                <button
+                  onClick={() => setActiveTab('account_credentials')}
+                  className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'account_credentials'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                  }`}
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Account & Credentials</span>
+                </button>
+
+                {/* 19. Platform Admin (Only if Platform Admin) */}
                 {currentUser?.role === 'PLATFORM_ADMIN' && (
                   <button
                     onClick={() => {
@@ -647,27 +846,21 @@ export default function App() {
 
             {/* Dashboard Content Container */}
             {activeTab === 'admin' ? (
-              <PlatformAdminDashboard
-                initialTab={adminSubTab}
-                onSelectBusinessWorkspace={(bizId) => {
-                  setActiveBusinessId(bizId);
-                  setActiveTab('overview');
-                }}
-                onTenantUpdated={(updatedBiz) => {
-                  if (activeBusinessId === updatedBiz.id) {
-                    setBusiness(updatedBiz);
-                  }
-                  setAllBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
-                }}
-                onTenantDeleted={async (deletedBizId) => {
-                  const list = await getAllBusinesses();
-                  setAllBusinesses(list);
-                  if (activeBusinessId === deletedBizId) {
-                    const nextId = list.length > 0 ? list[0].id : 'summit-home-services';
-                    setActiveBusinessId(nextId);
-                  }
-                }}
-              />
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-12 text-center max-w-lg mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Access Denied (403 Forbidden)</h3>
+                <p className="text-xs text-slate-400 mb-6">
+                  The Platform Multi-Tenant Control Plane is restricted exclusively to authenticated Platform Administrators. Your account role ({currentUser?.role}) is not authorized.
+                </p>
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
+                >
+                  Return to Business Console
+                </button>
+              </div>
             ) : activeTab === 'embed' ? (
               <WidgetSnippetDashboard
                 business={business}
@@ -751,6 +944,10 @@ export default function App() {
                     onUpdateBusiness={(updated) => setBusiness(updated)}
                   />
                 )}
+
+                {activeTab === 'account_credentials' && (
+                  <BusinessAccountSettings business={business} />
+                )}
               </div>
             ) : (
               <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
@@ -827,7 +1024,15 @@ export default function App() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onSuccess={() => setCurrentView('dashboard')}
+        onSuccess={(targetView) => {
+          if (targetView === 'onboarding') {
+            handleNavigate('onboarding');
+          } else {
+            handleNavigate('dashboard');
+          }
+        }}
+        onNavigateGetStarted={() => handleNavigate('onboarding')}
+        onNavigatePlatformLogin={() => handleNavigate('platform_login')}
       />
     </div>
   );

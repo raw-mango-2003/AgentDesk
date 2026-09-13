@@ -30,7 +30,11 @@ import {
   Bot,
   MessageSquare,
   Shield,
-  HelpCircle
+  HelpCircle,
+  CreditCard,
+  KeyRound,
+  Send,
+  Sliders
 } from 'lucide-react';
 import { Business, AuditLog, AIAgent } from '../types';
 import { 
@@ -57,28 +61,69 @@ import {
   formatPrice 
 } from '../data/pricing';
 import { PlatformAdminAgentEditor } from './PlatformAdminAgentEditor';
+import { BusinessLoginManagement } from './admin/BusinessLoginManagement';
+import { PlatformIntegrationsManager } from './admin/PlatformIntegrationsManager';
+import { PlatformSystemHealth } from './admin/PlatformSystemHealth';
+import { PlatformMonitoringLogs } from './admin/PlatformMonitoringLogs';
+import { PlatformAutomationsDashboard } from './admin/PlatformAutomationsDashboard';
+import { PlatformMultiCurrencyManager } from './admin/PlatformMultiCurrencyManager';
+import { PlatformPayPalWebhookSettings } from './admin/PlatformPayPalWebhookSettings';
+import { PlatformAdminSidebar, PlatformAdminSection } from './admin/PlatformAdminSidebar';
+import { PlatformAdminDashboardOverview } from './admin/PlatformAdminDashboardOverview';
+import { PlatformPaymentsSection } from './admin/PlatformPaymentsSection';
+import { PlatformCouponsSection } from './admin/PlatformCouponsSection';
+import { PlatformInvoicesSection } from './admin/PlatformInvoicesSection';
+import { AdminErrorBoundary } from './admin/AdminErrorBoundary';
+import { useAuth } from '../context/AuthContext';
 
 interface PlatformAdminDashboardProps {
   onSelectBusinessWorkspace: (businessId: string) => void;
   onTenantDeleted?: (deletedBusinessId: string) => void;
   onTenantUpdated?: (updatedBusiness: Business) => void;
-  initialTab?: 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs';
+  onSwitchToBusinessConsole?: () => void;
+  initialTab?: PlatformAdminSection;
+  allBusinesses?: Business[];
 }
 
 export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   onSelectBusinessWorkspace,
   onTenantDeleted,
   onTenantUpdated,
+  onSwitchToBusinessConsole,
   initialTab
 }) => {
+  const { currentUser } = useAuth();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [agentsList, setAgentsList] = useState<AIAgent[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [adminPlans, setAdminPlans] = useState<Record<string, PlanConfig>>({});
+  const [subscriptionsList, setSubscriptionsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs'>(initialTab || 'workspaces');
+  const [activeTab, setActiveTab] = useState<PlatformAdminSection>(initialTab || 'dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [showCreateDropdown, setShowCreateDropdown] = useState(false);
+
+  // Settings Navigation State (Settings → Payments → PayPal → Webhook Configuration)
+  const [settingsSection, setSettingsSection] = useState<'payments' | 'general'>('payments');
+  const [paymentsProvider, setPaymentsProvider] = useState<'paypal' | 'razorpay'>('paypal');
+  const [paypalSubSection, setPaypalSubSection] = useState<'webhook_configuration'>('webhook_configuration');
+
+  // Quick Business Owner Invitation State (Requirement 7)
+  const [showQuickInviteModal, setShowQuickInviteModal] = useState(false);
+  const [quickBizName, setQuickBizName] = useState('');
+  const [quickBizType, setQuickBizType] = useState('Home Services');
+  const [quickOwnerEmail, setQuickOwnerEmail] = useState('');
+  const [quickOwnerName, setQuickOwnerName] = useState('');
+  const [quickInviteLoading, setQuickInviteLoading] = useState(false);
+  const [quickInviteError, setQuickInviteError] = useState<string | null>(null);
+  const [quickInviteSuccess, setQuickInviteSuccess] = useState<{
+    businessName: string;
+    ownerEmail: string;
+    setupLink: string;
+  } | null>(null);
 
   useEffect(() => {
     if (initialTab) {
@@ -92,6 +137,33 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   // Isolation Test Suite State
   const [isolationResults, setIsolationResults] = useState<any[] | null>(null);
   const [isRunningIsolationTests, setIsRunningIsolationTests] = useState(false);
+
+  // Pending Signups & Payment Records State
+  const [pendingSignupsList, setPendingSignupsList] = useState<any[]>([]);
+  const [paymentRecordsList, setPaymentRecordsList] = useState<any[]>([]);
+  const [reconcilingOrderId, setReconcilingOrderId] = useState<string | null>(null);
+
+  // Tax Configuration State (Authoritative GST Settings)
+  const [taxConfig, setTaxConfig] = useState<any>({
+    enabled: false,
+    registration_status: 'NOT_REGISTERED',
+    gstin: '',
+    subscription_tax_rate: 0.18,
+    setup_tax_rate: 0.00,
+    default_rate: 0.18,
+    tax_label: 'GST (Disabled)',
+    tax_disclaimer: 'AgentDesk is currently not GST registered. No tax charged.',
+    rule_summary: 'GST collection is currently DISABLED. When registered, tax applies only to recurring subscriptions.'
+  });
+  const [isEditingTaxModal, setIsEditingTaxModal] = useState(false);
+  const [taxEnabledInput, setTaxEnabledInput] = useState(false);
+  const [taxRegStatusInput, setTaxRegStatusInput] = useState<'NOT_REGISTERED' | 'REGISTERED'>('NOT_REGISTERED');
+  const [taxGstinInput, setTaxGstinInput] = useState('');
+  const [taxSubRateInput, setTaxSubRateInput] = useState(18);
+  const [taxSetupRateInput, setTaxSetupRateInput] = useState(0);
+  const [taxLabelInput, setTaxLabelInput] = useState('18% GST (Recurring Subscription Only)');
+  const [taxDisclaimerInput, setTaxDisclaimerInput] = useState('GST applies strictly to the monthly recurring subscription. Setup fee is 0% GST exempt.');
+  const [isSavingTaxConfig, setIsSavingTaxConfig] = useState(false);
 
   // Webhook Gateway Status State
   const [webhookStatus, setWebhookStatus] = useState<any | null>(null);
@@ -159,20 +231,123 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
       setAuditLogs(aLogs);
       setAdminPlans(pConfigs);
 
-      // Load webhook status
+      // Load webhook status, admin subscriptions, pending signups, payment records, and tax settings
       try {
-        const whRes = await fetch('/api/webhooks/status');
+        const [whRes, subsRes, pendingRes, paymentsRes, taxRes] = await Promise.all([
+          fetch('/api/webhooks/status'),
+          fetch('/api/billing/admin/subscriptions'),
+          fetch('/api/billing/admin/pending-signups'),
+          fetch('/api/billing/admin/payment-records'),
+          fetch('/api/billing/tax-settings')
+        ]);
         if (whRes.ok) {
           const whData = await whRes.json();
           setWebhookStatus(whData);
         }
+        if (subsRes.ok) {
+          const subsData = await subsRes.json();
+          if (subsData.subscriptions) {
+            setSubscriptionsList(subsData.subscriptions);
+          }
+        }
+        if (pendingRes.ok) {
+          const pData = await pendingRes.json();
+          if (pData.signups) {
+            setPendingSignupsList(pData.signups);
+          }
+        }
+        if (paymentsRes.ok) {
+          const payData = await paymentsRes.json();
+          if (payData.records) {
+            setPaymentRecordsList(payData.records);
+          }
+        }
+        if (taxRes && taxRes.ok) {
+          const taxData = await taxRes.json();
+          if (taxData.taxConfig) {
+            setTaxConfig(taxData.taxConfig);
+            setTaxEnabledInput(Boolean(taxData.taxConfig.enabled));
+            setTaxRegStatusInput(taxData.taxConfig.registration_status || 'NOT_REGISTERED');
+            setTaxGstinInput(taxData.taxConfig.gstin || '');
+            setTaxSubRateInput(Math.round((taxData.taxConfig.subscription_tax_rate || 0.18) * 100));
+            setTaxSetupRateInput(Math.round((taxData.taxConfig.setup_tax_rate || 0.00) * 100));
+            setTaxLabelInput(taxData.taxConfig.tax_label || '18% GST (Recurring Subscription Only)');
+            setTaxDisclaimerInput(taxData.taxConfig.tax_disclaimer || '');
+          }
+        }
       } catch (e) {
-        console.warn('Could not load webhook status:', e);
+        console.warn('Could not load webhook or subscription status:', e);
       }
     } catch (err) {
       console.error('Error loading platform data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveTaxConfig = async () => {
+    setIsSavingTaxConfig(true);
+    try {
+      const res = await fetch('/api/billing/tax-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: taxEnabledInput,
+          registration_status: taxRegStatusInput,
+          gstin: taxGstinInput.trim() || undefined,
+          subscription_tax_rate: Number(taxSubRateInput) / 100,
+          setup_tax_rate: Number(taxSetupRateInput) / 100,
+          tax_label: taxLabelInput,
+          tax_disclaimer: taxDisclaimerInput,
+          updatedBy: currentUser?.email || 'Platform Admin'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update tax configuration');
+      }
+      setTaxConfig(data.taxConfig);
+      setIsEditingTaxModal(false);
+      setNotification({
+        type: 'success',
+        message: data.taxConfig.enabled
+          ? 'Tax configuration saved. GST is ENABLED.'
+          : 'Tax configuration saved. GST collection remains DISABLED (0% charged).'
+      });
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message: err.message || 'Failed to update tax configuration.'
+      });
+    } finally {
+      setIsSavingTaxConfig(false);
+    }
+  };
+
+  const handleReconcileOrder = async (orderId: string) => {
+    setReconcilingOrderId(orderId);
+    try {
+      const res = await fetch('/api/billing/admin/reconcile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Reconciliation failed');
+      }
+      setNotification({
+        type: 'success',
+        message: `Order "${orderId}" successfully reconciled! Tenant workspace provisioned.`
+      });
+      await loadData();
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message: err.message || 'Failed to reconcile order.'
+      });
+    } finally {
+      setReconcilingOrderId(null);
     }
   };
 
@@ -323,7 +498,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
 
     await addAuditLog({
       businessId: created.id,
-      actorEmail: 'platform-admin@agentdesk.ai',
+      actorEmail: currentUser?.email || 'admin',
       action: 'Business Onboarded',
       details: `Provisioned new multi-tenant workspace for ${name} (${industry}) on ${planConfig.name} plan`
     });
@@ -345,12 +520,58 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
     onSelectBusinessWorkspace(created.id);
   };
 
+  const handleQuickCreateBusiness = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickBizName.trim() || !quickOwnerEmail.trim() || !quickOwnerName.trim()) {
+      setQuickInviteError('All fields are required.');
+      return;
+    }
+
+    setQuickInviteLoading(true);
+    setQuickInviteError(null);
+    try {
+      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
+      const res = await fetch('/api/platform/businesses/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: quickBizName.trim(),
+          businessType: quickBizType.trim(),
+          ownerEmail: quickOwnerEmail.trim(),
+          ownerName: quickOwnerName.trim()
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setQuickInviteSuccess({
+          businessName: data.business?.name || quickBizName,
+          ownerEmail: quickOwnerEmail.trim(),
+          setupLink: data.setupLink
+        });
+        setQuickBizName('');
+        setQuickOwnerEmail('');
+        setQuickOwnerName('');
+        await loadData();
+      } else {
+        setQuickInviteError(data.error || 'Failed to create business and dispatch invite.');
+      }
+    } catch (err: any) {
+      setQuickInviteError(err.message || 'Network error occurred while creating business.');
+    } finally {
+      setQuickInviteLoading(false);
+    }
+  };
+
   const handleToggleSuspend = async (b: Business) => {
     const newStatus = b.status === 'suspended' ? 'active' : 'suspended';
     await updateBusinessSettings(b.id, { status: newStatus as any });
     await addAuditLog({
       businessId: b.id,
-      actorEmail: 'platform-admin@agentdesk.ai',
+      actorEmail: currentUser?.email || 'admin',
       action: newStatus === 'suspended' ? 'Account Suspended' : 'Account Re-Activated',
       details: `Platform admin changed workspace status to ${newStatus}`
     });
@@ -407,7 +628,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
 
       addAuditLog({
         businessId: editTarget.id,
-        actorEmail: 'platform-admin@agentdesk.ai',
+        actorEmail: currentUser?.email || 'admin',
         action: 'Tenant Settings Updated',
         details: `Platform admin updated core business profile and plan for "${editName}"`
       }).catch(() => {});
@@ -446,7 +667,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
     setDeleteStep('deleting');
 
     try {
-      const res = await deleteBusiness(deleteTarget.id, 'platform-admin@agentdesk.ai');
+      const res = await deleteBusiness(deleteTarget.id, currentUser?.email || 'admin');
       
       setNotification({
         type: 'success',
@@ -483,103 +704,226 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   );
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Toast Notification Banner */}
-      {notification && (
-        <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-semibold shadow-md transition-all ${
-          notification.type === 'success' 
-            ? 'bg-emerald-50 border-emerald-300 text-emerald-900' 
-            : 'bg-rose-50 border-rose-300 text-rose-900'
-        }`}>
-          <div className="flex items-center gap-2">
-            {notification.type === 'success' ? (
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            )}
-            <span>{notification.message}</span>
-          </div>
-          <button 
-            onClick={() => setNotification(null)}
-            className="p-1 hover:opacity-75 rounded-lg"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+    <div className="w-full min-h-[calc(100vh-4rem)] flex bg-slate-950 text-slate-100 antialiased overflow-x-hidden">
+      {/* Platform Admin Left Sidebar Navigation */}
+      <PlatformAdminSidebar
+        activeSection={activeTab}
+        onSelectSection={(sec) => {
+          setActiveTab(sec);
+          setIsMobileSidebarOpen(false);
+        }}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        businessesCount={businesses.length}
+        agentsCount={agentsList.length}
+      />
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 text-xs font-bold rounded-full flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              SaaS Owner Mode
-            </span>
-            <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-semibold overflow-x-auto max-w-full">
-              <button
-                onClick={() => setActiveTab('workspaces')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap ${activeTab === 'workspaces' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                Workspaces ({businesses.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('my_agent')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1.5 ${activeTab === 'my_agent' ? 'bg-purple-600 text-white shadow-xs' : 'text-purple-700 hover:bg-purple-50'}`}
-              >
-                <Bot className="w-3.5 h-3.5" />
-                <span>My AI Agent</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('agents')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap ${activeTab === 'agents' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                AI Agents ({agentsList.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('isolation_tests')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${activeTab === 'isolation_tests' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Isolation Tests
-              </button>
-              <button
-                onClick={() => setActiveTab('webhooks')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${activeTab === 'webhooks' ? 'bg-white text-purple-700 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-                Webhooks Gateway
-              </button>
-              <button
-                onClick={() => setActiveTab('pricing_plans')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap ${activeTab === 'pricing_plans' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                Pricing Matrix
-              </button>
-              <button
-                onClick={() => setActiveTab('audit_logs')}
-                className={`px-3 py-1 rounded-md transition-all whitespace-nowrap ${activeTab === 'audit_logs' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'}`}
-              >
-                Audit Logs
-              </button>
+      {/* Main Scrollable Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto custom-scrollbar">
+        {/* Top Control Bar */}
+        <div className="sticky top-0 z-20 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile Hamburger to open sidebar */}
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="lg:hidden p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              aria-label="Open Platform Admin Menu"
+            >
+              <Sliders className="w-5 h-5" />
+            </button>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  Platform Admin
+                </span>
+                <span className="text-slate-500 text-xs hidden sm:inline">/</span>
+                <span className="text-xs font-semibold text-slate-300 capitalize truncate hidden sm:inline">
+                  {activeTab.replace('_', ' ')}
+                </span>
+              </div>
+              <h1 className="text-base sm:text-lg font-extrabold text-white truncate">
+                Multi-Tenant Revenue Platform
+              </h1>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Multi-Tenant Platform Control Center
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Provision, edit, select, monitor, and permanently delete business tenants with full data isolation.
-          </p>
+
+          {/* Actions & Quick Controls */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Business Inspection / Fast Selector */}
+            {businesses.length > 0 && (
+              <div className="hidden xl:flex items-center gap-2 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-1.5 text-xs">
+                <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="text-slate-400">Inspect:</span>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      onSelectBusinessWorkspace(e.target.value);
+                    }
+                  }}
+                  className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="" disabled className="bg-slate-900 text-slate-400">
+                    Switch Workspace ({businesses.length} active)...
+                  </option>
+                  {businesses.map((b) => (
+                    <option key={b.id} value={b.id} className="bg-slate-900 text-white">
+                      {b.name} ({b.industry} • {b.currency || 'USD'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Switch to Business Console shortcut */}
+            {onSwitchToBusinessConsole && (
+              <button
+                onClick={onSwitchToBusinessConsole}
+                className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-colors cursor-pointer"
+                title="Open Tenant Business Console"
+              >
+                <Briefcase className="w-3.5 h-3.5 text-blue-400" />
+                <span>Business Console</span>
+              </button>
+            )}
+
+            {/* Refresh Data */}
+            <button
+              onClick={loadData}
+              title="Refresh Platform State"
+              className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl border border-slate-700 transition-colors cursor-pointer"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-purple-400' : ''}`} />
+            </button>
+
+            {/* Single Unified '+ Create' Dropdown Action Button (Requirement 9) */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCreateDropdown(!showCreateDropdown)}
+                className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showCreateDropdown ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showCreateDropdown && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setShowCreateDropdown(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl p-2 shadow-2xl z-40 animate-fadeIn">
+                    <button
+                      onClick={() => {
+                        setShowCreateDropdown(false);
+                        setQuickInviteError(null);
+                        setQuickInviteSuccess(null);
+                        setShowQuickInviteModal(true);
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white">Invite Business Owner</div>
+                        <div className="text-[10px] text-slate-400">Send setup link via email</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowCreateDropdown(false);
+                        setOnboardingStep(1);
+                        setShowCreateModal(true);
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white flex items-center gap-2.5 transition-colors cursor-pointer mt-1"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                        <Plus className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white">Provision Business (Wizard)</div>
+                        <div className="text-[10px] text-slate-400">Full 13-step setup flow</div>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={() => { setOnboardingStep(1); setShowCreateModal(true); }}
-          className="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-xl shadow transition-colors flex items-center gap-2 w-fit"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Provision New Business (13-Step Wizard)</span>
-        </button>
-      </div>
+        {/* Content Body Container with Error Boundary */}
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 flex-1 min-w-0">
+          {/* Toast Notification Banner */}
+          {notification && (
+            <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-semibold shadow-md transition-all ${
+              notification.type === 'success' 
+                ? 'bg-emerald-950/80 border-emerald-800 text-emerald-200' 
+                : 'bg-rose-950/80 border-rose-800 text-rose-200'
+            }`}>
+              <div className="flex items-center gap-2">
+                {notification.type === 'success' ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                )}
+                <span>{notification.message}</span>
+              </div>
+              <button 
+                onClick={() => setNotification(null)}
+                className="p-1 hover:opacity-75 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <AdminErrorBoundary sectionName={activeTab}>
+            {/* 1. Dashboard Overview */}
+            {activeTab === 'dashboard' && (
+              <PlatformAdminDashboardOverview
+                businesses={businesses}
+                subscriptionsList={subscriptionsList}
+                onNavigateSection={(sec) => setActiveTab(sec as any)}
+                onOpenCreateBusiness={() => {
+                  setOnboardingStep(1);
+                  setShowCreateModal(true);
+                }}
+                onOpenInviteOwner={() => {
+                  setQuickInviteError(null);
+                  setQuickInviteSuccess(null);
+                  setShowQuickInviteModal(true);
+                }}
+              />
+            )}
+
+            {/* 2. Payments & Multi-Currency Ledger */}
+            {activeTab === 'payments' && (
+              <PlatformPaymentsSection />
+            )}
+
+            {/* 3. Coupons & Promo Codes */}
+            {activeTab === 'coupons' && (
+              <PlatformCouponsSection />
+            )}
+
+            {/* 4. Invoices */}
+            {activeTab === 'invoices' && (
+              <PlatformInvoicesSection />
+            )}
+
+      {activeTab === 'credentials' && (
+        <BusinessLoginManagement
+          businesses={businesses}
+          onRefreshBusinesses={loadData}
+        />
+      )}
 
       {activeTab === 'workspaces' && (
         <>
@@ -1019,7 +1363,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 max-w-5xl">
             {/* Razorpay Webhook Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1029,7 +1373,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm">Razorpay Webhook</h3>
-                    <span className="text-[10px] text-slate-400">India & International INR/USD</span>
+                    <span className="text-[10px] text-slate-400">Integrated Payment Gateway (INR, USD, GBP)</span>
                   </div>
                 </div>
                 <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-bold">
@@ -1077,20 +1421,20 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* PayPal Webhook Card */}
+            {/* PayPal Live Webhook Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                     PP
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">PayPal Webhook</h3>
-                    <span className="text-[10px] text-slate-400">USA, UK & Global Subscriptions</span>
+                    <h3 className="font-bold text-slate-900 text-sm">PayPal Live Webhook</h3>
+                    <span className="text-[10px] text-slate-400">Global Payments & Subscriptions (Live HTTPS)</span>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-bold">
-                  ACTIVE ROUTE
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-bold">
+                  PRODUCTION ENDPOINT
                 </span>
               </div>
 
@@ -1115,22 +1459,32 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                     <span className="font-mono text-slate-900 font-bold">PAYPAL-TRANSMISSION-SIG</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-medium">Transmission ID:</span>
-                    <span className="font-mono text-slate-900 font-bold">PAYPAL-TRANSMISSION-ID</span>
+                    <span className="text-slate-500 font-medium">Verification Method:</span>
+                    <span className="text-purple-700 font-semibold">SHA256withRSA / verify-api</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-medium">Secret Environment Variable:</span>
+                    <span className="text-slate-500 font-medium">Environment Variable:</span>
                     <span className="font-mono text-slate-900 font-bold">PAYPAL_WEBHOOK_ID</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-500 font-medium">Idempotency:</span>
-                    <span className="text-emerald-700 font-bold">Event ID Deduplication Enabled</span>
+                    <span className="text-slate-500 font-medium">Tenant Safety:</span>
+                    <span className="text-emerald-700 font-bold">Capture Verification Required</span>
                   </div>
                 </div>
 
-                <div className="text-[11px] text-slate-600">
-                  <strong>Handled Events:</strong> <code className="text-purple-700">PAYMENT.CAPTURE.COMPLETED</code>, <code className="text-purple-700">BILLING.SUBSCRIPTION.ACTIVATED</code>, <code className="text-purple-700">BILLING.SUBSCRIPTION.CANCELLED</code>
-                </div>
+                <button
+                  onClick={() => {
+                    setActiveTab('settings');
+                    setSettingsSection('payments');
+                    setPaymentsProvider('paypal');
+                    setPaypalSubSection('webhook_configuration');
+                  }}
+                  className="w-full py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-200 transition-all cursor-pointer"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Configure in Settings → Payments → PayPal</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           </div>
@@ -1262,6 +1616,393 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
               );
             })}
           </div>
+
+          {/* Dedicated Regional & Multi-Currency Pricing Engine */}
+          <PlatformMultiCurrencyManager />
+        </div>
+      )}
+
+      {/* Subscriptions Tab */}
+      {activeTab === 'subscriptions' && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+              <h2 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-blue-600" />
+                Customer Subscriptions & Billing Engine
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Real-time multi-tenant subscription ledger, Razorpay IDs, implementation fee status, and recurring revenue
+              </p>
+            </div>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setIsEditingTaxModal(true)}
+                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Configure Tax & GST Rules</span>
+              </button>
+              <button
+                onClick={loadData}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh Ledger</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Statutory Tax Configuration & Separate GST Rules Engine Card */}
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-2xl">
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider ${
+                  taxConfig.enabled 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {taxConfig.enabled ? 'STATUTORY TAX RULE ACTIVE' : 'TAX COLLECTION DISABLED (NON-GST REGISTERED)'}
+                </span>
+                <span className="text-xs text-slate-300 font-semibold">
+                  {taxConfig.enabled ? (taxConfig.tax_label || '18% GST') : 'GST Registered: NO • Tax Rate: 0%'}
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-white">
+                {taxConfig.enabled
+                  ? `Recurring Subscription: ${Math.round((taxConfig.subscription_tax_rate ?? 0.18) * 100)}% GST • One-Time Setup Fee: ${Math.round((taxConfig.setup_tax_rate ?? 0.00) * 100)}% GST (Exempt)`
+                  : 'Current Non-GST-Registered Business — 0% GST on all checkout orders and invoices'}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                {taxConfig.enabled
+                  ? (taxConfig.rule_summary || 'GST applies strictly to the monthly recurring subscription.')
+                  : 'Customer checkout and invoices do not charge or display GST. Architecture is preserved so GST can be activated with a single toggle when business registration is finalized.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="text-right hidden sm:block">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Current Tax Status</div>
+                <div className={`text-xs font-bold ${taxConfig.enabled ? 'text-emerald-400' : 'text-amber-400'}`}>
+                  {taxConfig.enabled ? 'Collecting GST' : '0% Tax Charged'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingTaxModal(true)}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Configure Tax Settings</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Subscriptions Table */}
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left text-xs text-slate-600">
+              <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                <tr>
+                  <th className="py-3 px-4">Customer / Tenant</th>
+                  <th className="py-3 px-4">{taxConfig.enabled ? 'Recurring Subscription (with GST)' : 'Recurring Subscription'}</th>
+                  <th className="py-3 px-4">{taxConfig.enabled ? 'Setup Fee (0% GST)' : 'One-Time Setup Fee'}</th>
+                  <th className="py-3 px-4">Subscription Status</th>
+                  <th className="py-3 px-4">Razorpay Sub ID</th>
+                  <th className="py-3 px-4">Next Billing Date</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {businesses.map((biz) => {
+                  const subRecord = subscriptionsList.find(s => s.businessId?.toLowerCase() === biz.id.toLowerCase());
+                  const planId = subRecord?.planId || biz.plan || 'starter';
+                  const planConf = getPlanConfig(planId);
+                  const isImplementationPaid = subRecord?.implementationFeePaid !== false;
+                  const subStatus = subRecord?.status || (biz as any).planStatus || 'active';
+                  const rzpSubId = subRecord?.providerSubscriptionId || (subRecord?.status === 'active' ? `sub_rzp_${biz.id.slice(0, 8)}` : 'None');
+                  const nextBilling = subRecord?.nextBillingDate || 'Next 30-Day Cycle';
+
+                  const isTaxActive = Boolean(taxConfig.enabled && taxConfig.registration_status === 'REGISTERED');
+                  const monthlyPrice = planConf.pricing?.INR?.monthlyPrice || 29999;
+                  const monthlyGst = isTaxActive ? Math.round(monthlyPrice * (taxConfig.subscription_tax_rate ?? 0.18) * 100) / 100 : 0;
+                  const monthlyWithGst = Math.round((monthlyPrice + monthlyGst) * 100) / 100;
+
+                  const setupPrice = planConf.pricing?.INR?.setupPrice || 34999;
+
+                  return (
+                    <tr key={biz.id} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-900">{biz.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{biz.id}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                            {planConf.name}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-700 mt-1 font-medium">
+                          {biz.currency === 'INR' ? (
+                            <div>
+                              <span className="font-bold text-blue-700">₹{monthlyWithGst.toLocaleString()}/mo</span>
+                              {isTaxActive ? (
+                                <div className="text-[10px] text-slate-500 mt-0.5">
+                                  Base: ₹{monthlyPrice.toLocaleString()} + {Math.round((taxConfig.subscription_tax_rate ?? 0.18) * 100)}% GST (₹{monthlyGst.toLocaleString()})
+                                </div>
+                              ) : (
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  GST: 0% (Disabled)
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            `$${(planConf.pricing?.USD?.monthlyPrice || 199).toLocaleString()}/mo`
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="text-xs font-bold text-slate-800">
+                          {biz.currency === 'INR' ? `₹${setupPrice.toLocaleString()}` : `$${(planConf.pricing?.USD?.setupPrice || 499).toLocaleString()}`}
+                        </div>
+                        {isTaxActive && <div className="text-[10px] text-emerald-600 font-medium">0% GST (Exempt)</div>}
+                        {isImplementationPaid ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 mt-1">
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                            Setup Paid
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 mt-1">
+                            Setup Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          subStatus === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : subStatus === 'paused'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            subStatus === 'active' ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`} />
+                          <span className="capitalize">{subStatus}</span>
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-700">
+                        {rzpSubId}
+                      </td>
+                      <td className="py-3.5 px-4 text-[11px] text-slate-600">
+                        {nextBilling}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => onSelectBusinessWorkspace(biz.id)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          View Workspace
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 2. Pending Signups Awaiting Razorpay Verification */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-amber-600" />
+                  Pending Signups (Awaiting Razorpay Payment Verification)
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Tenant workspaces are strictly held in pending state until server verifies Razorpay payment/order signature.
+                </p>
+              </div>
+              <span className="px-2.5 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-full">
+                {pendingSignupsList.filter(s => s.status === 'PENDING').length} Awaiting Payment
+              </span>
+            </div>
+
+            {pendingSignupsList.length === 0 ? (
+              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 text-center text-xs text-slate-500">
+                No signups currently awaiting payment verification. All active tenants have confirmed payments.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-4">Business / Tenant</th>
+                      <th className="py-2.5 px-4">Customer</th>
+                      <th className="py-2.5 px-4">Razorpay Order ID</th>
+                      <th className="py-2.5 px-4">Plan & Amount</th>
+                      <th className="py-2.5 px-4">Status</th>
+                      <th className="py-2.5 px-4">Initiated</th>
+                      <th className="py-2.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pendingSignupsList.map((ps) => (
+                      <tr key={ps.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{ps.businessName}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">{ps.tenantId}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-slate-800">{ps.customerName || 'Customer'}</div>
+                          <div className="text-[10px] text-slate-400">{ps.customerEmail}</div>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-700">
+                          {ps.razorpayOrderId}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="font-bold text-slate-800 uppercase text-[11px]">{ps.planId}</span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                              {ps.currency || 'INR'}
+                            </span>
+                          </div>
+                          {ps.setup_fee !== undefined ? (
+                            <div className="text-[10px] space-y-0.5">
+                              <div className="text-slate-600">
+                                Setup: <span className="font-bold text-slate-800">{ps.currency === 'INR' ? `₹${ps.setup_fee?.toLocaleString()}` : `$${ps.setup_fee}`}</span> (0% GST)
+                              </div>
+                              <div className="text-slate-600">
+                                Sub: <span className="font-bold text-slate-800">{ps.currency === 'INR' ? `₹${ps.subscription_fee?.toLocaleString()}` : `$${ps.subscription_fee}`}</span> + 18% GST (<span className="text-amber-600 font-semibold">{ps.currency === 'INR' ? `₹${ps.subscription_tax?.toLocaleString()}` : `$${ps.subscription_tax}`}</span>)
+                              </div>
+                              <div className="pt-0.5 border-t border-slate-200 font-extrabold text-blue-700">
+                                Due Today: {ps.currency === 'INR' ? `₹${(ps.totalDueToday || (ps.setup_fee + ps.subscription_fee + ps.subscription_tax))?.toLocaleString()}` : `$${ps.totalDueToday}`}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-[11px] font-extrabold text-blue-700">
+                              Due Today: {ps.currency === 'INR' ? `₹${(ps.totalDueToday || 0).toLocaleString()}` : `$${(ps.totalDueToday || 0).toLocaleString()}`}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            ps.status === 'ACTIVATED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : ps.status === 'PENDING'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : ps.status === 'CANCELLED'
+                              ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {ps.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-[10px] text-slate-500 font-mono">
+                          {new Date(ps.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {ps.status === 'PENDING' && (
+                            <button
+                              disabled={reconcilingOrderId === ps.razorpayOrderId}
+                              onClick={() => handleReconcileOrder(ps.razorpayOrderId)}
+                              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              {reconcilingOrderId === ps.razorpayOrderId ? 'Verifying...' : 'Manual Reconcile'}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Server Payment Audit Records */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Razorpay Payment Records & Cryptographic Audit
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Server-recorded payments requiring valid HMAC-SHA256 signatures before tenant provisioning.
+                </p>
+              </div>
+              <span className="text-xs text-slate-500 font-medium">
+                {paymentRecordsList.length} Total Transactions
+              </span>
+            </div>
+
+            {paymentRecordsList.length === 0 ? (
+              <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 text-center text-xs text-slate-500">
+                No payment transactions recorded yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="w-full text-left text-xs text-slate-600">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-4">Payment ID</th>
+                      <th className="py-2.5 px-4">Order ID</th>
+                      <th className="py-2.5 px-4">Tenant / User</th>
+                      <th className="py-2.5 px-4">Amount</th>
+                      <th className="py-2.5 px-4">Status</th>
+                      <th className="py-2.5 px-4">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paymentRecordsList.map((pr) => (
+                      <tr key={pr.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-2.5 px-4 font-mono text-[11px] text-slate-800">
+                          {pr.razorpayPaymentId || pr.id}
+                        </td>
+                        <td className="py-2.5 px-4 font-mono text-[11px] text-slate-600">
+                          {pr.razorpayOrderId}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span className="font-mono text-[11px] text-blue-600 font-bold">{pr.tenantId}</span>
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <div className="font-bold text-slate-900">
+                            {pr.currency === 'INR' ? `₹${(pr.amount || 0).toLocaleString()}` : `$${(pr.amount || 0).toLocaleString()}`}
+                          </div>
+                          {pr.setup_fee !== undefined ? (
+                            <div className="text-[10px] text-slate-500 mt-0.5 space-x-1">
+                              <span>Setup: ₹{pr.setup_fee?.toLocaleString()} (0% tax)</span>
+                              <span>•</span>
+                              <span>Sub: ₹{pr.subscription_fee?.toLocaleString()} + ₹{pr.subscription_tax?.toLocaleString()} GST</span>
+                            </div>
+                          ) : (
+                            <div className="text-[9px] text-slate-400 font-mono">
+                              {pr.payment_flow === 'initial_checkout' ? 'Setup + Sub' : 'Payment'}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            pr.status === 'CAPTURED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : pr.status === 'PENDING'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
+                          }`}>
+                            {pr.status}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-4 text-[10px] text-slate-500 font-mono">
+                          {new Date(pr.createdAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1306,6 +2047,153 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {/* Internal Automations & Gmail Engine Tab */}
+      {activeTab === 'automations' && (
+        <PlatformAutomationsDashboard />
+      )}
+
+      {/* Production Integrations Hub Tab */}
+      {activeTab === 'integrations' && (
+        <PlatformIntegrationsManager />
+      )}
+
+      {/* System Health & Automated Tests Tab */}
+      {activeTab === 'system_health' && (
+        <PlatformSystemHealth />
+      )}
+
+      {/* Monitoring & Audit Logs Tab */}
+      {activeTab === 'monitoring' && (
+        <PlatformMonitoringLogs />
+      )}
+
+      {/* Settings → Payments → PayPal → Webhook Configuration */}
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          {/* Settings Section Selector */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSettingsSection('payments')}
+                className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+                  settingsSection === 'payments'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Payments</span>
+              </button>
+              <button
+                onClick={() => setSettingsSection('general')}
+                className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+                  settingsSection === 'general'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>General Platform</span>
+              </button>
+            </div>
+
+            {settingsSection === 'payments' && (
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                <button
+                  onClick={() => {
+                    setPaymentsProvider('paypal');
+                    setPaypalSubSection('webhook_configuration');
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    paymentsProvider === 'paypal'
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-blue-600" />
+                  <span>PayPal</span>
+                </button>
+                <button
+                  onClick={() => setPaymentsProvider('razorpay')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    paymentsProvider === 'razorpay'
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Razorpay</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Sub-Panel: Payments -> PayPal */}
+          {settingsSection === 'payments' && paymentsProvider === 'paypal' && (
+            <PlatformPayPalWebhookSettings />
+          )}
+
+          {/* Sub-Panel: Payments -> Razorpay */}
+          {settingsSection === 'payments' && paymentsProvider === 'razorpay' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <span>Settings</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <span>Payments</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                  Razorpay Configuration
+                </span>
+              </div>
+
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                    RP
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">Razorpay Payment Gateway Settings</h3>
+                    <p className="text-xs text-slate-500">Indian & International card checkout provider (INR settlement)</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">Key ID:</span>
+                    <div className="font-mono font-bold text-slate-900">
+                      {process.env.RAZORPAY_KEY_ID ? `${process.env.RAZORPAY_KEY_ID.slice(0, 10)}...` : 'Configured in Environment'}
+                    </div>
+                  </div>
+                  <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1">
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">Registered Webhook Path:</span>
+                    <div className="font-mono text-emerald-700 font-bold">
+                      POST /api/webhooks/razorpay
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-Panel: General Platform Settings */}
+          {settingsSection === 'general' && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <span>Settings</span>
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                  General Platform & Multi-Currency
+                </span>
+              </div>
+              <PlatformMultiCurrencyManager />
+            </div>
+          )}
+        </div>
+      )}
+          </AdminErrorBoundary>
+        </div>
+      </div>
 
       {/* SAFE MULTI-STEP DELETE TENANT MODAL */}
       {deleteTarget && (
@@ -2274,6 +3162,449 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
               >
                 {isSavingPlan ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                 <span>Save Tier Specifications</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK BUSINESS CREATION & OWNER INVITATION MODAL (REQUIREMENT 7) */}
+      {showQuickInviteModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">
+                    Create Business & Invite Owner
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Dispatches secure onboarding invitation via official Gmail engine
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowQuickInviteModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {quickInviteSuccess ? (
+              <div className="space-y-4 py-2">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 space-y-2">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>Business Created & Invitation Dispatched!</span>
+                  </div>
+                  <p className="text-xs text-emerald-700 leading-relaxed">
+                    Tenant <strong>{quickInviteSuccess.businessName}</strong> was created. An onboarding invitation has been dispatched to <strong>{quickInviteSuccess.ownerEmail}</strong> from <code className="text-xs bg-white px-1.5 py-0.5 rounded">hello.agentdesktech@gmail.com</code>.
+                  </p>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase">
+                    Setup Link (Copyable fallback)
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={quickInviteSuccess.setupLink}
+                      className="w-full text-xs font-mono bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(quickInviteSuccess.setupLink);
+                        setCopiedId('setup-link');
+                        setTimeout(() => setCopiedId(null), 2000);
+                      }}
+                      className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shrink-0 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copiedId === 'setup-link' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedId === 'setup-link' ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    The owner will create their secure password on this page. No passwords were emailed.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={() => {
+                      setShowQuickInviteModal(false);
+                      setQuickInviteSuccess(null);
+                    }}
+                    className="px-4 py-2 bg-slate-900 text-white text-xs font-semibold rounded-xl hover:bg-slate-800 cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleQuickCreateBusiness} className="space-y-4 text-xs">
+                {quickInviteError && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span>{quickInviteError}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    Business Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Apex Health Clinic"
+                    value={quickBizName}
+                    onChange={(e) => setQuickBizName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-800 mb-1">
+                    Business Type *
+                  </label>
+                  <select
+                    value={quickBizType}
+                    onChange={(e) => setQuickBizType(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs bg-white"
+                  >
+                    <option value="Home Services">Home Services (HVAC, Plumbing, Electrical)</option>
+                    <option value="Healthcare">Healthcare & Dental</option>
+                    <option value="Legal">Legal & Accounting</option>
+                    <option value="Real Estate">Real Estate & Property</option>
+                    <option value="Automotive">Automotive & Repair</option>
+                    <option value="Education">Education & Tutoring</option>
+                    <option value="E-Commerce">E-Commerce & Retail</option>
+                    <option value="General Services">Other Professional Services</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">
+                      Owner Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Dr. Sarah Connor"
+                      value={quickOwnerName}
+                      onChange={(e) => setQuickOwnerName(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-slate-800 mb-1">
+                      Owner Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="owner@apexhealth.com"
+                      value={quickOwnerEmail}
+                      onChange={(e) => setQuickOwnerEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1">
+                  <div className="font-semibold text-slate-800 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Automated Actions on Provisioning:</span>
+                  </div>
+                  <p>1. Multi-tenant business record initialized with isolated workspace</p>
+                  <p>2. User record created with role <code className="font-bold">BUSINESS_OWNER</code>, status <code className="font-bold">INVITED</code></p>
+                  <p>3. Secure setup token generated (stored as SHA-256 hash)</p>
+                  <p>4. Email dispatched via Gmail API from <code className="font-mono">hello.agentdesktech@gmail.com</code></p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickInviteModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={quickInviteLoading}
+                    className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {quickInviteLoading ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Creating & Dispatched Email...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Create & Dispatch Invite</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tax & GST Rules Configuration Modal */}
+      {isEditingTaxModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-blue-600" />
+                  Statutory Tax & GST Architecture
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Authoritative tax settings for customer checkout, backend order verification, and customer invoices.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingTaxModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Tax Status Banner */}
+            <div className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+              taxEnabledInput 
+                ? 'bg-blue-50/80 border-blue-200 text-blue-900' 
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}>
+              <div className="font-bold flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ShieldCheck className={`w-4 h-4 ${taxEnabledInput ? 'text-blue-600' : 'text-amber-600'}`} />
+                  <span>{taxEnabledInput ? 'GST Collection Enabled' : 'GST Collection Disabled (Current Status)'}</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                  taxEnabledInput ? 'bg-blue-600 text-white' : 'bg-amber-200 text-amber-900'
+                }`}>
+                  {taxRegStatusInput}
+                </span>
+              </div>
+              <p className="leading-relaxed">
+                {taxEnabledInput 
+                  ? 'GST applies strictly to recurring subscription charges (0% on setup fee). Valid GSTIN is required on commercial invoices.' 
+                  : 'AgentDesk is currently NOT GST registered. GST must NOT be charged, added to orders, or shown on checkout or invoices.'}
+              </p>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Registration & Enable Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    GST Registration Status
+                  </label>
+                  <select
+                    value={taxRegStatusInput}
+                    onChange={(e) => {
+                      const val = e.target.value as 'NOT_REGISTERED' | 'REGISTERED';
+                      setTaxRegStatusInput(val);
+                      if (val === 'NOT_REGISTERED') {
+                        setTaxEnabledInput(false);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-slate-900 bg-white"
+                  >
+                    <option value="NOT_REGISTERED">NOT REGISTERED (Current)</option>
+                    <option value="REGISTERED">REGISTERED</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Tax Collection Mode
+                  </label>
+                  <div className="pt-1.5">
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={taxEnabledInput}
+                        disabled={taxRegStatusInput !== 'REGISTERED'}
+                        onChange={(e) => setTaxEnabledInput(e.target.checked)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className={`font-semibold ${taxRegStatusInput !== 'REGISTERED' ? 'text-slate-400' : 'text-slate-800'}`}>
+                        {taxEnabledInput ? 'Enable GST Collection' : 'Disabled (0% Tax)'}
+                      </span>
+                    </label>
+                  </div>
+                  {taxRegStatusInput !== 'REGISTERED' && (
+                    <span className="text-[10px] text-amber-600 font-medium block mt-0.5">
+                      Must be set to REGISTERED before enabling
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* GSTIN (Only required when registered/enabled) */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Business GSTIN {taxEnabledInput ? <span className="text-rose-500">*</span> : <span className="text-slate-400 font-normal">(Optional when disabled)</span>}
+                </label>
+                <input
+                  type="text"
+                  maxLength={15}
+                  value={taxGstinInput}
+                  onChange={(e) => setTaxGstinInput(e.target.value.toUpperCase())}
+                  placeholder="e.g. 27AAAAA0000A1Z5"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-900 font-mono uppercase"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Leave empty or unconfigured while business is non-registered. Do not show fake GSTIN.
+                </span>
+              </div>
+
+              {/* Rates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Monthly Subscription Tax Rate (%) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={taxSubRateInput}
+                      onChange={(e) => setTaxSubRateInput(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-slate-900 pr-8"
+                    />
+                    <span className="absolute right-3 top-2 font-bold text-slate-400">%</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 mt-1 block">Standard Indian GST: 18%</span>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    One-Time Setup Fee Tax Rate (%) *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={taxSetupRateInput}
+                      onChange={(e) => setTaxSetupRateInput(Number(e.target.value))}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-bold text-slate-900 pr-8"
+                    />
+                    <span className="absolute right-3 top-2 font-bold text-slate-400">%</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-600 font-medium mt-1 block">Setup fee is 0% GST exempt</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Tax Display Label *
+                </label>
+                <input
+                  type="text"
+                  value={taxLabelInput}
+                  onChange={(e) => setTaxLabelInput(e.target.value)}
+                  placeholder="e.g. 18% GST (Recurring Subscription Only)"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Customer Invoice Disclaimer *
+                </label>
+                <textarea
+                  rows={2}
+                  value={taxDisclaimerInput}
+                  onChange={(e) => setTaxDisclaimerInput(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 text-slate-800 resize-none"
+                />
+              </div>
+
+              {/* Live Preview of Calculation */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="font-bold text-slate-700 text-[11px] uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <span>Live Checkout Amount (Growth Plan Example)</span>
+                  <span className={`text-[10px] font-extrabold ${taxEnabledInput ? 'text-blue-600' : 'text-amber-600'}`}>
+                    {taxEnabledInput ? 'WITH GST' : 'NO GST CHARGED'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+                  <div className="p-2 rounded-lg bg-white border border-slate-200">
+                    <div className="text-slate-500 text-[10px]">Setup Fee</div>
+                    <div className="font-bold text-slate-900">₹34,999</div>
+                    <div className="text-[9px] text-emerald-600 font-medium">
+                      {taxEnabledInput ? `+${taxSetupRateInput}% = ₹0` : '₹0 Tax'}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-white border border-slate-200">
+                    <div className="text-slate-500 text-[10px]">Monthly Sub</div>
+                    <div className="font-bold text-slate-900">₹29,999</div>
+                    <div className={`text-[9px] font-medium ${taxEnabledInput ? 'text-amber-600' : 'text-slate-400'}`}>
+                      {taxEnabledInput 
+                        ? `+${taxSubRateInput}% = ₹${Math.round(29999 * (taxSubRateInput / 100) * 100) / 100}` 
+                        : '₹0 Tax'}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
+                    <div className="text-blue-700 text-[10px] font-bold">Total Due Today</div>
+                    <div className="font-extrabold text-blue-900 text-xs">
+                      ₹{(34999 + 29999 + (taxEnabledInput ? Math.round(29999 * (taxSubRateInput / 100) * 100) / 100 : 0)).toLocaleString()}
+                    </div>
+                    <div className="text-[9px] text-blue-600">
+                      {taxEnabledInput ? 'GST Applied' : 'Exact Sum (No Tax)'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsEditingTaxModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingTaxConfig}
+                onClick={handleSaveTaxConfig}
+                className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isSavingTaxConfig ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving Rules...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Save Tax Configuration</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

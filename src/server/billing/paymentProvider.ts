@@ -2,6 +2,23 @@ import { CurrencyCode } from '../../types.js';
 
 export type PaymentProviderName = 'razorpay' | 'paypal';
 
+export type ProviderHealthStatus = 
+  | 'Connected' 
+  | 'Configuration Required' 
+  | 'Authentication Failed' 
+  | 'Unavailable' 
+  | 'Error';
+
+export interface ProviderHealthReport {
+  provider: PaymentProviderName;
+  status: ProviderHealthStatus;
+  isConfigured: boolean;
+  message: string;
+  environment?: string;
+  lastChecked: string;
+  details?: Record<string, any>;
+}
+
 export type SubscriptionBillingStatus = 
   | 'pending' 
   | 'trialing' 
@@ -55,7 +72,7 @@ export interface CreatePaymentParams {
   amount: number; // in base currency standard units (e.g., 2997 for USD $2,997)
   currency: CurrencyCode;
   description: string;
-  type: 'implementation_fee' | 'subscription' | 'usage_overage';
+  type: 'implementation_fee' | 'subscription' | 'usage_overage' | 'initial_checkout';
   metadata?: Record<string, any>;
 }
 
@@ -87,6 +104,7 @@ export interface ProviderSubscription {
   id: string;
   provider: PaymentProviderName;
   providerSubscriptionId: string;
+  businessId?: string;
   customerId?: string;
   planId: string;
   currency: CurrencyCode;
@@ -148,11 +166,14 @@ export interface VerifyPaymentResult {
   transactionId: string;
   status: PaymentTransactionStatus;
   message?: string;
+  method?: string;
+  raw?: any;
 }
 
 export interface PaymentProvider {
   name: PaymentProviderName;
   isConfigured(): boolean;
+  getPublicKey?(): string;
   supportsCurrency(currency: CurrencyCode): boolean;
   supportsRecurring(currency: CurrencyCode): boolean;
   
@@ -175,4 +196,5 @@ export interface PaymentProvider {
   getInvoice(invoiceId: string): Promise<ProviderInvoice>;
   
   handleWebhook(body: any, headers: Record<string, string | string[] | undefined>): Promise<WebhookResult>;
+  checkHealth?(): Promise<ProviderHealthReport>;
 }

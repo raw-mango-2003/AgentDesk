@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { billingService } from './billingService.js';
+import { payPalWebhookService } from './paypalWebhookService.js';
 import { CurrencyCode } from '../../types.js';
 
 export const billingRouter = Router();
@@ -10,12 +11,11 @@ billingRouter.get('/config', (req: Request, res: Response) => {
   const country = (req.query.country as string) || 'US';
 
   const razorpay = billingService.getProvider('razorpay') as any;
-  const paypal = billingService.getProvider('paypal') as any;
 
-  const isPaymentsEnabled = Boolean(
-    (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) ||
-    (process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET)
+  const isRazorpayConfigured = Boolean(
+    process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
   );
+  const isPaymentsEnabled = isRazorpayConfigured;
 
   const availableProviders = billingService.getAvailableProviders(currency, country);
 
@@ -25,8 +25,7 @@ billingRouter.get('/config', (req: Request, res: Response) => {
     isPaymentsEnabled,
     availableProviders,
     publicKeys: {
-      razorpay: razorpay.getPublicKey?.() || '',
-      paypalClientId: paypal.getClientId?.() || ''
+      razorpay: razorpay.getPublicKey?.() || ''
     },
     mode: isPaymentsEnabled ? 'production' : 'disabled'
   });
@@ -57,12 +56,285 @@ billingRouter.get('/tenant/:businessId', (req: Request, res: Response) => {
   }
 });
 
-// 3. Create Checkout Session (Implementation Fee or Monthly Subscription)
+// 2.5. Authoritative Order Pricing & Taxes Calculation
+billingRouter.post('/calculate-order', (req: Request, res: Response) => {
+  try {
+    const { planId, currency, type, couponCode, country, state, gstin, customerEmail, tenantId } = req.body;
+    if (!planId || !currency) {
+      return res.status(400).json({ success: false, error: 'planId and currency are required.' });
+    }
+    const calculation = billingService.calculateOrderAmount({
+      planId,
+      currency,
+      type: type || 'initial_checkout',
+      couponCode,
+      country,
+      state,
+      gstin,
+      customerEmail,
+      tenantId
+    });
+    return res.json({ success: true, ...calculation });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 2.52. Provider & Capability Availability Check
+billingRouter.get('/available-payment-methods', async (req: Request, res: Response) => {
+  try {
+    const currency = (req.query.currency as any) || 'INR';
+    const country = (req.query.country as string) || undefined;
+    const planId = (req.query.planId as string) || (req.query.plan as string) || undefined;
+
+    const result = await billingService.getAvailablePaymentMethods({ currency, country, planId });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+billingRouter.post('/available-payment-methods', async (req: Request, res: Response) => {
+  try {
+    const { currency = 'INR', country, planId, plan } = req.body;
+    const result = await billingService.getAvailablePaymentMethods({
+      currency: currency as any,
+      country,
+      planId: planId || plan
+    });
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 2.53. Provider Health Check Endpoint
+billingRouter.get('/providers/health', async (_req: Request, res: Response) => {
+  try {
+    const health = await billingService.getProvidersHealth();
+    return res.json({ success: true, health });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2.54. Payment Audit Logs Endpoint
+billingRouter.get('/admin/payment-audit-logs', (req: Request, res: Response) => {
+  try {
+    const tenantId = req.query.tenantId as string;
+    const provider = req.query.provider as string;
+    const logs = billingService.getPaymentAuditLogs({ tenantId, provider });
+    return res.json({ success: true, logs });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+billingRouter.post('/record-audit-event', (req: Request, res: Response) => {
+  try {
+    const { action, tenantId, customerEmail, provider, providerOrderId, providerPaymentId, amount, currency, status, method, details } = req.body;
+    if (!action || !tenantId) {
+      return res.status(400).json({ success: false, error: 'action and tenantId are required' });
+    }
+    const log = billingService.recordAuditLog({
+      action,
+      tenantId,
+      customerEmail: customerEmail || 'unknown@customer.com',
+      provider: provider || 'razorpay',
+      providerOrderId,
+      providerPaymentId,
+      amount,
+      currency,
+      status: status || 'INFO',
+      method,
+      details,
+      ipAddress: (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress,
+      userAgent: req.headers['user-agent']
+    });
+    return res.json({ success: true, log });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 2.55. Multi-Currency Platform Endpoints
+billingRouter.get('/currencies', async (_req: Request, res: Response) => {
+  try {
+    const currencies = await billingService.getAllCurrencies();
+    return res.json({ success: true, currencies });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+billingRouter.put('/currencies/:code/toggle', (req: Request, res: Response) => {
+  try {
+    const { code } = req.params;
+    const { enabled } = req.body;
+    const updated = billingService.toggleCurrency(code as any, Boolean(enabled));
+    return res.json({ success: true, currency: updated });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+billingRouter.get('/plan-prices', (req: Request, res: Response) => {
+  try {
+    const { planId } = req.query;
+    if (planId && typeof planId === 'string') {
+      const prices = billingService.getPlanPricesForPlan(planId);
+      return res.json({ success: true, planPrices: prices });
+    }
+    const prices = billingService.getAllPlanPrices();
+    return res.json({ success: true, planPrices: prices });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+billingRouter.put('/plan-prices', (req: Request, res: Response) => {
+  try {
+    const { planId, currency, setupFee, monthlyFee, active } = req.body;
+    if (!planId || !currency) {
+      return res.status(400).json({ success: false, error: 'planId and currency are required.' });
+    }
+    const updated = billingService.updatePlanPrice(
+      planId, 
+      currency, 
+      Number(setupFee), 
+      Number(monthlyFee), 
+      active !== undefined ? Boolean(active) : true
+    );
+    return res.json({ success: true, planPrice: updated });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+billingRouter.get('/revenue-analytics', (_req: Request, res: Response) => {
+  try {
+    const analytics = billingService.getRevenueAnalyticsByCurrency();
+    return res.json({ success: true, analytics });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2.6. Validate Promo Code
+billingRouter.post('/validate-coupon', (req: Request, res: Response) => {
+  try {
+    const { couponCode, code, planId, currency, customerEmail, tenantId, subtotal } = req.body;
+    const effectiveCode = couponCode || code;
+    const result = billingService.validateCoupon(effectiveCode, planId, currency, customerEmail, tenantId, subtotal);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 2.7. Platform Admin Promo Codes Management
+billingRouter.get('/promo-codes', (_req: Request, res: Response) => {
+  try {
+    const codes = billingService.getAllPromoCodes();
+    return res.json({ success: true, promoCodes: codes });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+billingRouter.post('/promo-codes', (req: Request, res: Response) => {
+  try {
+    const newPromo = billingService.createPromoCode(req.body);
+    return res.status(201).json({ success: true, promoCode: newPromo });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+billingRouter.put('/promo-codes/:code', (req: Request, res: Response) => {
+  try {
+    const updatedPromo = billingService.updatePromoCode(req.params.code, req.body);
+    return res.json({ success: true, promoCode: updatedPromo });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+billingRouter.delete('/promo-codes/:code', (req: Request, res: Response) => {
+  try {
+    const deleted = billingService.deletePromoCode(req.params.code);
+    return res.json({ success: deleted });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+billingRouter.post('/promo-codes/:code/toggle', (req: Request, res: Response) => {
+  try {
+    const toggled = billingService.togglePromoCodeActive(req.params.code);
+    return res.json({ success: true, promoCode: toggled });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// 2.8. Platform Admin Tax Settings Management
+billingRouter.get('/tax-settings', (_req: Request, res: Response) => {
+  try {
+    const config = billingService.getTaxConfiguration();
+    return res.json({ success: true, taxConfig: config });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+billingRouter.get('/tax-config', (_req: Request, res: Response) => {
+  try {
+    const config = billingService.getTaxConfiguration();
+    return res.json({ success: true, taxConfig: config });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+billingRouter.put('/tax-settings', (req: Request, res: Response) => {
+  try {
+    const updated = billingService.updateTaxConfiguration(req.body, req.body.updatedBy || 'Platform Admin');
+    return res.json({ success: true, taxConfig: updated });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+billingRouter.put('/tax-config', (req: Request, res: Response) => {
+  try {
+    const updated = billingService.updateTaxConfiguration(req.body, req.body.updatedBy || 'Platform Admin');
+    return res.json({ success: true, taxConfig: updated });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+// 3. Create Checkout Session (Implementation Fee, Monthly Subscription, or Bundled Initial Checkout)
 billingRouter.post('/create-checkout-session', async (req: Request, res: Response) => {
   try {
-    const { businessId, planId, type, currency, provider, customerEmail, customerName } = req.body;
+    const { 
+      businessId, 
+      businessName, 
+      planId, 
+      type, 
+      currency, 
+      displayCurrency,
+      displayAmount,
+      customerEmail, 
+      customerName, 
+      customerPhone,
+      couponCode,
+      billingAddress
+    } = req.body;
+    const provider = req.body.provider || 'razorpay';
 
-    if (!businessId || !planId || !type || !currency || !provider) {
+    if (!businessId || !planId || !type || !currency) {
       return res.status(400).json({ error: 'Missing required parameters for checkout session' });
     }
 
@@ -75,24 +347,37 @@ billingRouter.post('/create-checkout-session', async (req: Request, res: Respons
       });
     }
 
-    // PayPal INR Rule Enforcement
-    if (provider === 'paypal' && currency === 'INR') {
-      return res.status(400).json({
-        error: 'PayPal does not support INR subscriptions. Please select Razorpay for INR billing.'
-      });
-    }
-
     const session = await billingService.createCheckoutSession({
       businessId,
+      businessName,
       planId,
       type,
       currency,
+      displayCurrency,
+      displayAmount,
       providerName: provider,
       customerEmail,
-      customerName
+      customerName,
+      customerPhone,
+      couponCode,
+      billingAddress
     });
 
     return res.json(session);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 3.5. Order Status & Polling Endpoint
+billingRouter.get('/order-status/:orderId', async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) {
+      return res.status(400).json({ error: 'Order ID is required' });
+    }
+    const status = await billingService.getOrderStatus(orderId);
+    return res.json(status);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
@@ -103,7 +388,10 @@ billingRouter.post('/verify-payment', async (req: Request, res: Response) => {
   try {
     const {
       businessId,
-      provider,
+      businessName,
+      customerName,
+      customerEmail,
+      customerPhone,
       paymentId,
       orderId,
       subscriptionId,
@@ -111,12 +399,16 @@ billingRouter.post('/verify-payment', async (req: Request, res: Response) => {
       type,
       planId,
       currency,
+      displayCurrency,
+      displayAmount,
       amount,
       paymentMethodData
     } = req.body;
 
-    if (!businessId || !provider) {
-      return res.status(400).json({ error: 'Business ID and provider are required.' });
+    const provider = req.body.provider || 'razorpay';
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required.' });
     }
 
     const targetProvider = billingService.getProvider(provider as any);
@@ -129,21 +421,146 @@ billingRouter.post('/verify-payment', async (req: Request, res: Response) => {
 
     const result = await billingService.verifyAndActivatePayment({
       businessId,
+      businessName,
+      customerName,
+      customerEmail,
+      customerPhone,
       provider,
       paymentId,
       orderId,
       subscriptionId,
       signature,
-      type: type || 'subscription',
+      type: type || 'initial_checkout',
       planId: planId || 'growth',
-      currency: currency || 'USD',
-      amount: amount || 1497,
+      currency: currency || 'INR',
+      displayCurrency,
+      displayAmount,
+      amount,
       paymentMethodData
     });
+
+    if (result.sessionToken) {
+      res.cookie('agentdesk_session', result.sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+    }
 
     return res.json(result);
   } catch (err: any) {
     return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 4.5. Admin Subscriptions List
+billingRouter.get('/admin/subscriptions', (_req: Request, res: Response) => {
+  try {
+    const subscriptions = billingService.getAllTenantBillings();
+    return res.json({
+      success: true,
+      subscriptions
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.6. Admin Pending Signups (Awaiting Payment Verification)
+billingRouter.get('/admin/pending-signups', (_req: Request, res: Response) => {
+  try {
+    const signups = billingService.getPendingSignups();
+    return res.json({
+      success: true,
+      signups
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.7. Admin Payment Records (Server Payment Audit Trail)
+billingRouter.get('/admin/payment-records', (_req: Request, res: Response) => {
+  try {
+    const records = billingService.getPaymentRecords();
+    return res.json({
+      success: true,
+      records
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.8. Admin SaaS Subscription Records
+billingRouter.get('/admin/subscription-records', (_req: Request, res: Response) => {
+  try {
+    const subscriptions = billingService.getSubscriptionRecords();
+    return res.json({
+      success: true,
+      subscriptions
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.81. Admin Invoices Across All Tenants
+billingRouter.get('/admin/invoices', (_req: Request, res: Response) => {
+  try {
+    const invoices = billingService.getAllInvoices();
+    return res.json({
+      success: true,
+      invoices
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.82. Admin Transactions Across All Tenants
+billingRouter.get('/admin/all-transactions', (_req: Request, res: Response) => {
+  try {
+    const transactions = billingService.getAllTransactions();
+    return res.json({
+      success: true,
+      transactions
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// 4.9. Admin Reconcile / Retry Order Provisioning
+billingRouter.post('/admin/reconcile', async (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: 'orderId is required for reconciliation' });
+    }
+    const result = await billingService.reconcilePayment(orderId);
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// 4.10. Abandon / Cancel Checkout Session
+billingRouter.post('/cancel-checkout', (req: Request, res: Response) => {
+  try {
+    const { orderId } = req.body;
+    if (orderId) {
+      const signup = billingService.getPendingSignup(orderId);
+      if (signup && signup.status === 'PENDING') {
+        signup.status = 'CANCELLED';
+        signup.updatedAt = new Date().toISOString();
+      }
+    }
+    return res.json({ success: true, message: 'Checkout session marked as cancelled' });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -256,21 +673,42 @@ billingRouter.post('/webhooks/razorpay', async (req: Request, res: Response) => 
   }
 });
 
-// 9. PayPal Webhook Endpoint
+// 9. PayPal Live Webhook Endpoint (Requirement 1-12)
 billingRouter.post('/webhooks/paypal', async (req: Request, res: Response) => {
   try {
-    const result = await billingService.handleWebhook('paypal', req.body, req.headers);
-    return res.status(200).json(result);
+    const rawBody = (req as any).rawBody || (req as any).rawBodyString || JSON.stringify(req.body);
+    const result = await payPalWebhookService.handleWebhook(rawBody, req.body, req.headers);
+    return res.status(result.status).json(result.body);
   } catch (err: any) {
-    console.error('[PayPal Webhook Error]', err);
-    return res.status(400).json({ error: err.message });
+    console.error('[PayPal Webhook Fatal Error]', err);
+    return res.status(400).json({ success: false, error: err.message });
   }
 });
 
-// 10. Webhooks Metadata & Registration Information
-billingRouter.get('/webhooks/status', (_req: Request, res: Response) => {
+// 10. PayPal Webhook Configuration & Details
+billingRouter.get('/webhooks/paypal/config', (req: Request, res: Response) => {
+  try {
+    const config = payPalWebhookService.getWebhookConfig(req);
+    return res.json({ success: true, ...config });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 11. PayPal Webhook Event Logs
+billingRouter.get('/webhooks/paypal/logs', (_req: Request, res: Response) => {
+  try {
+    const logs = payPalWebhookService.getWebhookLogs();
+    return res.json({ success: true, logs });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 12. Combined Webhooks Metadata & Registration Information
+billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
   const isRazorpaySecretConfigured = Boolean(process.env.RAZORPAY_WEBHOOK_SECRET);
-  const isPaypalWebhookConfigured = Boolean(process.env.PAYPAL_WEBHOOK_ID);
+  const paypalConfig = payPalWebhookService.getWebhookConfig(req);
 
   return res.json({
     success: true,
@@ -280,6 +718,7 @@ billingRouter.get('/webhooks/status', (_req: Request, res: Response) => {
         provider: 'Razorpay',
         method: 'POST',
         path: '/api/webhooks/razorpay',
+        fullUrl: `${paypalConfig.webhookUrl.replace('/api/webhooks/paypal', '/api/webhooks/razorpay')}`,
         secretEnvVar: 'RAZORPAY_WEBHOOK_SECRET',
         isConfigured: isRazorpaySecretConfigured,
         supportedEvents: [
@@ -296,20 +735,20 @@ billingRouter.get('/webhooks/status', (_req: Request, res: Response) => {
         provider: 'PayPal',
         method: 'POST',
         path: '/api/webhooks/paypal',
+        fullUrl: paypalConfig.webhookUrl,
         secretEnvVar: 'PAYPAL_WEBHOOK_ID',
-        isConfigured: isPaypalWebhookConfigured,
-        supportedEvents: [
-          'PAYMENT.CAPTURE.COMPLETED',
-          'BILLING.SUBSCRIPTION.ACTIVATED',
-          'BILLING.SUBSCRIPTION.CANCELLED',
-          'BILLING.SUBSCRIPTION.SUSPENDED',
-          'BILLING.SUBSCRIPTION.PAYMENT.FAILED'
-        ],
-        verificationMethod: 'Webhook ID / transmission verification header validation'
+        webhookId: paypalConfig.webhookId,
+        webhookStatus: paypalConfig.webhookStatus,
+        isConfigured: paypalConfig.isConfigured,
+        environment: paypalConfig.environment,
+        supportedEvents: paypalConfig.supportedEvents,
+        verificationMethod: 'PayPal Transmission Signature Verification (SHA256withRSA & verify-webhook-signature API)'
       }
     ],
+    paypal: paypalConfig,
     idempotencyEngine: 'In-memory + DB Deduplication Active',
-    note: 'When deploying to production, register these exact endpoint paths in your Razorpay Dashboard (Webhooks section) and PayPal Developer Portal.'
+    note: 'When deploying to production, register these exact endpoint paths in your Razorpay and PayPal Developer Dashboards.'
   });
 });
+
 

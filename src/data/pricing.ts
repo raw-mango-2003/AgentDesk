@@ -7,6 +7,7 @@ import {
 } from '../lib/currency';
 
 export type { CurrencyCode, CurrencyConfig };
+export { formatCurrencyAmount, getCurrencyConfig };
 
 export const CURRENCIES: Record<CurrencyCode, CurrencyConfig> = SUPPORTED_CURRENCIES;
 
@@ -36,7 +37,7 @@ export interface PlanConfig {
   usageLimits: PlanUsageLimits;
   features: string[];
   ctaText: string;
-  ctaType: 'demo' | 'book_demo' | 'sales' | 'enterprise_sales';
+  ctaType: 'buy_now' | 'demo' | 'book_demo' | 'sales' | 'enterprise_sales';
 }
 
 // ----------------------------------------------------
@@ -50,16 +51,16 @@ export const DEFAULT_PLAN_CONFIGS: Record<string, PlanConfig> = {
     name: 'Starter',
     tagline: '1 website, 1 AI Sales Agent & 2,000 AI conversations/month with CRM foundation.',
     positioning: 'For businesses starting with AI-powered customer engagement.',
-    price: 199,
-    setupFee: 249,
+    price: 14999,
+    setupFee: 19999,
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 2000,
     voiceMinutes: 250,
     dropdownLabel: 'Starter (₹14,999/mo + ₹19,999 setup • 2,000 AI Convos)',
     isPopular: false,
-    ctaText: 'Start Demo',
-    ctaType: 'demo',
+    ctaText: 'Buy Now',
+    ctaType: 'buy_now',
     pricing: {
       INR: { monthlyPrice: 14999, setupPrice: 19999 },
       USD: { monthlyPrice: 199, setupPrice: 249 },
@@ -99,15 +100,15 @@ export const DEFAULT_PLAN_CONFIGS: Record<string, PlanConfig> = {
     positioning: 'For growing businesses that need automated lead conversion.',
     badge: 'MOST POPULAR',
     isPopular: true,
-    price: 399,
-    setupFee: 449,
+    price: 29999,
+    setupFee: 34999,
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 7500,
     voiceMinutes: 1000,
     dropdownLabel: 'Growth (₹29,999/mo + ₹34,999 setup • 7,500 AI Convos)',
-    ctaText: 'Book a Demo',
-    ctaType: 'book_demo',
+    ctaText: 'Buy Now',
+    ctaType: 'buy_now',
     pricing: {
       INR: { monthlyPrice: 29999, setupPrice: 34999 },
       USD: { monthlyPrice: 399, setupPrice: 449 },
@@ -147,15 +148,15 @@ export const DEFAULT_PLAN_CONFIGS: Record<string, PlanConfig> = {
     name: 'Scale',
     tagline: 'Multiple websites, multiple AI agents & 20,000 AI conversations/month with monthly optimization.',
     positioning: 'For scaling companies requiring multi-agent AI and advanced automations.',
-    price: 799,
-    setupFee: 799,
+    price: 59999,
+    setupFee: 59999,
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 20000,
     voiceMinutes: 3000,
     dropdownLabel: 'Scale (₹59,999/mo + ₹59,999 setup • 20,000 AI Convos)',
-    ctaText: 'Upgrade to Scale',
-    ctaType: 'book_demo',
+    ctaText: 'Buy Now',
+    ctaType: 'buy_now',
     pricing: {
       INR: { monthlyPrice: 59999, setupPrice: 59999 },
       USD: { monthlyPrice: 799, setupPrice: 799 },
@@ -287,23 +288,6 @@ export function formatPlanDropdownLabel(planId: string, currency: CurrencyCode =
 }
 
 export function getRecommendedCurrency(): CurrencyCode {
-  if (typeof window === 'undefined') return 'INR';
-  try {
-    const saved = localStorage.getItem('ai_revenue_os_selected_currency') as CurrencyCode;
-    if (saved && (saved === 'USD' || saved === 'INR' || saved === 'GBP')) {
-      return saved;
-    }
-    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    const lang = (navigator.language || '').toLowerCase();
-    if (timeZone.includes('London') || lang.endsWith('-gb')) {
-      return 'GBP';
-    }
-    if (timeZone.includes('New_York') || timeZone.includes('America') || lang.endsWith('-us')) {
-      return 'USD';
-    }
-  } catch (err) {
-    console.warn('Currency detection error:', err);
-  }
   return 'INR';
 }
 

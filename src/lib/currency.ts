@@ -14,7 +14,7 @@ export interface CurrencyConfig {
   countryName: string;
 }
 
-export const BASE_CURRENCY: CurrencyCode = 'USD';
+export const BASE_CURRENCY: CurrencyCode = 'INR';
 
 /**
  * EXACTLY THREE SUPPORTED CURRENCIES: USD ($), INR (₹), GBP (£)
@@ -161,13 +161,14 @@ export function getCurrencyConfig(code?: string): CurrencyConfig {
  * GBP: £14,997.00
  */
 export function formatCurrencyAmount(
-  amount: number,
-  currencyCode: CurrencyCode = 'USD',
+  amount?: number | null,
+  currencyCode: CurrencyCode = 'INR',
   localeOverride?: string,
   options?: { maximumFractionDigits?: number; minimumFractionDigits?: number; compact?: boolean }
 ): string {
+  const safeAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
   const config = getCurrencyConfig(currencyCode);
-  const locale = localeOverride || config.locale || 'en-US';
+  const locale = localeOverride || config.locale || 'en-IN';
 
   try {
     const maxFractionDigits = options?.maximumFractionDigits !== undefined 
@@ -176,7 +177,7 @@ export function formatCurrencyAmount(
       
     const minFractionDigits = options?.minimumFractionDigits !== undefined
       ? options.minimumFractionDigits
-      : (amount % 1 !== 0 ? Math.min(2, maxFractionDigits) : 0);
+      : (safeAmount % 1 !== 0 ? Math.min(2, maxFractionDigits) : 0);
 
     return new Intl.NumberFormat(locale, {
       style: 'currency',
@@ -184,9 +185,9 @@ export function formatCurrencyAmount(
       maximumFractionDigits: maxFractionDigits,
       minimumFractionDigits: minFractionDigits,
       notation: options?.compact ? 'compact' : 'standard'
-    }).format(amount);
+    }).format(safeAmount);
   } catch (err) {
-    const formattedNum = (Math.round(amount * 100) / 100).toLocaleString(locale);
+    const formattedNum = (Math.round(safeAmount * 100) / 100).toLocaleString(locale);
     return `${config.symbol}${formattedNum}`;
   }
 }

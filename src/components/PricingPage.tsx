@@ -42,41 +42,67 @@ import {
 } from '../data/pricing';
 import { ROICalculator } from './ROICalculator';
 import { ContactSalesModal } from './ContactSalesModal';
-import { CurrencySelector } from './CurrencySelector';
+import { AgentDeskCheckoutModal } from './AgentDeskCheckoutModal';
 
 interface PricingPageProps {
-  onOpenDashboard?: () => void;
+  onOpenDashboard?: (tenantId?: string) => void;
   onOpenDemo?: () => void;
+  onWorkspaceCreated?: (tenantId: string) => void;
 }
 
 export const PricingPage: React.FC<PricingPageProps> = ({
   onOpenDashboard,
-  onOpenDemo
+  onOpenDemo,
+  onWorkspaceCreated
 }) => {
   const [currency, setCurrency] = useState<CurrencyCode>(() => getRecommendedCurrency());
-  const [selectedPlanModal, setSelectedPlanModal] = useState<{
+  
+  // Checkout Modal State for Starter, Growth, Scale
+  const [checkoutModal, setCheckoutModal] = useState<{
+    isOpen: boolean;
+    planId: string;
+  }>({
+    isOpen: false,
+    planId: 'starter'
+  });
+
+  // Contact Sales Modal State for Enterprise
+  const [salesModal, setSalesModal] = useState<{
     isOpen: boolean;
     planId: string;
     ctaType: 'demo' | 'book_demo' | 'sales' | 'enterprise_sales';
   }>({
     isOpen: false,
-    planId: 'growth',
-    ctaType: 'book_demo'
+    planId: 'enterprise',
+    ctaType: 'sales'
   });
 
   const [expandedImplementation, setExpandedImplementation] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   const handleOpenPlanModal = (plan: PlanConfig) => {
-    if (plan.ctaType === 'demo' && onOpenDemo) {
-      onOpenDemo();
+    if (plan.id === 'enterprise' || plan.ctaType === 'sales' || plan.ctaType === 'enterprise_sales') {
+      setSalesModal({
+        isOpen: true,
+        planId: plan.id,
+        ctaType: 'sales'
+      });
       return;
     }
-    setSelectedPlanModal({
+
+    // Starter, Growth, Scale -> Open AgentDesk Checkout Modal
+    setCheckoutModal({
       isOpen: true,
-      planId: plan.id,
-      ctaType: plan.ctaType
+      planId: plan.id
     });
+  };
+
+  const handleWorkspaceActivated = (tenantId: string) => {
+    if (onWorkspaceCreated) {
+      onWorkspaceCreated(tenantId);
+    } else if (onOpenDashboard) {
+      onOpenDashboard(tenantId);
+    }
   };
 
   const categories = ['All', 'Websites & Agents', 'Usage Allowance', 'Lead Conversion', 'Knowledge & AI', 'Automation', 'Integrations', 'Analytics', 'Operations', 'Support'];
@@ -111,20 +137,15 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             The complete AI Revenue & Customer Operations Platform. Consolidate your answering service, CRM, follow-up, appointments, and reviews into one intelligent system.
           </p>
 
-          {/* Currency Selector */}
+          {/* Currency Indicator */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 relative z-30 mb-8 sm:mb-10">
-            <div className="inline-flex items-center gap-2 p-1.5 px-3 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl max-w-full">
-              <span className="text-xs text-slate-400 font-semibold flex items-center gap-1.5 shrink-0">
-                <Globe className="w-3.5 h-3.5 text-blue-400" />
-                <span>Currency:</span>
+            <div className="inline-flex items-center gap-2 py-1.5 px-4 rounded-full bg-slate-900/90 border border-slate-800 shadow-xl max-w-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-slate-300 font-semibold flex items-center gap-1.5">
+                <span>All plans priced in Indian Rupee (INR ₹)</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-blue-400">Razorpay Checkout</span>
               </span>
-              <CurrencySelector
-                selectedCurrency={currency}
-                onSelectCurrency={(c) => setCurrency(c)}
-                buttonClassName="bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700 text-xs px-3 py-1.5"
-                compact={false}
-                align="center"
-              />
             </div>
           </div>
         </div>
@@ -365,7 +386,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         <ROICalculator
           currency={currency}
           onBookDemo={() => {
-            setSelectedPlanModal({
+            setSalesModal({
               isOpen: true,
               planId: 'enterprise',
               ctaType: 'book_demo'
@@ -594,7 +615,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={() => {
-                setSelectedPlanModal({
+                setSalesModal({
                   isOpen: true,
                   planId: 'enterprise',
                   ctaType: 'sales'
@@ -619,13 +640,22 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         </div>
       </section>
 
-      {/* Contact Sales / Demo Modal */}
+      {/* AgentDesk Checkout Modal (Starter, Growth, Scale) */}
+      <AgentDeskCheckoutModal
+        isOpen={checkoutModal.isOpen}
+        onClose={() => setCheckoutModal(prev => ({ ...prev, isOpen: false }))}
+        planId={checkoutModal.planId}
+        initialCurrency={currency}
+        onWorkspaceCreatedAndActivated={handleWorkspaceActivated}
+      />
+
+      {/* Contact Sales / Demo Modal (Enterprise) */}
       <ContactSalesModal
-        isOpen={selectedPlanModal.isOpen}
-        onClose={() => setSelectedPlanModal({ ...selectedPlanModal, isOpen: false })}
-        planId={selectedPlanModal.planId}
+        isOpen={salesModal.isOpen}
+        onClose={() => setSalesModal(prev => ({ ...prev, isOpen: false }))}
+        planId={salesModal.planId}
         currency={currency}
-        ctaType={selectedPlanModal.ctaType}
+        ctaType={salesModal.ctaType}
       />
     </div>
   );

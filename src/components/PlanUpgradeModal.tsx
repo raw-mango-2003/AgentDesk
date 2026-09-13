@@ -14,10 +14,14 @@ import { CurrencyCode, formatPrice, getPlanConfig } from '../data/pricing';
 interface PlanUpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  featureName: string;
+  featureName?: string;
   requiredPlanName?: string;
   currency?: CurrencyCode;
   onUpgradeClick?: () => void;
+  currentPlanId?: string;
+  featureReason?: string;
+  targetPlanId?: string;
+  onSelectPlan?: (newPlan: any) => void;
 }
 
 export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
@@ -26,12 +30,19 @@ export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
   featureName,
   requiredPlanName = 'AI RevenueOS Enterprise',
   currency = 'USD',
-  onUpgradeClick
+  onUpgradeClick,
+  currentPlanId,
+  featureReason,
+  targetPlanId,
+  onSelectPlan
 }) => {
   if (!isOpen) return null;
 
-  const enterpriseConfig = getPlanConfig('enterprise');
+  const targetPlanKey = (targetPlanId || 'enterprise').toLowerCase();
+  const enterpriseConfig = getPlanConfig(targetPlanKey as any) || getPlanConfig('enterprise');
   const pricing = enterpriseConfig.pricing[currency] || enterpriseConfig.pricing.USD;
+  const displayFeatureName = featureReason || featureName || 'Advanced Feature';
+  const displayRequiredPlan = enterpriseConfig.name || requiredPlanName;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
@@ -58,10 +69,10 @@ export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
           </div>
 
           <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-            Unlock {featureName}
+            Unlock {displayFeatureName}
           </h3>
           <p className="text-xs text-slate-300 mt-1.5 leading-relaxed max-w-sm mx-auto">
-            <span className="font-semibold text-white">{featureName}</span> is included in the <span className="text-blue-400 font-bold">{requiredPlanName}</span> tier.
+            <span className="font-semibold text-white">{displayFeatureName}</span> is included in the <span className="text-blue-400 font-bold">{displayRequiredPlan}</span> tier.
           </p>
         </div>
 
@@ -84,7 +95,7 @@ export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
         {/* Pricing Summary */}
         <div className="flex items-center justify-between p-3.5 rounded-2xl bg-blue-950/40 border border-blue-500/30 mb-6">
           <div>
-            <div className="text-[10px] uppercase font-bold text-blue-300">Enterprise Platform Fee</div>
+            <div className="text-[10px] uppercase font-bold text-blue-300">Platform Fee</div>
             <div className="text-lg font-black text-white">
               {formatPrice(pricing.monthlyPrice, currency as CurrencyCode)} <span className="text-xs font-normal text-slate-400">/ mo</span>
             </div>
@@ -99,12 +110,17 @@ export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={() => {
+              if (onSelectPlan) {
+                onSelectPlan(targetPlanKey);
+              }
+              if (onUpgradeClick) {
+                onUpgradeClick();
+              }
               onClose();
-              if (onUpgradeClick) onUpgradeClick();
             }}
             className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Upgrade to Enterprise</span>
+            <span>Upgrade to {enterpriseConfig.name}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 

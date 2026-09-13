@@ -1,278 +1,373 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
-  signInWithPopup, 
-  User as FirebaseUser 
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, googleProvider, db } from '../lib/firebase';
 import { UserProfile, UserRole } from '../types';
-import { SUMMIT_ID, SHARMA_ID } from '../data/seedData';
+import { safeFetchJson } from '../lib/apiClient';
+
+export interface TenantInfo {
+  id: string;
+  name: string;
+  status: 'ONBOARDING' | 'PAYMENT_PENDING' | 'ACTIVE' | 'SUSPENDED' | 'CANCELLED' | string;
+  plan?: string;
+  currency?: string;
+  subscriptionState?: string;
+}
 
 interface AuthContextType {
   currentUser: UserProfile | null;
-  firebaseUser: FirebaseUser | null;
+  currentTenant: TenantInfo | null;
   loading: boolean;
   activeBusinessId: string;
   setActiveBusinessId: (id: string) => void;
-  loginWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, name: string, role?: UserRole, workspaceName?: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginBusiness: (email: string, pass: string) => Promise<{ success: boolean; error?: string; onboardingPending?: boolean; mustChangePassword?: boolean; user?: UserProfile; tenant?: TenantInfo | null }>;
+  loginPlatformAdmin: (email: string, pass: string) => Promise<{ success: boolean; error?: string; user?: UserProfile }>;
+  signupBusiness: (name: string, email: string, pass: string, confirmPass?: string) => Promise<{ success: boolean; error?: string; user?: UserProfile; onboardingStep?: string }>;
   logout: () => Promise<void>;
-  switchRoleForDemo: (role: UserRole, businessId?: string, customName?: string, customEmail?: string) => void;
+  updatePassword: (currentPassword: string, newPassword: string, confirmPassword?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  updateProfile: (name?: string, email?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
+  saveBusinessDetails: (details: { businessName: string; industry?: string; teamSize?: string; phone?: string; website?: string }) => Promise<{ success: boolean; tenantId?: string; error?: string }>;
+  refreshAuth: () => Promise<void>;
+  isAuthenticated: boolean;
+  isPlatformAdmin: boolean;
+  mustChangePassword: boolean;
 }
-
-function formatBusinessName(id: string): string {
-  return id
-    .replace(/[-_]/g, ' ')
-    .split(' ')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
-
-function getStoredAuthUser(): UserProfile | null {
-  try {
-    const saved = localStorage.getItem('agentdesk_auth_user');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch (e) {}
-  // Default to Platform Admin (SaaS Owner)
-  return {
-    uid: 'platform-admin-1',
-    email: 'admin@ai-revenueos.internal',
-    displayName: 'Platform Admin',
-    role: 'PLATFORM_ADMIN',
-    businessId: SUMMIT_ID
-  };
-}
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = 'agentdesk_session_token';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(getStoredAuthUser());
-  const [activeBusinessId, setActiveBusinessIdState] = useState<string>(() => {
-    try {
-      const savedTenant = localStorage.getItem('agentdesk_active_tenant_id');
-      if (savedTenant) return savedTenant;
-    } catch (e) {}
-    const user = getStoredAuthUser();
-    return user?.businessId || 'aec-overseas';
-  });
-  const [loading, setLoading] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<TenantInfo | null>(null);
+  const [activeBusinessId, setActiveBusinessIdState] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
 
   const setActiveBusinessId = (id: string) => {
     setActiveBusinessIdState(id);
+  };
+
+  const fetchSessionUser = async (token: string) => {
     try {
-      localStorage.setItem('agentdesk_active_tenant_id', id);
-    } catch (e) {}
+      const res = await safeFetchJson('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.success && res.user) {
+        setCurrentUser(res.user);
+        if (res.tenant) {
+          setCurrentTenant(res.tenant);
+          setActiveBusinessIdState(res.tenant.id);
+        } else if (res.user.tenantId && res.user.tenantId !== 'platform') {
+          setActiveBusinessIdState(res.user.tenantId);
+        }
+        return;
+      }
+      // Invalid session
+      localStorage.removeItem(TOKEN_KEY);
+      setCurrentUser(null);
+      setCurrentTenant(null);
+      setActiveBusinessIdState('');
+    } catch (err) {
+      console.warn('Failed to verify authentication session:', err);
+      // Do not silently fallback to admin on error
+      setCurrentUser(null);
+    }
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
-          if (userDoc.exists()) {
-            const profile = userDoc.data() as UserProfile;
-            setCurrentUser(profile);
-            if (profile.businessId) {
-              setActiveBusinessId(profile.businessId);
-            }
-            try {
-              localStorage.setItem('agentdesk_auth_user', JSON.stringify(profile));
-            } catch (e) {}
-          }
-        } catch (err) {
-          console.warn('Error fetching user profile from Firestore:', err);
-        }
+    const initAuth = async () => {
+      setLoading(true);
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (token) {
+        await fetchSessionUser(token);
+      } else {
+        setCurrentUser(null);
+        setCurrentTenant(null);
       }
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const loginWithEmail = async (email: string, pass: string) => {
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-    } catch (err) {
-      console.warn('Firebase login fallback:', err);
-    }
-
-    const lowerEmail = email.toLowerCase().trim();
-    let role: UserRole = 'BUSINESS_ADMIN';
-    let targetBizId = activeBusinessId || 'aec-overseas';
-    let displayName = email.split('@')[0];
-
-    if (lowerEmail.includes('agentdesk') || lowerEmail.includes('platform') || lowerEmail.includes('owner')) {
-      role = 'PLATFORM_ADMIN';
-      displayName = 'Platform Admin';
-    } else {
-      role = 'BUSINESS_ADMIN';
-      const domain = lowerEmail.split('@')[1]?.split('.')[0] || 'custom-workspace';
-      targetBizId = domain;
-      displayName = `${formatBusinessName(domain)} Admin`;
-    }
-
-    const profile: UserProfile = {
-      uid: 'user-' + Date.now(),
-      email,
-      displayName,
-      role,
-      businessId: targetBizId
     };
 
-    setCurrentUser(profile);
-    setActiveBusinessId(targetBizId);
-    try {
-      localStorage.setItem('agentdesk_auth_user', JSON.stringify(profile));
-    } catch (e) {}
-    setLoading(false);
+    initAuth();
+  }, []);
+
+  const refreshAuth = async () => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      await fetchSessionUser(token);
+    }
   };
 
-  const signUpWithEmail = async (
-    email: string, 
-    pass: string, 
-    name: string, 
-    role: UserRole = 'BUSINESS_ADMIN',
-    workspaceName?: string
-  ) => {
+  const loginBusiness = async (email: string, pass: string) => {
     setLoading(true);
-    let targetBizId = 'new-tenant';
-
-    if (workspaceName && workspaceName.trim()) {
-      targetBizId = workspaceName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
-    } else {
-      const lowerEmail = email.toLowerCase().trim();
-      const domain = lowerEmail.split('@')[1]?.split('.')[0] || 'new-workspace';
-      targetBizId = domain;
-    }
-
     try {
-      const res = await createUserWithEmailAndPassword(auth, email, pass);
-      const profile: UserProfile = {
-        uid: res.user.uid,
-        email,
-        displayName: name,
-        role,
-        businessId: targetBizId,
-        createdAt: new Date().toISOString()
+      const res = await safeFetchJson('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+
+      if (!res.success) {
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Authentication failed');
+        return { success: false, error: errorMsg };
+      }
+
+      if (res.token) {
+        localStorage.setItem(TOKEN_KEY, res.token);
+      }
+      if (res.user) {
+        setCurrentUser(res.user);
+      }
+      if (res.tenant) {
+        setCurrentTenant(res.tenant);
+        setActiveBusinessIdState(res.tenant.id);
+      } else if (res.user?.tenantId) {
+        setActiveBusinessIdState(res.user.tenantId);
+      }
+
+      return {
+        success: true,
+        user: res.user,
+        tenant: res.tenant,
+        mustChangePassword: !!res.mustChangePassword,
+        onboardingPending: res.onboardingPending
       };
-      await setDoc(doc(db, 'users', res.user.uid), profile);
-      setCurrentUser(profile);
-      setActiveBusinessId(targetBizId);
-      try {
-        localStorage.setItem('agentdesk_auth_user', JSON.stringify(profile));
-      } catch (e) {}
-    } catch (err) {
-      console.warn('Firebase signup fallback, setting local profile:', err);
-      const profile: UserProfile = {
-        uid: 'user-' + Date.now(),
-        email,
-        displayName: name,
-        role,
-        businessId: targetBizId
-      };
-      setCurrentUser(profile);
-      setActiveBusinessId(targetBizId);
-      try {
-        localStorage.setItem('agentdesk_auth_user', JSON.stringify(profile));
-      } catch (e) {}
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error during login' };
     } finally {
       setLoading(false);
     }
   };
 
-  const loginWithGoogle = async () => {
+  const loginPlatformAdmin = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (err) {
-      console.warn('Google login popup fallback:', err);
-      const profile: UserProfile = {
-        uid: 'google-user-1',
-        email: 'admin@agentdesk.ai',
-        displayName: 'Platform Admin',
-        role: 'PLATFORM_ADMIN',
-        businessId: activeBusinessId || 'aec-overseas'
+      // Support both /api/auth/platform/login and legacy /api/auth/platform-login
+      let res = await safeFetchJson('/api/auth/platform/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass })
+      });
+
+      if (!res.success && res.status === 404) {
+        res = await safeFetchJson('/api/auth/platform-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pass })
+        });
+      }
+
+      if (!res.success) {
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Platform Administrator login failed');
+        return { success: false, error: errorMsg };
+      }
+
+      if (res.token) {
+        localStorage.setItem(TOKEN_KEY, res.token);
+      }
+      if (res.user) {
+        setCurrentUser(res.user);
+      }
+      setCurrentTenant(null);
+      setActiveBusinessIdState('platform');
+
+      return {
+        success: true,
+        user: res.user
       };
-      setCurrentUser(profile);
-      try {
-        localStorage.setItem('agentdesk_auth_user', JSON.stringify(profile));
-      } catch (e) {}
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error during platform admin sign in' };
     } finally {
       setLoading(false);
+    }
+  };
+
+  const signupBusiness = async (name: string, email: string, pass: string, confirmPass?: string) => {
+    setLoading(true);
+    try {
+      const res = await safeFetchJson('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password: pass, confirmPassword: confirmPass })
+      });
+
+      if (!res.success) {
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Account creation failed');
+        return { success: false, error: errorMsg };
+      }
+
+      if (res.token) {
+        localStorage.setItem(TOKEN_KEY, res.token);
+      }
+      if (res.user) {
+        setCurrentUser(res.user);
+      }
+
+      return {
+        success: true,
+        user: res.user,
+        onboardingStep: (res as any).onboardingStep
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error during account registration' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveBusinessDetails = async (details: {
+    businessName: string;
+    industry?: string;
+    teamSize?: string;
+    phone?: string;
+    website?: string;
+  }) => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      return { success: false, error: 'Session expired. Please sign in again.' };
+    }
+
+    try {
+      const res = await safeFetchJson('/api/auth/onboarding/business-details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(details)
+      });
+
+      if (!res.success) {
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Failed to save business details');
+        return { success: false, error: errorMsg };
+      }
+
+      const tenantId = (res as any).tenantId;
+      if (tenantId) {
+        setActiveBusinessIdState(tenantId);
+      }
+      if (res.tenant) {
+        setCurrentTenant(res.tenant);
+      }
+      if (currentUser && tenantId) {
+        setCurrentUser({
+          ...currentUser,
+          tenantId,
+          businessId: tenantId
+        });
+      }
+
+      return { success: true, tenantId };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to save business details' };
+    }
+  };
+
+  const updatePassword = async (currentPassword: string, newPassword: string, confirmPassword?: string) => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      return { success: false, error: 'Authentication required.' };
+    }
+    try {
+      const res = await safeFetchJson('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+      });
+
+      if (!res.success) {
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Failed to update password.');
+        return { success: false, error: errorMsg };
+      }
+
+      if (res.user && currentUser) {
+        setCurrentUser({
+          ...currentUser,
+          mustChangePassword: false,
+          ...res.user
+        });
+      }
+      return { success: true, message: res.message || 'Password updated successfully.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to update password.' };
+    }
+  };
+
+  const updateProfile = async (name?: string, email?: string) => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      return { success: false, error: 'Authentication required.' };
+    }
+    try {
+      const res = await safeFetchJson('/api/auth/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ name, email })
+      });
+
+      if (!res.success) {
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Failed to update profile.');
+        return { success: false, error: errorMsg };
+      }
+
+      if (res.user && currentUser) {
+        setCurrentUser({
+          ...currentUser,
+          ...res.user
+        });
+      }
+      return { success: true, message: res.message || 'Profile updated successfully.' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to update profile.' };
     }
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (err) {
-      console.warn('Signout error:', err);
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+      } catch (e) {}
     }
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('agentdesk_auth_user');
+    localStorage.removeItem('agentdesk_active_tenant_id');
     setCurrentUser(null);
-    try {
-      localStorage.removeItem('agentdesk_auth_user');
-      localStorage.removeItem('agentdesk_active_tenant_id');
-    } catch (e) {}
+    setCurrentTenant(null);
+    setActiveBusinessIdState('');
   };
 
-  const switchRoleForDemo = (
-    role: UserRole, 
-    businessId?: string, 
-    customName?: string, 
-    customEmail?: string
-  ) => {
-    let finalBizId = businessId || activeBusinessId || 'aec-overseas';
-    let finalName = customName;
-    let finalEmail = customEmail;
-
-    if (role === 'PLATFORM_ADMIN') {
-      finalName = 'Platform Admin';
-      finalEmail = 'admin@agentdesk.ai';
-    } else {
-      finalName = customName || 'Business Admin';
-      finalEmail = customEmail || `admin@${finalBizId}.com`;
-    }
-
-    const profile: UserProfile = {
-      uid: `demo-${role.toLowerCase()}-${finalBizId}`,
-      email: finalEmail,
-      displayName: finalName,
-      role,
-      businessId: finalBizId
-    };
-
-    setCurrentUser(profile);
-    if (finalBizId) {
-      setActiveBusinessId(finalBizId);
-    }
-    try {
-      localStorage.setItem('agentdesk_auth_user', JSON.stringify(profile));
-    } catch (e) {}
-  };
+  const isAuthenticated = !!currentUser;
+  const isPlatformAdmin = currentUser?.role === 'PLATFORM_ADMIN';
+  const mustChangePassword = !!currentUser?.mustChangePassword;
 
   return (
     <AuthContext.Provider value={{
       currentUser,
-      firebaseUser,
+      currentTenant,
       loading,
       activeBusinessId,
       setActiveBusinessId,
-      loginWithEmail,
-      signUpWithEmail,
-      loginWithGoogle,
+      loginBusiness,
+      loginPlatformAdmin,
+      signupBusiness,
+      saveBusinessDetails,
+      updatePassword,
+      updateProfile,
       logout,
-      switchRoleForDemo
+      refreshAuth,
+      isAuthenticated,
+      isPlatformAdmin,
+      mustChangePassword
     }}>
       {children}
     </AuthContext.Provider>

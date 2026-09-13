@@ -43,23 +43,44 @@ import {
   PlanConfig
 } from '../data/pricing';
 import { ContactSalesModal } from './ContactSalesModal';
+import { AgentDeskCheckoutModal } from './AgentDeskCheckoutModal';
 import { ROICalculator } from './ROICalculator';
+import { LogIn } from 'lucide-react';
 
 interface LandingPageProps {
   onOpenDemo: () => void;
   onOpenAuth: () => void;
-  onOpenDashboard: () => void;
+  onOpenDashboard: (tenantId?: string) => void;
   onOpenPricing?: () => void;
+  onWorkspaceCreated?: (tenantId: string) => void;
+  onNavigateGetStarted?: () => void;
+  onNavigateLogin?: () => void;
+  onNavigatePlatformLogin?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenDemo,
   onOpenAuth,
   onOpenDashboard,
-  onOpenPricing
+  onOpenPricing,
+  onWorkspaceCreated,
+  onNavigateGetStarted,
+  onNavigateLogin,
+  onNavigatePlatformLogin
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [currency, setCurrency] = useState<CurrencyCode>(getRecommendedCurrency());
+  
+  // Checkout Modal State for Starter, Growth, Scale
+  const [checkoutModal, setCheckoutModal] = useState<{
+    isOpen: boolean;
+    planId: string;
+  }>({
+    isOpen: false,
+    planId: 'starter'
+  });
+
+  // Sales Modal State for Enterprise
   const [salesModal, setSalesModal] = useState<{
     isOpen: boolean;
     planId: string;
@@ -71,15 +92,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   });
 
   const handleOpenPlanAction = (plan: PlanConfig) => {
-    if (plan.ctaType === 'demo') {
-      onOpenDemo();
+    if (plan.id === 'enterprise' || plan.ctaType === 'sales' || plan.ctaType === 'enterprise_sales') {
+      setSalesModal({
+        isOpen: true,
+        planId: plan.id,
+        ctaType: 'sales'
+      });
       return;
     }
-    setSalesModal({
+
+    // Starter, Growth, Scale -> Open AgentDesk Checkout Modal
+    setCheckoutModal({
       isOpen: true,
-      planId: plan.id,
-      ctaType: plan.ctaType
+      planId: plan.id
     });
+  };
+
+  const handleWorkspaceActivated = (tenantId: string) => {
+    if (onWorkspaceCreated) {
+      onWorkspaceCreated(tenantId);
+    } else {
+      onOpenDashboard(tenantId);
+    }
   };
 
   const toggleFaq = (index: number) => {
@@ -200,19 +234,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Action CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={onOpenDashboard}
+              onClick={onNavigateGetStarted || onOpenAuth}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
             >
-              <span>Launch SaaS Console</span>
+              <span>Get Started</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
 
             <button
-              onClick={onOpenDemo}
+              onClick={onNavigateLogin || onOpenAuth}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
+              <LogIn className="w-4 h-4 text-blue-400" />
+              <span>Sign In</span>
+            </button>
+
+            <button
+              onClick={onOpenDemo}
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/80 text-slate-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
               <Bot className="w-4 h-4 text-emerald-400" />
-              <span>Test Live AI Receptionist</span>
+              <span>Test AI Receptionist</span>
             </button>
           </div>
 
@@ -450,12 +492,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center gap-6 text-[11px] text-slate-400">
             <span>SOC-2 Type II Certified</span>
             <span>GDPR & TCPA Compliant</span>
-            <span>Twilio & WhatsApp Business Verified</span>
+            {onNavigatePlatformLogin && (
+              <button
+                onClick={onNavigatePlatformLogin}
+                className="text-purple-400 hover:text-purple-300 font-semibold cursor-pointer underline underline-offset-4"
+              >
+                Platform Admin Sign In
+              </button>
+            )}
           </div>
         </div>
       </footer>
 
-      {/* Sales Inquiry & Demo Modal */}
+      {/* AgentDesk Checkout Modal (Starter, Growth, Scale) */}
+      <AgentDeskCheckoutModal
+        isOpen={checkoutModal.isOpen}
+        onClose={() => setCheckoutModal(prev => ({ ...prev, isOpen: false }))}
+        planId={checkoutModal.planId}
+        initialCurrency={currency}
+        onWorkspaceCreatedAndActivated={handleWorkspaceActivated}
+      />
+
+      {/* Sales Inquiry & Demo Modal (Enterprise) */}
       <ContactSalesModal
         isOpen={salesModal.isOpen}
         onClose={() => setSalesModal({ ...salesModal, isOpen: false })}

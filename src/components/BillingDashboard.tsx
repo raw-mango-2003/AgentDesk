@@ -54,11 +54,13 @@ import { PaymentCheckoutModal } from './PaymentCheckoutModal.js';
 interface BillingDashboardProps {
   business: Business;
   onNavigateTab?: (tab: string) => void;
+  onOpenUpgrade?: (feature?: string, targetPlan?: string) => void;
 }
 
 export const BillingDashboard: React.FC<BillingDashboardProps> = ({
   business,
-  onNavigateTab
+  onNavigateTab,
+  onOpenUpgrade
 }) => {
   const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -254,7 +256,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
             <span>Billing & Payment Architecture</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Real production billing engine supporting <span className="font-semibold text-slate-200">Razorpay</span> & <span className="font-semibold text-slate-200">PayPal</span> across USD, INR, and GBP.
+            Real production billing engine supporting <span className="font-semibold text-slate-200">Razorpay</span> across USD, INR, and GBP.
           </p>
         </div>
 
@@ -278,52 +280,24 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
       </div>
 
       {/* Provider Connectivity Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Razorpay Banner */}
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-black text-xs">
-              RZP
-            </div>
-            <div>
-              <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>Razorpay Gateway</span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
-                  Active
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400">Recurring e-mandates & cards • Preferred for INR</div>
-            </div>
+      <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-black text-xs">
+            RZP
           </div>
-          <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-            INR • USD • GBP
-          </span>
-        </div>
-
-        {/* PayPal Banner */}
-        <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black text-xs">
-              PP
+          <div>
+            <div className="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>Razorpay Payment Gateway</span>
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                Active & Integrated
+              </span>
             </div>
-            <div>
-              <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>PayPal Subscriptions</span>
-                <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 text-[10px] font-bold">
-                  Active
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400">
-                {isINR ? 'Prohibited for INR • Active for USD & GBP' : 'Global Vault & recurring wallet billing'}
-              </div>
-            </div>
+            <div className="text-[10px] text-slate-400">Cards, UPI, NetBanking & e-mandates across all supported currencies</div>
           </div>
-          <span className={`text-[11px] font-mono px-2.5 py-1 rounded-lg border ${
-            isINR ? 'text-rose-400 bg-rose-950/40 border-rose-800/40' : 'text-slate-400 bg-slate-950 border-slate-800'
-          }`}>
-            {isINR ? 'NO INR' : 'USD • GBP'}
-          </span>
         </div>
+        <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
+          INR • USD • GBP
+        </span>
       </div>
 
       {/* 1. Subscription & Payment Method Section */}
@@ -533,7 +507,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
             </div>
 
             <p className="text-xs text-slate-400 leading-relaxed mb-2">
-              All payment details are tokenized directly with Razorpay / PayPal. AI RevenueOS never stores raw card or CVV information.
+              All payment details are tokenized directly with Razorpay. AI RevenueOS never stores raw card or CVV information.
             </p>
           </div>
 
@@ -678,7 +652,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
                     <td className="py-4 px-6 text-slate-400">{inv.date}</td>
                     <td className="py-4 px-6 font-semibold text-slate-200">{inv.description}</td>
                     <td className="py-4 px-6 font-bold text-white">
-                      {formatPrice(inv.amount, inv.currency || currency)}
+                      {formatPrice(inv.amount, (inv.currency as CurrencyCode) || currency)}
                     </td>
                     <td className="py-4 px-6">
                       <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px]">

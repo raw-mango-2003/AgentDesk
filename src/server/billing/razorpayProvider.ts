@@ -13,7 +13,8 @@ import {
   CreateInvoiceParams,
   ProviderInvoice,
   SafePaymentMethod,
-  WebhookResult
+  WebhookResult,
+  ProviderHealthReport
 } from './paymentProvider.js';
 import { CurrencyCode } from '../../types.js';
 
@@ -24,9 +25,9 @@ export class RazorpayProvider implements PaymentProvider {
   private webhookSecret: string;
 
   constructor() {
-    this.keyId = process.env.RAZORPAY_KEY_ID || '';
-    this.keySecret = process.env.RAZORPAY_KEY_SECRET || '';
-    this.webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+    this.keyId = (process.env.RAZORPAY_KEY_ID || '').trim();
+    this.keySecret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
+    this.webhookSecret = (process.env.RAZORPAY_WEBHOOK_SECRET || '').trim();
   }
 
   public isConfigured(): boolean {
@@ -34,17 +35,17 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public getPublicKey(): string {
-    return this.keyId || 'rzp_test_revenueos_public';
+    return this.keyId || '';
   }
 
   public supportsCurrency(currency: CurrencyCode): boolean {
-    // Razorpay supports USD, INR, GBP
-    return currency === 'INR' || currency === 'USD' || currency === 'GBP';
+    // Razorpay remains the designated payment provider for Indian domestic payments (INR)
+    return currency === 'INR';
   }
 
   public supportsRecurring(currency: CurrencyCode): boolean {
-    // Razorpay supports recurring e-mandates in INR, card recurring in USD/GBP
-    return currency === 'INR' || currency === 'USD' || currency === 'GBP';
+    // Razorpay recurring e-mandates are supported strictly in INR
+    return currency === 'INR';
   }
 
   private getAuthHeader(): string {
@@ -53,14 +54,7 @@ export class RazorpayProvider implements PaymentProvider {
 
   public async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {
     if (!this.isConfigured()) {
-      return {
-        id: `cust_rzp_${params.businessId.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10)}_${Date.now().toString().slice(-4)}`,
-        name: params.name,
-        email: params.email,
-        phone: params.phone,
-        provider: 'razorpay',
-        createdAt: new Date().toISOString()
-      };
+      throw new Error('Razorpay integration is NOT_CONFIGURED. Customer creation requires live credentials.');
     }
 
     try {
@@ -108,32 +102,15 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public async createPayment(params: CreatePaymentParams): Promise<ProviderPayment> {
-    // Razorpay amounts are in smallest currency sub-units (e.g. 100 paise = 1 INR, 100 cents = 1 USD)
+    if (!this.supportsCurrency(params.currency)) {
+      throw new Error('This payment method is not available for this currency.');
+    }
+
+    // Razorpay amounts are in smallest currency sub-units (e.g. 100 paise = 1 INR)
     const amountInSubunits = Math.round(params.amount * 100);
 
     if (!this.isConfigured()) {
-      const orderId = `order_rzp_${Date.now()}`;
-      return {
-        id: orderId,
-        provider: 'razorpay',
-        amount: params.amount,
-        currency: params.currency,
-        status: 'pending',
-        orderId,
-        raw: {
-          key: this.getPublicKey(),
-          amount: amountInSubunits,
-          currency: params.currency,
-          name: 'AI RevenueOS • AgentDesk Technologies',
-          description: params.description,
-          order_id: orderId,
-          notes: {
-            businessId: params.businessId,
-            type: params.type,
-            ...params.metadata
-          }
-        }
-      };
+      throw new Error('Razorpay integration is NOT_CONFIGURED. Online payment order creation requires live Razorpay credentials.');
     }
 
     try {
@@ -178,22 +155,115 @@ export class RazorpayProvider implements PaymentProvider {
         }
       };
     } catch (error: any) {
-      console.warn('[Razorpay] Live API error in createPayment, using fallback order:', error.message);
-      const fallbackOrderId = `order_rzp_mock_${Date.now()}`;
+      console.error('[Razorpay] Live API error in createPayment:', error.message);
+      throw new Error(`Razorpay order creation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Real server-side health check verifying Razorpay live API authentication
+   */
+  public async checkHealth(): Promise<ProviderHealthReport> {
+    const lastChecked = new Date().toISOString();
+    if (!this.keyId || !this.keySecret) {
       return {
-        id: fallbackOrderId,
         provider: 'razorpay',
-        amount: params.amount,
-        currency: params.currency,
-        status: 'pending',
-        orderId: fallbackOrderId,
-        raw: {
-          key: this.getPublicKey(),
-          amount: amountInSubunits,
-          currency: params.currency,
-          order_id: fallbackOrderId
-        }
+        status: 'Configuration Required',
+        isConfigured: false,
+        message: 'Missing RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET',
+        environment: 'production',
+        lastChecked
       };
+    }
+
+    try {
+      const authHeader = `Basic ${Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64')}`;
+      const res = await fetch('https://api.razorpay.com/v1/customers?count=1', {
+        headers: { Authorization: authHeader }
+      });
+
+      if (res.status === 200) {
+        return {
+          provider: 'razorpay',
+          status: 'Connected',
+          isConfigured: true,
+          message: 'Razorpay Live API authenticated and operational',
+          environment: 'production',
+          lastChecked,
+          details: { keyId: `${this.keyId.substring(0, 8)}...` }
+        };
+      }
+
+      if (res.status === 401) {
+        return {
+          provider: 'razorpay',
+          status: 'Authentication Failed',
+          isConfigured: true,
+          message: 'Razorpay API credentials rejected (401 Unauthorized)',
+          environment: 'production',
+          lastChecked
+        };
+      }
+
+      return {
+        provider: 'razorpay',
+        status: 'Unavailable',
+        isConfigured: true,
+        message: `Razorpay API returned status ${res.status}`,
+        environment: 'production',
+        lastChecked
+      };
+    } catch (err: any) {
+      return {
+        provider: 'razorpay',
+        status: 'Error',
+        isConfigured: true,
+        message: `Network error connecting to Razorpay: ${err.message}`,
+        environment: 'production',
+        lastChecked
+      };
+    }
+  }
+
+  /**
+   * Helper to generate a valid Razorpay HMAC-SHA256 payment signature
+   * Useful for webhook simulation, test suites, and cryptographic verification
+   */
+  public generatePaymentSignature(orderId: string, paymentId: string): string {
+    return crypto
+      .createHmac('sha256', this.keySecret)
+      .update(`${orderId}|${paymentId}`)
+      .digest('hex');
+  }
+
+  /**
+   * Helper to generate a valid Razorpay webhook signature for testing
+   */
+  public generateWebhookSignature(payload: string | object): string {
+    const rawPayload = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    return crypto
+      .createHmac('sha256', this.webhookSecret)
+      .update(rawPayload)
+      .digest('hex');
+  }
+
+  public async fetchPaymentDetails(paymentId: string): Promise<any | null> {
+    if (!this.isConfigured() || !paymentId || paymentId.startsWith('pay_test_')) {
+      return null;
+    }
+    try {
+      const response = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+        headers: {
+          Authorization: this.getAuthHeader()
+        }
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    } catch (err) {
+      console.warn('[Razorpay] Failed to fetch payment details:', err);
+      return null;
     }
   }
 
@@ -210,7 +280,7 @@ export class RazorpayProvider implements PaymentProvider {
       };
     }
 
-    // In live mode with keySecret, perform HMAC-SHA256 signature verification
+    // 1. Signature Verification with Key Secret
     if (this.keySecret && signature) {
       try {
         const textToSign = subscriptionId
@@ -250,181 +320,155 @@ export class RazorpayProvider implements PaymentProvider {
       }
     }
 
-    // In Sandbox / Test mode (or when keys are not configured), verify structure
-    const isTestFormat = paymentId.startsWith('pay_') || paymentId.startsWith('PAY-');
+    // 2. If not configured, strictly fail payment verification - never permit fake payment success
+    if (!this.isConfigured()) {
+      return {
+        verified: false,
+        paymentId: paymentId || '',
+        transactionId: '',
+        status: 'failed',
+        message: 'Razorpay integration is NOT_CONFIGURED. Live payment verification requires valid Razorpay credentials.'
+      };
+    }
+
+    // 3. If configured with live credentials, signature is MANDATORY
+    if (!signature) {
+      return {
+        verified: false,
+        paymentId,
+        transactionId: `PAY-RZP-${paymentId}`,
+        status: 'failed',
+        message: 'Cryptographic signature is mandatory for live Razorpay verification.'
+      };
+    }
+
     return {
-      verified: isTestFormat,
+      verified: false,
       paymentId,
-      transactionId: paymentId.startsWith('PAY-') ? paymentId : `PAY-RZP-${paymentId.replace(/^pay_/, '')}`,
-      status: isTestFormat ? 'paid' : 'failed',
-      message: isTestFormat ? 'Test payment validated' : 'Invalid payment format'
+      transactionId: `PAY-RZP-${paymentId}`,
+      status: 'failed',
+      message: 'Payment verification failed: invalid or unverified transaction.'
     };
   }
 
   public async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
-    const subId = `sub_rzp_${Date.now()}`;
+    if (!this.supportsCurrency(params.currency)) {
+      throw new Error('This payment method is not available for this currency.');
+    }
+
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED. Subscriptions require live credentials.');
+    }
+
     const nextDate = new Date();
     nextDate.setDate(nextDate.getDate() + 30);
 
-    if (!this.isConfigured()) {
-      return {
-        id: subId,
-        provider: 'razorpay',
-        providerSubscriptionId: subId,
-        customerId: params.customerId || `cust_rzp_${params.businessId}`,
-        planId: params.planId,
-        currency: params.currency,
-        amount: params.monthlyAmount,
-        status: 'active',
-        currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: nextDate.toISOString(),
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        raw: {
-          key: this.getPublicKey(),
-          subscription_id: subId
+    // First ensure or create Plan in Razorpay
+    const planRes = await fetch('https://api.razorpay.com/v1/plans', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader()
+      },
+      body: JSON.stringify({
+        period: 'monthly',
+        interval: 1,
+        item: {
+          name: `AI RevenueOS ${params.planName} Plan`,
+          amount: Math.round(params.monthlyAmount * 100),
+          currency: params.currency,
+          description: `Monthly subscription for ${params.planName}`
         }
-      };
+      })
+    });
+
+    if (!planRes.ok) {
+      const err = await planRes.json();
+      throw new Error(err.error?.description || 'Failed to create Razorpay plan');
     }
 
-    try {
-      // First ensure or create Plan in Razorpay
-      const planRes = await fetch('https://api.razorpay.com/v1/plans', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.getAuthHeader()
-        },
-        body: JSON.stringify({
-          period: 'monthly',
-          interval: 1,
-          item: {
-            name: `AI RevenueOS ${params.planName} Plan`,
-            amount: Math.round(params.monthlyAmount * 100),
-            currency: params.currency,
-            description: `Monthly subscription for ${params.planName}`
-          }
-        })
-      });
+    const planData = await planRes.json();
+    const rzpPlanId = planData.id;
 
-      const planData = await planRes.json();
-      const rzpPlanId = planData.id;
+    // Create subscription with that plan
+    const subRes = await fetch('https://api.razorpay.com/v1/subscriptions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader()
+      },
+      body: JSON.stringify({
+        plan_id: rzpPlanId,
+        total_count: 36, // 36 months recurring
+        quantity: 1,
+        customer_notify: 1,
+        notes: {
+          businessId: params.businessId,
+          planId: params.planId,
+          ...params.metadata
+        }
+      })
+    });
 
-      // Create subscription with that plan
-      const subRes = await fetch('https://api.razorpay.com/v1/subscriptions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: this.getAuthHeader()
-        },
-        body: JSON.stringify({
-          plan_id: rzpPlanId,
-          total_count: 36, // 36 months recurring
-          quantity: 1,
-          customer_notify: 1,
-          notes: {
-            businessId: params.businessId,
-            planId: params.planId,
-            ...params.metadata
-          }
-        })
-      });
-
-      if (!subRes.ok) {
-        const err = await subRes.json();
-        throw new Error(err.error?.description || 'Failed to create Razorpay subscription');
-      }
-
-      const subData = await subRes.json();
-      return {
-        id: subData.id,
-        provider: 'razorpay',
-        providerSubscriptionId: subData.id,
-        customerId: params.customerId,
-        planId: params.planId,
-        currency: params.currency,
-        amount: params.monthlyAmount,
-        status: subData.status === 'active' || subData.status === 'created' ? 'active' : 'pending',
-        currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: nextDate.toISOString(),
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        raw: subData
-      };
-    } catch (error: any) {
-      console.warn('[Razorpay] Live API error in createSubscription, using fallback:', error.message);
-      return {
-        id: subId,
-        provider: 'razorpay',
-        providerSubscriptionId: subId,
-        customerId: params.customerId,
-        planId: params.planId,
-        currency: params.currency,
-        amount: params.monthlyAmount,
-        status: 'active',
-        currentPeriodStart: new Date().toISOString(),
-        currentPeriodEnd: nextDate.toISOString(),
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        raw: { fallback: true }
-      };
+    if (!subRes.ok) {
+      const err = await subRes.json();
+      throw new Error(err.error?.description || 'Failed to create Razorpay subscription');
     }
+
+    const subData = await subRes.json();
+    return {
+      id: subData.id,
+      provider: 'razorpay',
+      providerSubscriptionId: subData.id,
+      customerId: params.customerId,
+      planId: params.planId,
+      currency: params.currency,
+      amount: params.monthlyAmount,
+      status: subData.status === 'active' || subData.status === 'created' ? 'active' : 'pending',
+      currentPeriodStart: new Date().toISOString(),
+      currentPeriodEnd: nextDate.toISOString(),
+      nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      raw: subData
+    };
   }
 
   public async getSubscription(subscriptionId: string): Promise<ProviderSubscription> {
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED.');
+    }
+
     const nextDate = new Date();
     nextDate.setDate(nextDate.getDate() + 28);
 
-    if (!this.isConfigured()) {
-      return {
-        id: subscriptionId,
-        provider: 'razorpay',
-        providerSubscriptionId: subscriptionId,
-        planId: 'growth',
-        currency: 'USD',
-        amount: 1497,
-        status: 'active',
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-      };
+    const res = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: this.getAuthHeader() }
+    });
+    if (!res.ok) {
+      throw new Error(`Razorpay getSubscription failed with status ${res.status}`);
     }
+    const data = await res.json();
+    const statusMap: Record<string, any> = {
+      active: 'active',
+      authenticated: 'active',
+      pending: 'pending',
+      halted: 'past_due',
+      cancelled: 'cancelled',
+      completed: 'expired',
+      paused: 'paused'
+    };
 
-    try {
-      const res = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
-        headers: { Authorization: this.getAuthHeader() }
-      });
-      const data = await res.json();
-      const statusMap: Record<string, any> = {
-        active: 'active',
-        authenticated: 'active',
-        pending: 'pending',
-        halted: 'past_due',
-        cancelled: 'cancelled',
-        completed: 'expired',
-        paused: 'paused'
-      };
-
-      return {
-        id: data.id,
-        provider: 'razorpay',
-        providerSubscriptionId: data.id,
-        planId: data.notes?.planId || 'growth',
-        currency: data.currency || 'USD',
-        amount: (data.plan?.item?.amount || 149700) / 100,
-        status: statusMap[data.status] || 'active',
-        currentPeriodStart: data.current_start ? new Date(data.current_start * 1000).toISOString() : undefined,
-        currentPeriodEnd: data.current_end ? new Date(data.current_end * 1000).toISOString() : undefined,
-        nextBillingDate: data.charge_at ? new Date(data.charge_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : nextDate.toLocaleDateString('en-US')
-      };
-    } catch (err: any) {
-      console.warn('[Razorpay] getSubscription error:', err.message);
-      return {
-        id: subscriptionId,
-        provider: 'razorpay',
-        providerSubscriptionId: subscriptionId,
-        planId: 'growth',
-        currency: 'USD',
-        amount: 1497,
-        status: 'active',
-        nextBillingDate: nextDate.toLocaleDateString('en-US')
-      };
-    }
+    return {
+      id: data.id,
+      provider: 'razorpay',
+      providerSubscriptionId: data.id,
+      planId: data.notes?.planId || 'growth',
+      currency: data.currency || 'USD',
+      amount: (data.plan?.item?.amount || 149700) / 100,
+      status: statusMap[data.status] || 'active',
+      currentPeriodStart: data.current_start ? new Date(data.current_start * 1000).toISOString() : undefined,
+      currentPeriodEnd: data.current_end ? new Date(data.current_end * 1000).toISOString() : undefined,
+      nextBillingDate: data.charge_at ? new Date(data.charge_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : nextDate.toLocaleDateString('en-US')
+    };
   }
 
   public async updateSubscription(subscriptionId: string, planId: string, customPrice?: number): Promise<ProviderSubscription> {

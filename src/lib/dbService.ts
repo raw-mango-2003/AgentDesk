@@ -56,6 +56,20 @@ import {
   SHARMA_ID
 } from '../data/seedData';
 
+export async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
+  try {
+    const res = await fetch(url, options);
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || errData.message || `Request failed with status ${res.status}`);
+    }
+    return await res.json();
+  } catch (err: any) {
+    console.error(`[safeFetchJson] Error fetching ${url}:`, err);
+    throw err;
+  }
+}
+
 import {
   firestoreTenant,
   TenantSecurityException,
@@ -1501,7 +1515,7 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
     last4: '8892',
     expiry: '09/28',
     isPrimary: true,
-    provider: isIN ? 'razorpay' : 'paypal'
+    provider: 'razorpay'
   };
 
   const dynamicInvoices: InvoiceItem[] = serverBillingData?.invoices?.length > 0 
@@ -1524,7 +1538,7 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
     businessId: validTenant,
     planId: serverBillingData?.billing?.planId || planConfig.id,
     planName: serverBillingData?.billing?.planName || planConfig.name,
-    provider: serverBillingData?.billing?.provider || (isIN ? 'razorpay' : 'paypal'),
+    provider: serverBillingData?.billing?.provider || 'razorpay',
     status: currentStatus,
     currency: effectiveCurrency,
     implementationFee: serverBillingData?.billing?.implementationFee || planPricing.setupPrice,
@@ -1550,10 +1564,10 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
       {
         id: 'pm-01',
         businessId: validTenant,
-        provider: isIN ? 'razorpay' : 'paypal',
+        provider: 'razorpay',
         providerPaymentMethodId: 'tok_01',
-        brand: isIN ? 'Visa' : 'PayPal Account',
-        last4: isIN ? '8892' : 'Primary PayPal Wallet',
+        brand: 'Visa',
+        last4: '8892',
         expiry: '09/28',
         isPrimary: true,
         createdAt: new Date().toISOString()

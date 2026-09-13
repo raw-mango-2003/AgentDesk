@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import 'dotenv/config';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
@@ -38,7 +39,22 @@ import {
 } from './src/lib/conversationEngine.js';
 import { runConversationTestSuite, runMultiTenantIsolationTestSuite } from './src/lib/testSuite.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
+import { authRouter } from './src/server/auth/authRouter.js';
+import { integrationsRouter } from './src/server/integrationsRouter.js';
+import { storageService, gmailService } from './src/server/integrations/index.js';
+import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
+import { 
+  serverBusinessesStore, 
+  serverAgentsStore, 
+  serverKnowledgeStore, 
+  serverTenantUsageStore, 
+  recordTenantUsage, 
+  checkTenantQuota, 
+  getPlanUsageLimits, 
+  getTenant, 
+  provisionCustomerTenant 
+} from './src/server/tenantRegistry.js';
 
 // Safe environment directory resolver for both dev (tsx/ESM) and prod (esbuild/CJS)
 const getAppDirectory = (): string => {
@@ -56,14 +72,51 @@ const getAppDirectory = (): string => {
 const appDirectory = getAppDirectory();
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    req.rawBody = buf;
+    req.rawBodyString = buf.toString('utf8');
+  }
+}));
+app.use(express.urlencoded({ extended: true }));
 
 // Mount Billing & Webhooks API Router
 app.use('/api/billing', billingRouter);
 app.use('/api', billingRouter);
+
+// Mount Authentication API Router
+app.use('/api/auth', authRouter);
+app.use('/api', authRouter);
+app.use('/api/platform', authRouter);
+
+// Mount Production Integrations, Notifications, Security & Health API Router
+app.use('/api', integrationsRouter);
+app.use('/', integrationsRouter);
+
+// Secure Local Storage Files Endpoint
+app.get('/api/storage/files/:fileKey', (req: Request, res: Response) => {
+  try {
+    const fileKey = decodeURIComponent(req.params.fileKey);
+    const file = storageService.getLocalFile(fileKey);
+    if (!file || !file.dataBuffer) {
+      return res.status(404).json({ success: false, error: 'File not found in storage.' });
+    }
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`);
+    return res.send(file.dataBuffer);
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Client Error Telemetry Endpoint
+app.post('/api/logs/client-error', (req: Request, res: Response) => {
+  console.warn('[Client Error Logged]:', req.body?.message || 'Unknown client error', req.body?.time);
+  return res.json({ success: true });
+});
 
 // Initialize Gemini Client safely with lazy evaluation
 let aiClient: GoogleGenAI | null = null;
@@ -225,56 +278,7 @@ function formatBusinessName(id: string): string {
     .join(' ');
 }
 
-// Server-side Tenant Knowledge Store (Multi-Tenant Persistence)
-const serverKnowledgeStore = new Map<string, KnowledgeItem[]>();
-
-// Initialize seed knowledge into tenant buckets
-function initServerKnowledgeStore() {
-  for (const item of SEED_KNOWLEDGE_ITEMS) {
-    const tenantId = (item.tenantId || item.businessId || '').trim().toLowerCase();
-    if (!tenantId) continue;
-    const existing = serverKnowledgeStore.get(tenantId) || [];
-    if (!existing.some(k => k.id === item.id)) {
-      existing.push({
-        ...item,
-        tenantId,
-        businessId: tenantId,
-        active: item.status === 'active' || item.active === true
-      });
-      serverKnowledgeStore.set(tenantId, existing);
-    }
-  }
-}
-initServerKnowledgeStore();
-
-// Server-side Tenant Businesses Store (Multi-Tenant Persistence)
-const serverBusinessesStore = new Map<string, any>();
-
-function initServerBusinessesStore() {
-  for (const b of SEED_BUSINESSES) {
-    const id = (b.id || '').trim().toLowerCase();
-    if (id) {
-      serverBusinessesStore.set(id, { ...b, id });
-    }
-  }
-}
-initServerBusinessesStore();
-
-// Server-side AI Agents Store (1 Agent belongs to exactly 1 Tenant)
-const serverAgentsStore = new Map<string, any>();
-
-function initServerAgentsStore() {
-  for (const a of SEED_AGENTS) {
-    const id = (a.id || '').trim().toLowerCase();
-    if (id) {
-      serverAgentsStore.set(id, { ...a, id });
-      if (a.publicId) {
-        serverAgentsStore.set(a.publicId.trim().toLowerCase(), { ...a, id });
-      }
-    }
-  }
-}
-initServerAgentsStore();
+// Stores (serverKnowledgeStore, serverBusinessesStore, serverAgentsStore, etc.) are imported from tenantRegistry.js
 
 // Helper: Resolve Business, Agent, and Knowledge strictly by Identifier (STRICT TENANT ISOLATION)
 export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge?: any[]) {
@@ -1723,6 +1727,32 @@ async function startServer() {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // API ROUTING GUARDS: Ensure all /api/* routes ALWAYS return JSON, never HTML
+  // ---------------------------------------------------------------------------
+  app.all('/api/*', (req: Request, res: Response) => {
+    res.status(404).json({
+      success: false,
+      error: {
+        code: 'API_ENDPOINT_NOT_FOUND',
+        message: `API endpoint ${req.method} ${req.originalUrl} does not exist.`
+      }
+    });
+  });
+
+  // Global API error handler ensuring any unhandled backend exception in /api returns JSON
+  app.use('/api', (err: any, req: Request, res: Response, _next: NextFunction) => {
+    console.error(`[API Global Error] ${req.method} ${req.originalUrl}:`, err);
+    const status = typeof err.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500;
+    res.status(status).json({
+      success: false,
+      error: {
+        code: err.code || 'INTERNAL_SERVER_ERROR',
+        message: err.message || 'An unexpected internal server error occurred.'
+      }
+    });
+  });
+
   const isProduction = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
 
   if (!isProduction) {
@@ -1753,6 +1783,7 @@ async function startServer() {
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`AgentDesk Server & WebSocket running on http://0.0.0.0:${PORT}`);
+    validateEnvironmentOnStartup(gmailService.getConnectionStatus());
   });
 }
 

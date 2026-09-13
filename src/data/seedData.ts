@@ -480,7 +480,7 @@ export const SEED_KNOWLEDGE_DOCS: KnowledgeItem[] = [
   * Starter: $199/month - up to 5 users, automated bank feeds, basic invoicing.
   * Growth: $399/month - unlimited users, multi-currency accounting, automated invoice chasing, payroll sync.
   * Enterprise: Custom pricing - dedicated account manager, custom ERP integrations, SLA guarantee.
-- Integrations: Stripe, PayPal, Razorpay, QuickBooks migration tool, NetSuite export.
+- Integrations: Stripe, Razorpay, QuickBooks migration tool, NetSuite export.
 - Note: Acme Technologies specializes purely in financial & accounting software. We do NOT provide recruitment, staffing, or human resource headhunting services.`,
     category: 'Product Overview & Pricing',
     createdAt: '2026-04-01T10:00:00Z',
