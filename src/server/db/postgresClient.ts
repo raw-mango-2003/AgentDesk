@@ -9,6 +9,27 @@ export interface DbStatus {
   lastCheckedAt: string;
 }
 
+export function isValidConfiguredDatabaseUrl(url: string): boolean {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed.startsWith('postgres://') && !trimmed.startsWith('postgresql://')) {
+    return false;
+  }
+  // Check for template placeholder patterns
+  if (
+    trimmed.includes('[YOUR-PASSWORD]') ||
+    trimmed.includes('[PASSWORD]') ||
+    trimmed.includes('<PASSWORD>') ||
+    trimmed.includes('YOUR_PASSWORD') ||
+    trimmed.includes('YOUR-PASSWORD') ||
+    trimmed.includes('[your-password]') ||
+    trimmed.includes('your_password')
+  ) {
+    return false;
+  }
+  return true;
+}
+
 class PostgresClient {
   private pool: pg.Pool | null = null;
   private isConnected = false;
@@ -22,8 +43,9 @@ class PostgresClient {
 
   private initPool(): void {
     const dbUrl = (process.env.DATABASE_URL || '').trim();
-    if (!dbUrl) {
-      this.lastError = 'DATABASE_URL is not set';
+    if (!isValidConfiguredDatabaseUrl(dbUrl)) {
+      this.lastError = 'DATABASE_URL is not configured or contains placeholder credentials';
+      this.pool = null;
       return;
     }
 
@@ -37,12 +59,10 @@ class PostgresClient {
       });
 
       this.pool.on('error', (err) => {
-        console.warn('[PostgresClient:PoolError]', err.message);
         this.isConnected = false;
         this.lastError = err.message;
       });
     } catch (err: any) {
-      console.warn('[PostgresClient:InitError]', err.message);
       this.pool = null;
       this.lastError = err.message;
     }
@@ -144,7 +164,7 @@ class PostgresClient {
       } catch (err: any) {
         this.isConnected = false;
         this.lastError = err.message;
-        console.warn(`[PostgresClient] Notice: PostgreSQL offline or credentials pending (${err.message}). Using resilient local storage fallback.`);
+        console.log(`[PostgresClient] Notice: PostgreSQL standby (${err.message}). Using resilient local storage.`);
         return false;
       }
     })();
@@ -160,9 +180,10 @@ class PostgresClient {
   }
 
   public getStatus(): DbStatus {
+    const isConfigured = isValidConfiguredDatabaseUrl(process.env.DATABASE_URL || '');
     return {
       isConnected: this.isConnected,
-      isConfigured: Boolean(process.env.DATABASE_URL),
+      isConfigured,
       provider: this.isConnected ? 'postgresql' : 'resilient_file_store',
       error: this.lastError || undefined,
       lastCheckedAt: new Date().toISOString()

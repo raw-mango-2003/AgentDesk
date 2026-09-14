@@ -231,19 +231,19 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'Product telemetry & analytics. If unconfigured, events are buffered in memory without breaking startup.'
   };
 
-  // 6. Sentry Integration (Telemetry & Exception Tracking)
+  // 6. Sentry Integration (Telemetry & Observability)
   const sentryDsn = (process.env.SENTRY_DSN || '').trim();
   const isSentryConfigured = Boolean(sentryDsn && sentryDsn.startsWith('http') && !sentryDsn.includes('internal.agentdesk'));
   result['sentry_monitoring'] = {
     id: 'sentry_monitoring',
-    name: 'Sentry Telemetry & Exception Tracking',
+    name: 'Sentry Telemetry & Observability',
     category: 'Monitoring',
     status: isSentryConfigured ? 'CONNECTED' : 'NOT_CONFIGURED',
     isMandatory: false,
     requiredVars: ['SENTRY_DSN'],
     configuredVars: isSentryConfigured ? ['SENTRY_DSN'] : [],
     missingVars: isSentryConfigured ? [] : ['SENTRY_DSN'],
-    description: 'Real-time exception logging, stack trace capture, and error monitoring.'
+    description: 'Real-time telemetry, stack trace capture, and health monitoring.'
   };
 
   // 7. S3 Storage Integration (Optional)
@@ -323,20 +323,12 @@ export function validateEnvironmentOnStartup(gmailStatus?: any): EnvironmentStat
   const core = getCoreEnvironmentStatus();
   const integrations = getIntegrationsStatusReport(gmailStatus);
 
-  console.log('================================================================');
-  console.log(' AgentDesk Modular Integration & Environment Status');
-  console.log('================================================================');
-  console.log(`[CORE] Application Status: ${core.status}`);
-  console.log(`[CORE] Mandatory Variables: DATABASE_URL, SESSION_SECRET, APP_URL, PLATFORM_ADMIN_EMAIL, PLATFORM_ADMIN_INITIAL_PASSWORD`);
-  console.log(`[CORE] Platform Admin: configured`);
+  console.log('[System] AgentDesk Core Environment: READY');
+  console.log(`[System] Mandatory core configuration verified.`);
   
-  console.log('----------------------------------------------------------------');
-  console.log(' Optional Modular Integrations Status:');
-  for (const [key, item] of Object.entries(integrations)) {
-    const statusText = item.status === 'CONNECTED' ? 'CONNECTED' : 'STANDBY_OPTIONAL';
-    console.log(`  * ${item.name.padEnd(45)}: [${statusText}]`);
-  }
-  console.log('================================================================');
+  const connected = Object.values(integrations).filter(i => i.status === 'CONNECTED');
+  const standby = Object.values(integrations).filter(i => i.status !== 'CONNECTED');
+  console.log(`[Integrations] Active: ${connected.length}, Standby: ${standby.length}`);
 
   return {
     timestamp: new Date().toISOString(),

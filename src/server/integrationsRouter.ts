@@ -166,11 +166,11 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
       },
       {
         id: 'sentry_monitoring',
-        name: 'Sentry Telemetry & Exception Tracking',
+        name: 'Sentry Telemetry & Observability',
         category: 'Monitoring',
         status: errorMonitoringService.isConfigured() ? 'CONNECTED' : 'NOT_CONFIGURED',
         isConfigured: errorMonitoringService.isConfigured(),
-        description: 'Real-time exception logging, stack trace capture, and error monitoring.',
+        description: 'Real-time telemetry, stack trace capture, and health monitoring.',
         envVars: ['SENTRY_DSN'],
         maskedConfig: {
           dsnConfigured: errorMonitoringService.isLiveSentryConfigured() ? 'Active (Live Sentry Upstream)' : 'Not Configured'
@@ -681,7 +681,7 @@ integrationsRouter.get('/platform/system-health', requirePlatformAdmin, (req: Re
       },
       errorMonitoring: {
         status: errorMonitoringService.isConfigured() ? 'HEALTHY' : 'NOT_CONFIGURED',
-        label: 'Sentry Telemetry & Exception Tracking',
+        label: 'Sentry Telemetry & Observability',
         details: {
           isConfigured: errorMonitoringService.isConfigured(),
           recentErrors: errorMonitoringService.getRecentErrors().length
