@@ -119,7 +119,7 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
       id: 'active-subscriptions',
       title: 'Active Subscriptions',
       value: (subscriptionsCount || businesses.length).toString(),
-      subtext: 'Razorpay & PayPal recurring plans',
+      subtext: 'Razorpay recurring plans & checkout',
       icon: CreditCard,
       color: 'blue',
       sectionKey: 'subscriptions'
@@ -308,8 +308,8 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
                   RZ
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white">Razorpay (India / INR)</div>
-                  <div className="text-[10px] text-slate-400">Cards, UPI, Netbanking, Mandates</div>
+                  <div className="text-xs font-bold text-white">Razorpay (Domestic & International)</div>
+                  <div className="text-[10px] text-slate-400">Cards, UPI, Netbanking, International Currencies</div>
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
@@ -317,15 +317,15 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
               </span>
             </div>
 
-            {/* PayPal Status */}
+            {/* Razorpay Webhook Status */}
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                  PP
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                  WH
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-white">PayPal Live (USD & GBP)</div>
-                  <div className="text-[10px] text-slate-400">Live Webhook Signature Verification</div>
+                  <div className="text-xs font-bold text-white">Razorpay Live Webhook</div>
+                  <div className="text-[10px] text-slate-400">HMAC-SHA256 Server Signature Verification</div>
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">

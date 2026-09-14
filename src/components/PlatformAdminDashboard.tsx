@@ -67,7 +67,6 @@ import { PlatformSystemHealth } from './admin/PlatformSystemHealth';
 import { PlatformMonitoringLogs } from './admin/PlatformMonitoringLogs';
 import { PlatformAutomationsDashboard } from './admin/PlatformAutomationsDashboard';
 import { PlatformMultiCurrencyManager } from './admin/PlatformMultiCurrencyManager';
-import { PlatformPayPalWebhookSettings } from './admin/PlatformPayPalWebhookSettings';
 import { PlatformAdminSidebar, PlatformAdminSection } from './admin/PlatformAdminSidebar';
 import { PlatformAdminDashboardOverview } from './admin/PlatformAdminDashboardOverview';
 import { PlatformPaymentsSection } from './admin/PlatformPaymentsSection';
@@ -106,10 +105,9 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showCreateDropdown, setShowCreateDropdown] = useState(false);
 
-  // Settings Navigation State (Settings → Payments → PayPal → Webhook Configuration)
+  // Settings Navigation State (Settings → Payments → Razorpay Configuration)
   const [settingsSection, setSettingsSection] = useState<'payments' | 'general'>('payments');
-  const [paymentsProvider, setPaymentsProvider] = useState<'paypal' | 'razorpay'>('paypal');
-  const [paypalSubSection, setPaypalSubSection] = useState<'webhook_configuration'>('webhook_configuration');
+  const [paymentsProvider, setPaymentsProvider] = useState<'razorpay'>('razorpay');
 
   // Quick Business Owner Invitation State (Requirement 7)
   const [showQuickInviteModal, setShowQuickInviteModal] = useState(false);
@@ -1421,19 +1419,19 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
               </div>
             </div>
 
-            {/* PayPal Live Webhook Card */}
+            {/* Razorpay Live Webhook Card */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                    PP
+                    RP
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-sm">PayPal Live Webhook</h3>
-                    <span className="text-[10px] text-slate-400">Global Payments & Subscriptions (Live HTTPS)</span>
+                    <h3 className="font-bold text-slate-900 text-sm">Razorpay Live Webhook</h3>
+                    <span className="text-[10px] text-slate-400">Payment & Subscription Synchronization (Live HTTPS)</span>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-[10px] font-bold">
+                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-bold">
                   PRODUCTION ENDPOINT
                 </span>
               </div>
@@ -1442,9 +1440,9 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">Registered Path:</span>
                   <div className="p-2.5 bg-slate-900 text-emerald-400 rounded-xl font-mono text-xs flex items-center justify-between">
-                    <span>POST /api/webhooks/paypal</span>
+                    <span>POST /api/webhooks/razorpay</span>
                     <button 
-                      onClick={(e) => handleCopyId('/api/webhooks/paypal', e)}
+                      onClick={(e) => handleCopyId('/api/webhooks/razorpay', e)}
                       className="text-slate-400 hover:text-white"
                       title="Copy Path"
                     >
@@ -1456,19 +1454,19 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                 <div className="p-3 bg-slate-50 rounded-xl space-y-1.5 text-[11px]">
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">Signature Header:</span>
-                    <span className="font-mono text-slate-900 font-bold">PAYPAL-TRANSMISSION-SIG</span>
+                    <span className="font-mono text-slate-900 font-bold">x-razorpay-signature</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">Verification Method:</span>
-                    <span className="text-purple-700 font-semibold">SHA256withRSA / verify-api</span>
+                    <span className="text-purple-700 font-semibold">HMAC-SHA256 (Server-Side)</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">Environment Variable:</span>
-                    <span className="font-mono text-slate-900 font-bold">PAYPAL_WEBHOOK_ID</span>
+                    <span className="font-mono text-slate-900 font-bold">RAZORPAY_WEBHOOK_SECRET</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 font-medium">Tenant Safety:</span>
-                    <span className="text-emerald-700 font-bold">Capture Verification Required</span>
+                    <span className="text-emerald-700 font-bold">Deduplicated & Idempotent</span>
                   </div>
                 </div>
 
@@ -1476,13 +1474,12 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                   onClick={() => {
                     setActiveTab('settings');
                     setSettingsSection('payments');
-                    setPaymentsProvider('paypal');
-                    setPaypalSubSection('webhook_configuration');
+                    setPaymentsProvider('razorpay');
                   }}
                   className="w-full py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-200 transition-all cursor-pointer"
                 >
                   <Sliders className="w-3.5 h-3.5" />
-                  <span>Configure in Settings → Payments → PayPal</span>
+                  <span>Configure in Settings → Payments → Razorpay</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -2100,42 +2097,16 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
 
             {settingsSection === 'payments' && (
               <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-                <button
-                  onClick={() => {
-                    setPaymentsProvider('paypal');
-                    setPaypalSubSection('webhook_configuration');
-                  }}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    paymentsProvider === 'paypal'
-                      ? 'bg-white text-blue-700 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-blue-600" />
-                  <span>PayPal</span>
-                </button>
-                <button
-                  onClick={() => setPaymentsProvider('razorpay')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    paymentsProvider === 'razorpay'
-                      ? 'bg-white text-blue-700 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
+                <div className="px-3 py-1 rounded-lg text-xs font-bold bg-white text-emerald-700 shadow-xs flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span>Razorpay</span>
-                </button>
+                  <span>Razorpay (Active Provider)</span>
+                </div>
               </div>
             )}
           </div>
 
-          {/* Sub-Panel: Payments -> PayPal */}
-          {settingsSection === 'payments' && paymentsProvider === 'paypal' && (
-            <PlatformPayPalWebhookSettings />
-          )}
-
-          {/* Sub-Panel: Payments -> Razorpay */}
-          {settingsSection === 'payments' && paymentsProvider === 'razorpay' && (
+          {/* Panel: Payments -> Razorpay */}
+          {settingsSection === 'payments' && (
             <div className="space-y-6">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
                 <span>Settings</span>

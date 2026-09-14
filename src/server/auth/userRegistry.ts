@@ -94,12 +94,13 @@ export function initUserRegistry() {
  *   - Do NOT create another one automatically.
  *   - Do NOT overwrite the existing administrator's password.
  *   - Report that the existing platform admin account is already configured.
- * If NO PLATFORM_ADMIN account exists, create the initial platform administrator:
- *   Email / Username: admin@agentdesk (or process.env.INITIAL_ADMIN_EMAIL)
- *   Password: Admin@2613 (or process.env.INITIAL_ADMIN_PASSWORD)
+ * If NO PLATFORM_ADMIN account exists, bootstrap the initial platform administrator:
+ *   Email: admin@agentdesk (or process.env.PLATFORM_ADMIN_EMAIL / INITIAL_ADMIN_EMAIL)
+ *   Password: process.env.PLATFORM_ADMIN_INITIAL_PASSWORD (strictly required, minimum 8 characters)
  *   Role: PLATFORM_ADMIN
  *   Status: ACTIVE
  *   Password MUST be securely hashed before being stored.
+ *   There is NEVER a default or hardcoded administrator password.
  */
 export function bootstrapPlatformAdmin(): { created: boolean; email: string; message: string } {
   // Check the database for an existing PLATFORM_ADMIN account
@@ -112,18 +113,12 @@ export function bootstrapPlatformAdmin(): { created: boolean; email: string; mes
     process.env.INITIAL_ADMIN_EMAIL ||
     'admin@agentdesk'
   ).toLowerCase().trim();
-  const initialPassword =
-    process.env.PLATFORM_ADMIN_PASSWORD ||
-    process.env.PLATFORM_ADMIN_INITIAL_PASSWORD ||
-    process.env.INITIAL_ADMIN_PASSWORD ||
-    'Admin@2613';
 
   // Check if admin account matching target initialEmail or existing PLATFORM_ADMIN exists
   const existingByEmail = getUserByEmail(initialEmail);
   if (existingByEmail && existingByEmail.role === 'PLATFORM_ADMIN') {
     const message = `[Auth Bootstrap] Platform admin account is already configured (${existingByEmail.email}). Did not overwrite administrator password.`;
     console.log(`[Auth Bootstrap] PLATFORM_ADMIN_EMAIL: configured (${existingByEmail.email})`);
-    console.log(`[Auth Bootstrap] PLATFORM_ADMIN_INITIAL_PASSWORD: configured`);
     return {
       created: false,
       email: existingByEmail.email,
@@ -135,11 +130,27 @@ export function bootstrapPlatformAdmin(): { created: boolean; email: string; mes
     const primaryAdmin = existingAdmins[0];
     const message = `[Auth Bootstrap] Existing platform admin account is already configured (${primaryAdmin.email}). Did not create duplicate or overwrite administrator password.`;
     console.log(`[Auth Bootstrap] PLATFORM_ADMIN_EMAIL: configured (${primaryAdmin.email})`);
-    console.log(`[Auth Bootstrap] PLATFORM_ADMIN_INITIAL_PASSWORD: configured`);
     return {
       created: false,
       email: primaryAdmin.email,
       message
+    };
+  }
+
+  const initialPassword = (
+    process.env.PLATFORM_ADMIN_INITIAL_PASSWORD ||
+    process.env.PLATFORM_ADMIN_PASSWORD ||
+    process.env.INITIAL_ADMIN_PASSWORD ||
+    ''
+  ).trim();
+
+  if (!initialPassword || initialPassword.length < 8) {
+    const errorMsg = '[Auth Bootstrap Error] No PLATFORM_ADMIN account exists, and PLATFORM_ADMIN_INITIAL_PASSWORD is not set in environment (minimum 8 characters required). Administrator bootstrap aborted without creating insecure credentials.';
+    console.error(errorMsg);
+    return {
+      created: false,
+      email: initialEmail,
+      message: errorMsg
     };
   }
 

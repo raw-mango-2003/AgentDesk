@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { billingService } from './billingService.js';
-import { payPalWebhookService } from './paypalWebhookService.js';
 import { CurrencyCode } from '../../types.js';
 import { requirePlatformAdmin, requireTenantAccess } from '../auth/authRouter.js';
 import { paymentRateLimiter } from '../integrations/rateLimiter.js';
@@ -679,42 +678,12 @@ billingRouter.post('/webhooks/razorpay', async (req: Request, res: Response) => 
   }
 });
 
-// 9. PayPal Live Webhook Endpoint (Requirement 1-12)
-billingRouter.post('/webhooks/paypal', async (req: Request, res: Response) => {
-  try {
-    const rawBody = (req as any).rawBody || (req as any).rawBodyString || JSON.stringify(req.body);
-    const result = await payPalWebhookService.handleWebhook(rawBody, req.body, req.headers);
-    return res.status(result.status).json(result.body);
-  } catch (err: any) {
-    console.error('[PayPal Webhook Fatal Error]', err);
-    return res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// 10. PayPal Webhook Configuration & Details
-billingRouter.get('/webhooks/paypal/config', (req: Request, res: Response) => {
-  try {
-    const config = payPalWebhookService.getWebhookConfig(req);
-    return res.json({ success: true, ...config });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// 11. PayPal Webhook Event Logs
-billingRouter.get('/webhooks/paypal/logs', (_req: Request, res: Response) => {
-  try {
-    const logs = payPalWebhookService.getWebhookLogs();
-    return res.json({ success: true, logs });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// 12. Combined Webhooks Metadata & Registration Information
+// 9. Webhooks Metadata & Registration Information
 billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
   const isRazorpaySecretConfigured = Boolean(process.env.RAZORPAY_WEBHOOK_SECRET);
-  const paypalConfig = payPalWebhookService.getWebhookConfig(req);
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  const baseUrl = `${protocol}://${host}`;
 
   return res.json({
     success: true,
@@ -724,7 +693,7 @@ billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
         provider: 'Razorpay',
         method: 'POST',
         path: '/api/webhooks/razorpay',
-        fullUrl: `${paypalConfig.webhookUrl.replace('/api/webhooks/paypal', '/api/webhooks/razorpay')}`,
+        fullUrl: `${baseUrl}/api/webhooks/razorpay`,
         secretEnvVar: 'RAZORPAY_WEBHOOK_SECRET',
         isConfigured: isRazorpaySecretConfigured,
         supportedEvents: [
@@ -736,24 +705,10 @@ billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
           'subscription.paused'
         ],
         verificationMethod: 'HMAC-SHA256 signature verification via x-razorpay-signature'
-      },
-      {
-        provider: 'PayPal',
-        method: 'POST',
-        path: '/api/webhooks/paypal',
-        fullUrl: paypalConfig.webhookUrl,
-        secretEnvVar: 'PAYPAL_WEBHOOK_ID',
-        webhookId: paypalConfig.webhookId,
-        webhookStatus: paypalConfig.webhookStatus,
-        isConfigured: paypalConfig.isConfigured,
-        environment: paypalConfig.environment,
-        supportedEvents: paypalConfig.supportedEvents,
-        verificationMethod: 'PayPal Transmission Signature Verification (SHA256withRSA & verify-webhook-signature API)'
       }
     ],
-    paypal: paypalConfig,
     idempotencyEngine: 'In-memory + DB Deduplication Active',
-    note: 'When deploying to production, register these exact endpoint paths in your Razorpay and PayPal Developer Dashboards.'
+    note: 'When deploying to production, register the /api/webhooks/razorpay endpoint in your Razorpay Developer Dashboard.'
   });
 });
 

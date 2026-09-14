@@ -39,13 +39,12 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public supportsCurrency(currency: CurrencyCode): boolean {
-    // Razorpay remains the designated payment provider for Indian domestic payments (INR)
-    return currency === 'INR';
+    // Razorpay serves as the primary billing provider supporting INR, USD, and GBP
+    return currency === 'INR' || currency === 'USD' || currency === 'GBP';
   }
 
-  public supportsRecurring(currency: CurrencyCode): boolean {
-    // Razorpay recurring e-mandates are supported strictly in INR
-    return currency === 'INR';
+  public supportsRecurring(_currency: CurrencyCode): boolean {
+    return true;
   }
 
   private getAuthHeader(): string {

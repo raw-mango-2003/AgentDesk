@@ -10,7 +10,6 @@ import {
   ProviderHealthReport
 } from './paymentProvider.js';
 import { RazorpayProvider } from './razorpayProvider.js';
-import { PayPalProvider, paypalProvider } from './paypalProvider.js';
 import { 
   CurrencyCode, 
   PaymentRecord, 
@@ -249,7 +248,6 @@ export interface BillingInvoice {
 
 export class BillingService {
   private razorpay: RazorpayProvider;
-  private paypal: PayPalProvider;
   private paymentAuditLogsStore: PaymentAuditLogEntry[] = [];
 
   // Server-authoritative Tax Configuration (Current Business is NOT GST Registered)
@@ -286,7 +284,6 @@ export class BillingService {
 
   constructor() {
     this.razorpay = new RazorpayProvider();
-    this.paypal = paypalProvider;
     this.seedDefaultCurrencies();
     this.seedDefaultPlanPrices();
     this.seedDefaultTenants();
@@ -351,7 +348,7 @@ export class BillingService {
         isDefault: false,
         countryCode: 'US',
         countryName: 'United States',
-        supportedProviders: ['paypal']
+        supportedProviders: ['razorpay']
       },
       {
         code: 'GBP',
@@ -362,7 +359,7 @@ export class BillingService {
         isDefault: false,
         countryCode: 'GB',
         countryName: 'United Kingdom',
-        supportedProviders: ['paypal']
+        supportedProviders: ['razorpay']
       }
     ];
 
@@ -680,10 +677,7 @@ export class BillingService {
     }
   }
 
-  public getProvider(name?: PaymentProviderName): PaymentProvider {
-    if (name === 'paypal') {
-      return this.paypal;
-    }
+  public getProvider(_name?: PaymentProviderName): PaymentProvider {
     return this.razorpay;
   }
 
@@ -702,25 +696,16 @@ export class BillingService {
       supportsRecurring: boolean;
     }> = [];
 
-    // INR is handled by Razorpay
-    if (currency === 'INR') {
-      list.push({
-        name: 'razorpay',
-        label: 'Razorpay (Cards, UPI, QR, NetBanking, Wallets)',
-        isConfigured: this.razorpay.isConfigured(),
-        isRecommended: true,
-        supportsRecurring: this.razorpay.supportsRecurring(currency)
-      });
-    } else if (currency === 'USD' || currency === 'GBP') {
-      // USD and GBP are handled by PayPal
-      list.push({
-        name: 'paypal',
-        label: 'PayPal (PayPal Balance & Cards)',
-        isConfigured: this.paypal.isConfigured(),
-        isRecommended: true,
-        supportsRecurring: this.paypal.supportsRecurring(currency)
-      });
-    }
+    // Razorpay is the designated active billing provider
+    list.push({
+      name: 'razorpay',
+      label: currency === 'INR'
+        ? 'Razorpay (Cards, UPI, QR, NetBanking, Wallets)'
+        : 'Razorpay (International Cards & Currencies)',
+      isConfigured: this.razorpay.isConfigured(),
+      isRecommended: true,
+      supportsRecurring: this.razorpay.supportsRecurring(currency)
+    });
 
     return list;
   }
@@ -731,9 +716,9 @@ export class BillingService {
     planId?: string;
   }): Promise<AvailablePaymentMethodsResponse> {
     const { currency, country, planId } = params;
+    const isConfigured = this.razorpay.isConfigured();
 
     if (currency === 'INR') {
-      const isConfigured = this.razorpay.isConfigured();
       return {
         success: true,
         currency,
@@ -754,57 +739,20 @@ export class BillingService {
       };
     }
 
-    // International Currencies: USD, GBP -> PayPal
-    const paypalHealth = await this.paypal.checkHealth();
-    const isPaypalHealthy = paypalHealth.status === 'Connected';
-    const isRazorpayConfigured = this.razorpay.isConfigured();
-
-    if (isPaypalHealthy) {
-      return {
-        success: true,
-        currency,
-        country,
-        planId,
-        isPaymentAvailable: true,
-        provider: 'paypal',
-        providerName: 'PayPal',
-        providerLabel: 'PayPal Express Checkout',
-        methods: [
-          { id: 'paypal', name: 'PayPal Account', category: 'wallets', description: 'Pay with PayPal balance, linked bank account, or saved card', popular: true },
-          { id: 'cards', name: 'Credit or Debit Card', category: 'cards', description: 'Pay directly with Visa, Mastercard, or Amex via PayPal' }
-        ],
-        allowsINRFallback: isRazorpayConfigured
-      };
-    }
-
-    // PayPal is not ready or failed authentication
-    const unavailableMessage = paypalHealth.status === 'Configuration Required'
-      ? `International payment in ${currency} requires PayPal configuration.`
-      : `International payment in ${currency} is temporarily unavailable (PayPal: ${paypalHealth.message || 'Authentication Failed'}).`;
-
+    // International Currencies: USD, GBP -> Razorpay International
     return {
       success: true,
       currency,
       country,
       planId,
-      isPaymentAvailable: false,
-      provider: 'paypal',
-      providerName: 'PayPal',
-      providerLabel: 'PayPal',
-      providerStatus: paypalHealth.status,
-      methods: [],
-      unavailableMessage,
-      allowsINRFallback: isRazorpayConfigured,
-      inrFallback: isRazorpayConfigured ? {
-        paymentCurrency: 'INR',
-        provider: 'razorpay',
-        providerName: 'Razorpay',
-        providerLabel: 'Razorpay',
-        methods: [
-          { id: 'cards', name: 'Cards', category: 'cards', description: 'International Credit & Debit Cards (Visa, Mastercard, Amex)' }
-        ],
-        notice: 'Payments processed through Razorpay are charged in Indian Rupees (INR ₹). Your bank or card issuer will convert this on your billing statement according to their applicable exchange rate.'
-      } : undefined
+      isPaymentAvailable: isConfigured,
+      provider: 'razorpay',
+      providerName: 'Razorpay',
+      providerLabel: 'Razorpay (International Credit & Debit Cards)',
+      methods: [
+        { id: 'cards', name: 'Credit or Debit Card', category: 'cards', description: 'Visa, Mastercard, American Express, Diners Club', popular: true }
+      ],
+      allowsINRFallback: false
     };
   }
 
@@ -1137,46 +1085,23 @@ export class BillingService {
 
   public async getProvidersHealth(): Promise<{
     razorpay: ProviderHealthReport;
-    paypal: ProviderHealthReport;
   }> {
-    const [razorpayReport, paypalReport] = await Promise.all([
-      this.razorpay.checkHealth(),
-      this.paypal.checkHealth()
-    ]);
+    const razorpayReport = await this.razorpay.checkHealth();
     return {
-      razorpay: razorpayReport,
-      paypal: paypalReport
+      razorpay: razorpayReport
     };
   }
 
   public async getAllCurrencies(): Promise<PlatformCurrencyRecord[]> {
     const health = await this.getProvidersHealth();
+    const isConnected = health.razorpay.status === 'Connected';
     return Array.from(this.currenciesStore.values()).map(c => {
-      if (c.code === 'INR') {
-        const isConnected = health.razorpay.status === 'Connected';
-        return {
-          ...c,
-          supportedProviders: ['razorpay'],
-          providerStatus: health.razorpay.status,
-          currencyStatus: c.enabled && isConnected ? 'Enabled' : 'Disabled for checkout',
-          checkoutAvailability: c.enabled && isConnected ? 'Available' : 'Unavailable'
-        };
-      }
-      if (c.code === 'USD' || c.code === 'GBP') {
-        const isConnected = health.paypal.status === 'Connected';
-        return {
-          ...c,
-          supportedProviders: ['paypal'],
-          providerStatus: health.paypal.status,
-          currencyStatus: c.enabled && isConnected ? 'Enabled' : 'Disabled for checkout',
-          checkoutAvailability: c.enabled && isConnected ? 'Available' : 'Unavailable'
-        };
-      }
       return {
         ...c,
-        providerStatus: 'Unavailable',
-        currencyStatus: 'Disabled for checkout',
-        checkoutAvailability: 'Unavailable'
+        supportedProviders: ['razorpay'],
+        providerStatus: health.razorpay.status,
+        currencyStatus: c.enabled && isConnected ? 'Enabled' : 'Disabled for checkout',
+        checkoutAvailability: c.enabled && isConnected ? 'Available' : 'Unavailable'
       };
     });
   }
