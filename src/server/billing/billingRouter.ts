@@ -3,6 +3,7 @@ import { billingService } from './billingService.js';
 import { payPalWebhookService } from './paypalWebhookService.js';
 import { CurrencyCode } from '../../types.js';
 import { requirePlatformAdmin, requireTenantAccess } from '../auth/authRouter.js';
+import { paymentRateLimiter } from '../integrations/rateLimiter.js';
 
 export const billingRouter = Router();
 
@@ -317,7 +318,7 @@ billingRouter.put('/tax-config', requirePlatformAdmin, (req: Request, res: Respo
 });
 
 // 3. Create Checkout Session (Implementation Fee, Monthly Subscription, or Bundled Initial Checkout)
-billingRouter.post('/create-checkout-session', async (req: Request, res: Response) => {
+billingRouter.post('/create-checkout-session', paymentRateLimiter, async (req: Request, res: Response) => {
   try {
     const { 
       businessId, 
@@ -385,7 +386,7 @@ billingRouter.get('/order-status/:orderId', async (req: Request, res: Response) 
 });
 
 // 4. Verify & Activate Payment
-billingRouter.post('/verify-payment', async (req: Request, res: Response) => {
+billingRouter.post('/verify-payment', paymentRateLimiter, async (req: Request, res: Response) => {
   try {
     const {
       businessId,
@@ -666,11 +667,15 @@ billingRouter.post('/payment-methods/remove', async (req: Request, res: Response
 // 8. Razorpay Webhook Endpoint
 billingRouter.post('/webhooks/razorpay', async (req: Request, res: Response) => {
   try {
-    const result = await billingService.handleWebhook('razorpay', req.body, req.headers);
+    const rawBody = (req as any).rawBodyString || (req as any).rawBody || JSON.stringify(req.body);
+    const result = await billingService.handleWebhook('razorpay', req.body, req.headers, rawBody);
+    if (result && !result.handled && result.error) {
+      return res.status(400).json({ success: false, error: result.error });
+    }
     return res.status(200).json(result);
   } catch (err: any) {
     console.error('[Razorpay Webhook Error]', err);
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ success: false, error: err.message });
   }
 });
 

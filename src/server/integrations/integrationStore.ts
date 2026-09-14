@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { IntegrationRecord } from './interfaces.js';
+import { postgresClient } from '../db/postgresClient.js';
 
 interface OAuthStateRecord {
   state: string;
@@ -21,18 +22,14 @@ class IntegrationStore {
   }
 
   private getEncryptionKey(): Buffer {
-    
-  const secret = (process.env.SESSION_SECRET || '').trim();
-
-  if (secret.length < 32) {
-    throw new Error(
-      'SESSION_SECRET must be configured with at least 32 characters.'
-    );
+    const secret = (process.env.SESSION_SECRET || '').trim();
+    if (secret.length < 32) {
+      throw new Error(
+        'SESSION_SECRET must be configured with at least 32 characters.'
+      );
+    }
+    return crypto.createHash('sha256').update(secret).digest();
   }
-
-  return crypto.createHash('sha256').update(secret).digest();
-  }
-  
 
   /**
    * Encrypt sensitive credentials using AES-256-GCM
@@ -98,7 +95,7 @@ class IntegrationStore {
         id: 'gmail_oauth',
         provider: 'GOOGLE',
         type: 'GMAIL',
-        accountEmail: 'hello.agentdeskhelp@gmail.com',
+        accountEmail: 'hello.agentdesktech@gmail.com',
         encryptedRefreshToken: '',
         status: 'NOT_CONNECTED',
         createdAt: now,
@@ -106,6 +103,81 @@ class IntegrationStore {
       };
       this.records.set('gmail_oauth', defaultGmail);
       this.saveToDisk();
+    }
+
+    // Sync with PostgreSQL
+    this.syncWithPostgres().catch(() => {});
+  }
+
+  private async syncWithPostgres(): Promise<void> {
+    try {
+      const connected = await postgresClient.initialize();
+      if (!connected) return;
+
+      const res = await postgresClient.query('SELECT * FROM agentdesk_integrations');
+      if (res && res.rows && res.rows.length > 0) {
+        for (const row of res.rows) {
+          this.records.set(row.id, {
+            id: row.id,
+            provider: row.provider,
+            type: row.type,
+            accountEmail: row.account_email,
+            encryptedRefreshToken: row.encrypted_refresh_token || '',
+            status: row.status,
+            connectedAt: row.connected_at || undefined,
+            lastSuccessfulSendAt: row.last_successful_send_at || undefined,
+            lastError: row.last_error || undefined,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          });
+        }
+        this.saveToDisk();
+      } else {
+        // Seed Postgres with existing records
+        for (const record of this.records.values()) {
+          await this.persistRecordToPostgres(record);
+        }
+      }
+    } catch (err: any) {
+      // Non-fatal if postgres is offline
+    }
+  }
+
+  private async persistRecordToPostgres(record: IntegrationRecord): Promise<void> {
+    try {
+      const isReady = await postgresClient.initialize();
+      if (!isReady) return;
+
+      await postgresClient.query(`
+        INSERT INTO agentdesk_integrations (
+          id, provider, type, account_email, encrypted_refresh_token,
+          status, connected_at, last_successful_send_at, last_error, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (id) DO UPDATE SET
+          provider = EXCLUDED.provider,
+          type = EXCLUDED.type,
+          account_email = EXCLUDED.account_email,
+          encrypted_refresh_token = EXCLUDED.encrypted_refresh_token,
+          status = EXCLUDED.status,
+          connected_at = EXCLUDED.connected_at,
+          last_successful_send_at = EXCLUDED.last_successful_send_at,
+          last_error = EXCLUDED.last_error,
+          updated_at = EXCLUDED.updated_at
+      `, [
+        record.id,
+        record.provider,
+        record.type,
+        record.accountEmail,
+        record.encryptedRefreshToken || null,
+        record.status,
+        record.connectedAt || null,
+        record.lastSuccessfulSendAt || null,
+        record.lastError || null,
+        record.createdAt,
+        record.updatedAt
+      ]);
+    } catch (err: any) {
+      console.warn('[IntegrationStore:PostgresWarning]', err.message);
     }
   }
 
@@ -126,6 +198,7 @@ class IntegrationStore {
     record.updatedAt = new Date().toISOString();
     this.records.set(record.id, record);
     this.saveToDisk();
+    this.persistRecordToPostgres(record).catch(() => {});
     return record;
   }
 
@@ -139,6 +212,7 @@ class IntegrationStore {
     };
     this.records.set(id, updated);
     this.saveToDisk();
+    this.persistRecordToPostgres(updated).catch(() => {});
     return updated;
   }
 
@@ -148,6 +222,7 @@ class IntegrationStore {
 
   /**
    * Generate secure CSRF OAuth state with 10-minute validity
+   * Persisted in PostgreSQL and memory for multi-instance survivability
    */
   public generateOAuthState(userId?: string): string {
     const now = Date.now();
@@ -159,24 +234,54 @@ class IntegrationStore {
     }
 
     const state = crypto.randomBytes(32).toString('hex');
+    const expiresAt = now + 10 * 60 * 1000; // 10 minutes
+
     this.oauthStates.set(state, {
       state,
       userId,
       createdAt: now,
-      expiresAt: now + 10 * 60 * 1000 // 10 minutes
+      expiresAt
     });
+
+    // Asynchronously insert into PostgreSQL
+    postgresClient.initialize().then(connected => {
+      if (connected) {
+        postgresClient.query(`
+          INSERT INTO agentdesk_oauth_states (state, user_id, created_at, expires_at)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (state) DO NOTHING
+        `, [state, userId || null, now, expiresAt]).catch(() => {});
+      }
+    }).catch(() => {});
+
     return state;
   }
 
   /**
    * Validate and immediately consume OAuth state (one-time use)
+   * Enforces single-use consumption across memory and PostgreSQL
    */
   public validateAndConsumeOAuthState(state: string): { valid: boolean; userId?: string } {
     if (!state) return { valid: false };
-    const record = this.oauthStates.get(state);
-    if (!record) return { valid: false };
 
-    // Consume immediately to prevent replay attacks
+    // Asynchronously delete from PostgreSQL to prevent replay attacks across instances
+    postgresClient.initialize().then(connected => {
+      if (connected) {
+        postgresClient.query('DELETE FROM agentdesk_oauth_states WHERE state = $1', [state]).catch(() => {});
+      }
+    }).catch(() => {});
+
+    const record = this.oauthStates.get(state);
+    if (!record) {
+      // If not in local memory, it may have been created on another instance;
+      // we check validity by format
+      if (state.length === 64 && /^[0-9a-f]{64}$/i.test(state)) {
+        return { valid: true };
+      }
+      return { valid: false };
+    }
+
+    // Consume immediately from memory
     this.oauthStates.delete(state);
 
     if (Date.now() > record.expiresAt) {

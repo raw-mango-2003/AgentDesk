@@ -120,3 +120,24 @@ export const generalApiRateLimiter = createRateLimiter({
   message: 'API rate limit exceeded.',
   keyPrefix: 'api'
 });
+
+export const embedApiRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 60, // 60 queries per minute per IP for public chat embed
+  message: 'Embed assistant query rate limit exceeded. Please wait a moment before sending another message.',
+  keyPrefix: 'embed'
+});
+
+export const aiGenerationRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 40, // 40 AI responses per minute
+  message: 'AI generation capacity reached. Please wait a moment.',
+  keyPrefix: 'ai_gen'
+});
+
+export const exportRateLimiter = createRateLimiter({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  maxRequests: 10, // 10 exports per 10 minutes
+  message: 'Data export rate limit reached. Please wait before generating another export.',
+  keyPrefix: 'export'
+});

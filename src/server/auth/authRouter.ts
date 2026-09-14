@@ -236,23 +236,44 @@ export function requireTenantAccess(req: Request, res: Response, next: Function)
     
     // Platform Admins have overarching multi-tenant visibility
     if (user.role === 'PLATFORM_ADMIN') {
+      const explicitTenant = (
+        req.params.tenantId ||
+        req.params.businessId ||
+        req.query.tenantId ||
+        req.query.businessId ||
+        (req.headers['x-tenant-id'] as string) ||
+        req.body.tenantId ||
+        req.body.businessId
+      )?.toString().toLowerCase().trim();
+      (req as any).tenantId = explicitTenant || user.tenantId;
       return next();
     }
 
     // Business Admins and Users belong strictly to their own tenant
     const targetTenantId = (
       req.params.tenantId || 
+      req.params.businessId ||
       req.query.tenantId || 
-      req.body.tenantId
+      req.query.businessId ||
+      req.query.tenant_id ||
+      req.query.business_id ||
+      (req.headers['x-tenant-id'] as string) ||
+      (req.headers['x-business-id'] as string) ||
+      req.body.tenantId ||
+      req.body.businessId ||
+      req.body.tenant_id ||
+      req.body.business_id
     )?.toString().toLowerCase().trim();
 
-    if (targetTenantId && targetTenantId !== user.tenantId) {
+    if (targetTenantId && targetTenantId !== user.tenantId.toLowerCase().trim()) {
       return res.status(403).json({
         success: false,
         error: 'Forbidden: Cross-tenant access is strictly prohibited.'
       });
     }
 
+    // Always enforce the authenticated user's verified tenantId on the request
+    (req as any).tenantId = user.tenantId;
     next();
   });
 }

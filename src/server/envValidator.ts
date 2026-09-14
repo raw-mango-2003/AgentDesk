@@ -233,16 +233,17 @@ export function getIntegrationsStatusReport(gmailStatus?: {
 
   // 6. Sentry Integration (Telemetry & Exception Tracking)
   const sentryDsn = (process.env.SENTRY_DSN || '').trim();
+  const isSentryConfigured = Boolean(sentryDsn && sentryDsn.startsWith('http') && !sentryDsn.includes('internal.agentdesk'));
   result['sentry_monitoring'] = {
     id: 'sentry_monitoring',
     name: 'Sentry Telemetry & Exception Tracking',
     category: 'Monitoring',
-    status: 'CONNECTED',
+    status: isSentryConfigured ? 'CONNECTED' : 'NOT_CONFIGURED',
     isMandatory: false,
-    requiredVars: ['SENTRY_DSN', 'SENTRY_ENVIRONMENT'],
-    configuredVars: sentryDsn ? ['SENTRY_DSN'] : ['SENTRY_DSN_BUILTIN'],
-    missingVars: [],
-    description: 'Real-time exception logging, stack trace capture, and PII sanitization (Active built-in engine with optional Sentry cloud upstream).'
+    requiredVars: ['SENTRY_DSN'],
+    configuredVars: isSentryConfigured ? ['SENTRY_DSN'] : [],
+    missingVars: isSentryConfigured ? [] : ['SENTRY_DSN'],
+    description: 'Real-time exception logging, stack trace capture, and error monitoring.'
   };
 
   // 7. S3 Storage Integration (Optional)

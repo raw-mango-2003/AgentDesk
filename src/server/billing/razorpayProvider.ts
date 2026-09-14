@@ -620,54 +620,126 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public async createInvoice(params: CreateInvoiceParams): Promise<ProviderInvoice> {
-    const invNum = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    return {
-      id: `inv_rzp_${Date.now()}`,
-      invoiceNumber: invNum,
-      amount: params.amount,
-      currency: params.currency,
-      status: 'PAID',
-      provider: 'razorpay',
-      hostedInvoiceUrl: `https://invoices.razorpay.com/${invNum}`,
-      createdAt: new Date().toISOString()
-    };
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED. Live Razorpay invoice creation requires live credentials.');
+    }
+
+    try {
+      const response = await fetch('https://api.razorpay.com/v1/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: this.getAuthHeader()
+        },
+        body: JSON.stringify({
+          type: 'invoice',
+          description: params.description,
+          customer: {
+            name: params.businessId
+          },
+          line_items: (params.items && params.items.length > 0)
+            ? params.items.map(item => ({
+                name: item.name,
+                amount: Math.round(item.amount * 100),
+                currency: params.currency,
+                quantity: item.quantity || 1
+              }))
+            : [{
+                name: params.description || 'AgentDesk Subscription',
+                amount: Math.round(params.amount * 100),
+                currency: params.currency,
+                quantity: 1
+              }]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.description || `Razorpay Invoice API returned status ${response.status}`);
+      }
+
+      const invData = await response.json();
+      return {
+        id: invData.id,
+        invoiceNumber: invData.invoice_number || invData.id,
+        amount: params.amount,
+        currency: params.currency,
+        status: invData.status === 'paid' ? 'PAID' : 'PENDING',
+        provider: 'razorpay',
+        hostedInvoiceUrl: invData.short_url,
+        createdAt: new Date(invData.date ? invData.date * 1000 : Date.now()).toISOString()
+      };
+    } catch (err: any) {
+      console.error('[Razorpay] createInvoice error:', err.message);
+      throw err;
+    }
   }
 
   public async getInvoice(invoiceId: string): Promise<ProviderInvoice> {
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED.');
+    }
+    const response = await fetch(`https://api.razorpay.com/v1/invoices/${invoiceId}`, {
+      headers: { Authorization: this.getAuthHeader() }
+    });
+    if (!response.ok) {
+      throw new Error(`Razorpay getInvoice failed with status ${response.status}`);
+    }
+    const invData = await response.json();
     return {
-      id: invoiceId,
-      invoiceNumber: `INV-${new Date().getFullYear()}-0881`,
-      amount: 1497,
-      currency: 'USD',
-      status: 'PAID',
+      id: invData.id,
+      invoiceNumber: invData.invoice_number || invData.id,
+      amount: (invData.amount || 0) / 100,
+      currency: invData.currency,
+      status: invData.status === 'paid' ? 'PAID' : 'PENDING',
       provider: 'razorpay',
-      createdAt: new Date().toISOString()
+      hostedInvoiceUrl: invData.short_url,
+      createdAt: new Date(invData.date ? invData.date * 1000 : Date.now()).toISOString()
     };
   }
 
-  public async handleWebhook(body: any, headers: Record<string, string | string[] | undefined>): Promise<WebhookResult> {
+  public async handleWebhook(
+    body: any,
+    headers: Record<string, string | string[] | undefined>,
+    rawBody?: string | Buffer
+  ): Promise<WebhookResult> {
     const signature = headers['x-razorpay-signature'] as string;
     
     // Verify signature if secret is present
-    if (this.webhookSecret && signature) {
+    if (this.webhookSecret) {
+      if (!signature) {
+        return {
+          handled: false,
+          event: body?.event || 'unknown',
+          message: 'Missing X-Razorpay-Signature header'
+        };
+      }
       try {
-        const rawPayload = typeof body === 'string' ? body : JSON.stringify(body);
+        const rawPayload = rawBody
+          ? (typeof rawBody === 'string' ? rawBody : rawBody.toString('utf-8'))
+          : (typeof body === 'string' ? body : JSON.stringify(body));
+
         const expectedSig = crypto
           .createHmac('sha256', this.webhookSecret)
           .update(rawPayload)
           .digest('hex');
 
-        if (expectedSig !== signature) {
+        const isValid = crypto.timingSafeEqual(
+          Buffer.from(expectedSig, 'utf-8'),
+          Buffer.from(signature.trim(), 'utf-8')
+        );
+
+        if (!isValid) {
           return {
             handled: false,
-            event: body.event || 'unknown',
+            event: body?.event || 'unknown',
             message: 'Invalid Razorpay webhook signature'
           };
         }
       } catch (err: any) {
         return {
           handled: false,
-          event: body.event || 'unknown',
+          event: body?.event || 'unknown',
           message: err.message
         };
       }
@@ -686,6 +758,19 @@ export class RazorpayProvider implements PaymentProvider {
         paymentId: payment?.id,
         status: 'paid',
         data: payment
+      };
+    }
+
+    if (event === 'invoice.paid') {
+      const invoice = payload?.invoice?.entity;
+      const businessId = invoice?.customer?.name || invoice?.notes?.businessId;
+      return {
+        handled: true,
+        event,
+        businessId,
+        paymentId: invoice?.payment_id,
+        status: 'paid',
+        data: invoice
       };
     }
 

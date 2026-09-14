@@ -113,6 +113,7 @@ export function bootstrapPlatformAdmin(): { created: boolean; email: string; mes
     'admin@agentdesk'
   ).toLowerCase().trim();
   const initialPassword =
+    process.env.PLATFORM_ADMIN_PASSWORD ||
     process.env.PLATFORM_ADMIN_INITIAL_PASSWORD ||
     process.env.INITIAL_ADMIN_PASSWORD ||
     'Admin@2613';

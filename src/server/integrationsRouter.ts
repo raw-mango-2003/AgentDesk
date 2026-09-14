@@ -94,7 +94,7 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
         description: 'Optional backup transactional email provider if primary Gmail transmission encounters temporary quota limits.',
         envVars: ['RESEND_API_KEY', 'EMAIL_FROM', 'EMAIL_FROM_NAME', 'EMAIL_REPLY_TO'],
         maskedConfig: {
-          fromEmail: process.env.EMAIL_FROM || 'hello.agentdeskhtech@gmail.com',
+          fromEmail: process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com',
           fromName: process.env.EMAIL_FROM_NAME || 'AgentDesk',
           apiKey: process.env.RESEND_API_KEY ? `re_***${process.env.RESEND_API_KEY.slice(-4)}` : 'Not Set'
         }
@@ -168,12 +168,12 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
         id: 'sentry_monitoring',
         name: 'Sentry Telemetry & Exception Tracking',
         category: 'Monitoring',
-        status: 'CONNECTED',
+        status: errorMonitoringService.isConfigured() ? 'CONNECTED' : 'NOT_CONFIGURED',
         isConfigured: errorMonitoringService.isConfigured(),
-        description: 'Real-time exception logging, stack trace capture, and PII sanitization (Active built-in engine with optional Sentry cloud upstream).',
+        description: 'Real-time exception logging, stack trace capture, and error monitoring.',
         envVars: ['SENTRY_DSN'],
         maskedConfig: {
-          dsnConfigured: errorMonitoringService.isLiveSentryConfigured() ? 'Active (Live Sentry Upstream)' : 'Active (Built-In Exception Engine)'
+          dsnConfigured: errorMonitoringService.isLiveSentryConfigured() ? 'Active (Live Sentry Upstream)' : 'Not Configured'
         }
       },
       {
@@ -680,7 +680,7 @@ integrationsRouter.get('/platform/system-health', requirePlatformAdmin, (req: Re
         }
       },
       errorMonitoring: {
-        status: 'HEALTHY',
+        status: errorMonitoringService.isConfigured() ? 'HEALTHY' : 'NOT_CONFIGURED',
         label: 'Sentry Telemetry & Exception Tracking',
         details: {
           isConfigured: errorMonitoringService.isConfigured(),

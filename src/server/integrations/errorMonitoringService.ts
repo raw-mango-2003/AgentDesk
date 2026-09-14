@@ -17,17 +17,14 @@ export class ErrorMonitoringService implements IErrorMonitoringService {
 
   constructor() {
     this.dsn = (process.env.SENTRY_DSN || '').trim();
-    if (!this.dsn) {
-      this.dsn = 'https://agentdesk_telemetry@sentry.internal.agentdesk/1';
-    }
   }
 
   public isConfigured(): boolean {
-    return true;
+    return Boolean(this.dsn && this.dsn.startsWith('http') && !this.dsn.includes('internal.agentdesk'));
   }
 
   public isLiveSentryConfigured(): boolean {
-    return Boolean(this.dsn && this.dsn.startsWith('http') && !this.dsn.includes('internal.agentdesk'));
+    return this.isConfigured();
   }
 
   public setUserContext(user: { id?: string; email?: string; tenantId?: string; role?: string } | null): void {

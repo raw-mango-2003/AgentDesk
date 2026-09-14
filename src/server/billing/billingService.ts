@@ -38,6 +38,7 @@ import {
 } from '../tenantRegistry.js';
 import { getUserByEmail, updateUser } from '../auth/userRegistry.js';
 import { createSession } from '../auth/sessionStore.js';
+import { postgresClient } from '../db/postgresClient.js';
 
 export interface CouponDefinition {
   code: string;
@@ -2590,20 +2591,42 @@ export class BillingService {
     return { success: true, business: provResult.business, agent: provResult.agent };
   }
 
-  public async handleWebhook(providerName: PaymentProviderName, body: any, headers: Record<string, string | string[] | undefined>) {
+  public async handleWebhook(
+    providerName: PaymentProviderName,
+    body: any,
+    headers: Record<string, string | string[] | undefined>,
+    rawBody?: string | Buffer
+  ) {
     const provider = this.getProvider(providerName);
-    const result = await provider.handleWebhook(body, headers);
+    const result = await (provider as any).handleWebhook(body, headers, rawBody);
 
     if (!result.handled) {
-      return { success: false, error: result.message || 'Webhook rejected by provider' };
+      return { success: false, handled: false, error: result.message || 'Webhook rejected by provider' };
     }
 
     // Idempotency: avoid double handling of identical webhook payload ID
     const eventId = body?.id || body?.event_id || `${providerName}_${result.event}_${result.paymentId || result.subscriptionId || Date.now()}`;
     if (this.processedWebhookEvents.has(eventId)) {
-      return { success: true, duplicate: true, message: 'Event already processed' };
+      return { success: true, handled: true, duplicate: true, message: 'Event already processed' };
     }
     this.processedWebhookEvents.add(eventId);
+
+    // Persist webhook event in PostgreSQL if available
+    postgresClient.initialize().then(connected => {
+      if (connected) {
+        postgresClient.query(`
+          INSERT INTO agentdesk_webhook_events (event_id, provider, event_type, status, payload, created_at)
+          VALUES ($1, $2, $3, $4, $5, NOW())
+          ON CONFLICT (event_id) DO NOTHING
+        `, [
+          eventId,
+          providerName,
+          result.event || 'unknown',
+          'PROCESSED',
+          JSON.stringify(body || {})
+        ]).catch(() => {});
+      }
+    }).catch(() => {});
 
     // Extract IDs across providers
     let orderId = body?.payload?.payment?.entity?.order_id || body?.payload?.order?.entity?.id;

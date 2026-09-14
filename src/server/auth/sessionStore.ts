@@ -1,5 +1,8 @@
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import { generateSecureToken } from './passwordUtils.js';
+import { postgresClient } from '../db/postgresClient.js';
 
 export interface ServerSession {
   token: string;
@@ -11,9 +14,47 @@ export interface ServerSession {
   expiresAt: number;
 }
 
-// In-memory session index. The token itself is also cryptographically signed
-// with SESSION_SECRET so a forged token cannot be accepted by the server.
+// In-memory session index, backed by PostgreSQL and persistent disk cache
 export const activeSessions = new Map<string, ServerSession>();
+
+const sessionsFilePath = path.join(process.cwd(), 'data', 'sessions_store.json');
+
+// Session TTL: 7 days
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function loadSessionsFromDisk(): void {
+  try {
+    if (fs.existsSync(sessionsFilePath)) {
+      const raw = fs.readFileSync(sessionsFilePath, 'utf-8');
+      const list = JSON.parse(raw) as ServerSession[];
+      const now = Date.now();
+      for (const s of list) {
+        if (s.expiresAt > now) {
+          activeSessions.set(s.token, s);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[SessionStore:LoadWarning] Could not load sessions from disk:', err);
+  }
+}
+
+function persistSessionsToDisk(): void {
+  try {
+    const dir = path.dirname(sessionsFilePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const now = Date.now();
+    const valid = Array.from(activeSessions.values()).filter(s => s.expiresAt > now);
+    fs.writeFileSync(sessionsFilePath, JSON.stringify(valid, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[SessionStore:PersistWarning] Could not save sessions to disk:', err);
+  }
+}
+
+// Initial disk load
+loadSessionsFromDisk();
 
 function getSessionSecret(): string {
   const secret = (process.env.SESSION_SECRET || '').trim();
@@ -49,9 +90,6 @@ function isValidSignedToken(token: string): boolean {
   );
 }
 
-// Session TTL: 7 days
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 export function createSession(
   userId: string,
   email: string,
@@ -71,6 +109,19 @@ export function createSession(
   };
 
   activeSessions.set(token, session);
+  persistSessionsToDisk();
+
+  // Asynchronously insert into PostgreSQL
+  postgresClient.initialize().then(connected => {
+    if (connected) {
+      postgresClient.query(`
+        INSERT INTO agentdesk_sessions (token, user_id, email, role, tenant_id, created_at, expires_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (token) DO NOTHING
+      `, [session.token, session.userId, session.email, session.role, session.tenantId, session.createdAt, session.expiresAt]).catch(() => {});
+    }
+  }).catch(() => {});
+
   return session;
 }
 
@@ -80,20 +131,31 @@ export function getSession(token: string | undefined): ServerSession | null {
   if (!isValidSignedToken(cleanToken)) return null;
 
   const session = activeSessions.get(cleanToken);
-  if (!session) return null;
-
-  if (Date.now() > session.expiresAt) {
-    activeSessions.delete(cleanToken);
-    return null;
+  if (session) {
+    if (Date.now() > session.expiresAt) {
+      destroySession(cleanToken);
+      return null;
+    }
+    return session;
   }
 
-  return session;
+  return null;
 }
 
 export function destroySession(token: string | undefined): boolean {
   if (!token) return false;
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
-  return activeSessions.delete(cleanToken);
+  const removed = activeSessions.delete(cleanToken);
+  persistSessionsToDisk();
+
+  // Remove from PostgreSQL
+  postgresClient.initialize().then(connected => {
+    if (connected) {
+      postgresClient.query('DELETE FROM agentdesk_sessions WHERE token = $1', [cleanToken]).catch(() => {});
+    }
+  }).catch(() => {});
+
+  return removed;
 }
 
 export function destroyAllUserSessions(userId: string): void {
@@ -102,6 +164,13 @@ export function destroyAllUserSessions(userId: string): void {
       activeSessions.delete(token);
     }
   }
+  persistSessionsToDisk();
+
+  postgresClient.initialize().then(connected => {
+    if (connected) {
+      postgresClient.query('DELETE FROM agentdesk_sessions WHERE user_id = $1', [userId]).catch(() => {});
+    }
+  }).catch(() => {});
 }
 
 export function getUserSessions(userId: string): ServerSession[] {
@@ -128,5 +197,13 @@ export function destroyOtherUserSessions(userId: string, currentToken: string): 
       destroyedCount++;
     }
   }
+  persistSessionsToDisk();
+
+  postgresClient.initialize().then(connected => {
+    if (connected) {
+      postgresClient.query('DELETE FROM agentdesk_sessions WHERE user_id = $1 AND token != $2', [userId, cleanCurrent]).catch(() => {});
+    }
+  }).catch(() => {});
+
   return destroyedCount;
 }
