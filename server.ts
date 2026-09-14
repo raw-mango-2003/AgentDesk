@@ -39,7 +39,7 @@ import {
 } from './src/lib/conversationEngine.js';
 import { runConversationTestSuite, runMultiTenantIsolationTestSuite } from './src/lib/testSuite.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
-import { authRouter } from './src/server/auth/authRouter.js';
+import { authRouter, requirePlatformAdmin } from './src/server/auth/authRouter.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
@@ -849,7 +849,7 @@ app.delete('/api/knowledge/:tenantId/:id', (req: Request, res: Response) => {
 });
 
 // GET All Businesses (Platform Admin Tenant Registry)
-app.get('/api/admin/businesses', (_req: Request, res: Response) => {
+app.get('/api/admin/businesses', requirePlatformAdmin, (_req: Request, res: Response) => {
   const list = Array.from(serverBusinessesStore.values());
   return res.json({
     success: true,
@@ -858,7 +858,7 @@ app.get('/api/admin/businesses', (_req: Request, res: Response) => {
 });
 
 // POST / PUT Business (Platform Admin / Sync)
-app.post('/api/admin/businesses', (req: Request, res: Response) => {
+app.post('/api/admin/businesses', requirePlatformAdmin, (req: Request, res: Response) => {
   const businessData = req.body;
   if (!businessData || !businessData.id) {
     return res.status(400).json({ error: 'Business object with valid id is required.' });
@@ -875,7 +875,7 @@ app.post('/api/admin/businesses', (req: Request, res: Response) => {
 });
 
 // POST Multi-Step Business Onboarding Wizard
-app.post('/api/admin/onboard-business', async (req: Request, res: Response) => {
+app.post('/api/admin/onboard-business', requirePlatformAdmin, async (req: Request, res: Response) => {
   const {
     name,
     industry,
@@ -951,7 +951,7 @@ app.post('/api/admin/onboard-business', async (req: Request, res: Response) => {
 });
 
 // DELETE Business Tenant Endpoint (Platform Admin - Strict Tenant Isolation)
-app.delete('/api/admin/businesses/:businessId', (req: Request, res: Response) => {
+app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, (req: Request, res: Response) => {
   const { businessId } = req.params;
   const { actorEmail } = req.body || {};
   const normBiz = (businessId || '').trim().toLowerCase();
@@ -985,7 +985,7 @@ app.delete('/api/admin/businesses/:businessId', (req: Request, res: Response) =>
 });
 
 // GET Admin Live Conversation Records with Intelligence Metadata
-app.get('/api/admin/conversations/:businessId', (req: Request, res: Response) => {
+app.get('/api/admin/conversations/:businessId', requirePlatformAdmin, (req: Request, res: Response) => {
   const { businessId } = req.params;
   const normBiz = (businessId || DEMO_BUSINESS_ID).toLowerCase();
   

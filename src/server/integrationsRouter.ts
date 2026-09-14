@@ -1171,16 +1171,17 @@ integrationsRouter.post('/system/run-production-tests', requirePlatformAdmin, as
   try {
     const testOrderId = 'order_test_999';
     const testPaymentId = 'pay_test_999';
-    const isMockValid = paymentService.verifySignature({
+    // Test that an invalid/tampered signature is strictly rejected
+    const isInvalidSignatureRejected = !paymentService.verifySignature({
       orderId: testOrderId,
       paymentId: testPaymentId,
-      signature: 'mock_sig_valid_12345'
+      signature: 'forged_invalid_sig_12345'
     });
     testResults.push({
       name: 'Razorpay HMAC-SHA256 Payment Verification',
       category: 'Billing',
-      passed: isMockValid,
-      details: 'Signature verification engine strictly guards unauthorized activation.'
+      passed: isInvalidSignatureRejected,
+      details: 'Signature verification engine strictly rejects invalid or tampered signatures.'
     });
   } catch (e: any) {
     testResults.push({ name: 'Payment Signature Verification', category: 'Billing', passed: false, details: e.message });

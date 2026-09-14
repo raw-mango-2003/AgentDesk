@@ -717,6 +717,26 @@ export class BillingService {
   }): Promise<AvailablePaymentMethodsResponse> {
     const { currency, country, planId } = params;
     const isConfigured = this.razorpay.isConfigured();
+    const isCurrencySupported = this.razorpay.supportsCurrency(currency);
+    const isPaymentAvailable = isConfigured && isCurrencySupported;
+
+    if (!isPaymentAvailable) {
+      return {
+        success: true,
+        currency,
+        country,
+        planId,
+        isPaymentAvailable: false,
+        provider: 'razorpay',
+        providerName: 'Razorpay',
+        providerLabel: 'Razorpay',
+        methods: [],
+        allowsINRFallback: false,
+        unavailableMessage: !isConfigured
+          ? 'Payment gateway is not currently configured with live credentials.'
+          : `Payments in ${currency} are not supported by the payment gateway.`
+      };
+    }
 
     if (currency === 'INR') {
       return {
@@ -724,7 +744,7 @@ export class BillingService {
         currency,
         country,
         planId,
-        isPaymentAvailable: isConfigured,
+        isPaymentAvailable: true,
         provider: 'razorpay',
         providerName: 'Razorpay',
         providerLabel: 'Razorpay (Cards, UPI, QR, Net Banking, Wallets)',
@@ -745,7 +765,7 @@ export class BillingService {
       currency,
       country,
       planId,
-      isPaymentAvailable: isConfigured,
+      isPaymentAvailable: true,
       provider: 'razorpay',
       providerName: 'Razorpay',
       providerLabel: 'Razorpay (International Credit & Debit Cards)',
@@ -2166,7 +2186,7 @@ export class BillingService {
             tenantId: norm,
             status: 'ACTIVE'
           });
-          const session = createSession(user.id, user.email, 'BUSINESS_ADMIN', norm);
+          const session = await createSession(user.id, user.email, 'BUSINESS_ADMIN', norm);
           sessionToken = session.token;
         }
       } catch (userErr) {

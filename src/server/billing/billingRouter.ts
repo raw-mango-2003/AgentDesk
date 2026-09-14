@@ -3,6 +3,7 @@ import { billingService } from './billingService.js';
 import { CurrencyCode } from '../../types.js';
 import { requirePlatformAdmin, requireTenantAccess } from '../auth/authRouter.js';
 import { paymentRateLimiter } from '../integrations/rateLimiter.js';
+import { serverBusinessesStore } from '../tenantRegistry.js';
 
 export const billingRouter = Router();
 
@@ -19,10 +20,13 @@ billingRouter.get('/config', (req: Request, res: Response) => {
   const isPaymentsEnabled = isRazorpayConfigured;
 
   const availableProviders = billingService.getAvailableProviders(currency, country);
+  const configuredCurrencies = (
+    process.env.RAZORPAY_SUPPORTED_CURRENCIES || 'USD,INR,GBP'
+  ).split(',').map(c => c.trim().toUpperCase());
 
   res.json({
     success: true,
-    supportedCurrencies: ['USD', 'INR', 'GBP'],
+    supportedCurrencies: configuredCurrencies,
     isPaymentsEnabled,
     availableProviders,
     publicKeys: {
@@ -457,7 +461,7 @@ billingRouter.post('/verify-payment', paymentRateLimiter, async (req: Request, r
 });
 
 // 4.5. Admin Subscriptions List
-billingRouter.get('/admin/subscriptions', (_req: Request, res: Response) => {
+billingRouter.get('/admin/subscriptions', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const subscriptions = billingService.getAllTenantBillings();
     return res.json({
@@ -469,8 +473,21 @@ billingRouter.get('/admin/subscriptions', (_req: Request, res: Response) => {
   }
 });
 
+// 4.51. Admin Businesses List
+billingRouter.get('/admin/businesses', requirePlatformAdmin, (_req: Request, res: Response) => {
+  try {
+    const list = Array.from(serverBusinessesStore.values());
+    return res.json({
+      success: true,
+      businesses: list
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 // 4.6. Admin Pending Signups (Awaiting Payment Verification)
-billingRouter.get('/admin/pending-signups', (_req: Request, res: Response) => {
+billingRouter.get('/admin/pending-signups', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const signups = billingService.getPendingSignups();
     return res.json({
@@ -483,7 +500,7 @@ billingRouter.get('/admin/pending-signups', (_req: Request, res: Response) => {
 });
 
 // 4.7. Admin Payment Records (Server Payment Audit Trail)
-billingRouter.get('/admin/payment-records', (_req: Request, res: Response) => {
+billingRouter.get('/admin/payment-records', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const records = billingService.getPaymentRecords();
     return res.json({
@@ -496,7 +513,7 @@ billingRouter.get('/admin/payment-records', (_req: Request, res: Response) => {
 });
 
 // 4.8. Admin SaaS Subscription Records
-billingRouter.get('/admin/subscription-records', (_req: Request, res: Response) => {
+billingRouter.get('/admin/subscription-records', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const subscriptions = billingService.getSubscriptionRecords();
     return res.json({
@@ -509,7 +526,7 @@ billingRouter.get('/admin/subscription-records', (_req: Request, res: Response) 
 });
 
 // 4.81. Admin Invoices Across All Tenants
-billingRouter.get('/admin/invoices', (_req: Request, res: Response) => {
+billingRouter.get('/admin/invoices', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const invoices = billingService.getAllInvoices();
     return res.json({
@@ -522,7 +539,7 @@ billingRouter.get('/admin/invoices', (_req: Request, res: Response) => {
 });
 
 // 4.82. Admin Transactions Across All Tenants
-billingRouter.get('/admin/all-transactions', (_req: Request, res: Response) => {
+billingRouter.get('/admin/all-transactions', requirePlatformAdmin, (_req: Request, res: Response) => {
   try {
     const transactions = billingService.getAllTransactions();
     return res.json({
@@ -535,7 +552,7 @@ billingRouter.get('/admin/all-transactions', (_req: Request, res: Response) => {
 });
 
 // 4.9. Admin Reconcile / Retry Order Provisioning
-billingRouter.post('/admin/reconcile', async (req: Request, res: Response) => {
+billingRouter.post('/admin/reconcile', requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const { orderId } = req.body;
     if (!orderId) {
@@ -566,7 +583,7 @@ billingRouter.post('/cancel-checkout', (req: Request, res: Response) => {
 });
 
 // 5. Subscription Updates (Upgrade, Downgrade, Change Plan)
-billingRouter.post('/subscription/update', async (req: Request, res: Response) => {
+billingRouter.post('/subscription/update', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId, planId, customPrice } = req.body;
     if (!businessId || !planId) {
@@ -581,7 +598,7 @@ billingRouter.post('/subscription/update', async (req: Request, res: Response) =
 });
 
 // 6. Subscription Lifecycle (Pause, Resume, Cancel)
-billingRouter.post('/subscription/pause', async (req: Request, res: Response) => {
+billingRouter.post('/subscription/pause', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId } = req.body;
     const updated = await billingService.pauseSubscription(businessId);
@@ -591,7 +608,7 @@ billingRouter.post('/subscription/pause', async (req: Request, res: Response) =>
   }
 });
 
-billingRouter.post('/subscription/resume', async (req: Request, res: Response) => {
+billingRouter.post('/subscription/resume', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId } = req.body;
     const updated = await billingService.resumeSubscription(businessId);
@@ -601,7 +618,7 @@ billingRouter.post('/subscription/resume', async (req: Request, res: Response) =
   }
 });
 
-billingRouter.post('/subscription/cancel', async (req: Request, res: Response) => {
+billingRouter.post('/subscription/cancel', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId } = req.body;
     const updated = await billingService.cancelSubscription(businessId);
@@ -612,7 +629,7 @@ billingRouter.post('/subscription/cancel', async (req: Request, res: Response) =
 });
 
 // 7. Payment Methods Management
-billingRouter.post('/payment-methods/add', async (req: Request, res: Response) => {
+billingRouter.post('/payment-methods/add', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId, brand, last4, expiry, provider, isPrimary } = req.body;
     if (!businessId || !brand || !last4 || !provider) {
@@ -635,7 +652,7 @@ billingRouter.post('/payment-methods/add', async (req: Request, res: Response) =
   }
 });
 
-billingRouter.post('/payment-methods/set-primary', async (req: Request, res: Response) => {
+billingRouter.post('/payment-methods/set-primary', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId, paymentMethodId } = req.body;
     if (!businessId || !paymentMethodId) {
@@ -649,7 +666,7 @@ billingRouter.post('/payment-methods/set-primary', async (req: Request, res: Res
   }
 });
 
-billingRouter.post('/payment-methods/remove', async (req: Request, res: Response) => {
+billingRouter.post('/payment-methods/remove', requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const { businessId, paymentMethodId } = req.body;
     if (!businessId || !paymentMethodId) {

@@ -30,25 +30,38 @@ export class RazorpayProvider implements PaymentProvider {
     this.webhookSecret = (process.env.RAZORPAY_WEBHOOK_SECRET || '').trim();
   }
 
+  private getKeyId(): string {
+    return (process.env.RAZORPAY_KEY_ID || '').trim();
+  }
+
+  private getKeySecret(): string {
+    return (process.env.RAZORPAY_KEY_SECRET || '').trim();
+  }
+
   public isConfigured(): boolean {
-    return Boolean(this.keyId && this.keySecret);
+    return Boolean(this.getKeyId() && this.getKeySecret());
   }
 
   public getPublicKey(): string {
-    return this.keyId || '';
+    return this.getKeyId();
   }
 
   public supportsCurrency(currency: CurrencyCode): boolean {
-    // Razorpay serves as the primary billing provider supporting INR, USD, and GBP
-    return currency === 'INR' || currency === 'USD' || currency === 'GBP';
+    if (!this.isConfigured()) {
+      return false;
+    }
+    const configuredCurrencies = (
+      process.env.RAZORPAY_SUPPORTED_CURRENCIES || 'INR,USD,GBP'
+    ).split(',').map(c => c.trim().toUpperCase());
+    return configuredCurrencies.includes((currency || '').toUpperCase());
   }
 
-  public supportsRecurring(_currency: CurrencyCode): boolean {
-    return true;
+  public supportsRecurring(currency: CurrencyCode): boolean {
+    return this.isConfigured() && this.supportsCurrency(currency);
   }
 
   private getAuthHeader(): string {
-    return `Basic ${Buffer.from(`${this.keyId}:${this.keySecret}`).toString('base64')}`;
+    return `Basic ${Buffer.from(`${this.getKeyId()}:${this.getKeySecret()}`).toString('base64')}`;
   }
 
   public async createCustomer(params: CreateCustomerParams): Promise<ProviderCustomer> {

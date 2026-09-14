@@ -166,18 +166,15 @@ export function extractTokenFromRequest(req: Request): string | undefined {
       return cookieToken;
     }
   }
-  if (req.query?.token && typeof req.query.token === 'string') {
-    return req.query.token;
-  }
   return undefined;
 }
 
 /**
  * Middleware: Extract authenticated user from session token
  */
-export function requireAuth(req: Request, res: Response, next: Function) {
+export async function requireAuth(req: Request, res: Response, next: Function) {
   const token = extractTokenFromRequest(req);
-  const session = getSession(token);
+  const session = await getSession(token);
   if (!session) {
     return res.status(401).json({
       success: false,
@@ -194,7 +191,7 @@ export function requireAuth(req: Request, res: Response, next: Function) {
   }
 
   if (user.status === 'DISABLED') {
-    destroyAllUserSessions(user.id);
+    await destroyAllUserSessions(user.id);
     return res.status(403).json({
       success: false,
       error: 'Your account has been disabled. Please contact platform support.'
@@ -202,7 +199,7 @@ export function requireAuth(req: Request, res: Response, next: Function) {
   }
 
   if (user.status === 'SUSPENDED') {
-    destroyAllUserSessions(user.id);
+    await destroyAllUserSessions(user.id);
     return res.status(403).json({
       success: false,
       error: 'Your account has been suspended. Please contact platform support.'
@@ -217,68 +214,82 @@ export function requireAuth(req: Request, res: Response, next: Function) {
 /**
  * Middleware: Enforce PLATFORM_ADMIN role
  */
-export function requirePlatformAdmin(req: Request, res: Response, next: Function) {
-  requireAuth(req, res, () => {
-    const user = (req as any).user as UserRecord;
-    if (user.role !== 'PLATFORM_ADMIN') {
-      return res.status(403).json({
-        success: false,
-        error: 'Forbidden: Platform Administrator privileges required.'
-      });
-    }
-    next();
-  });
+export async function requirePlatformAdmin(req: Request, res: Response, next: Function) {
+  try {
+    await requireAuth(req, res, () => {
+      const user = (req as any).user as UserRecord;
+      if (!user || user.role !== 'PLATFORM_ADMIN') {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden: Platform Administrator privileges required.'
+        });
+      }
+      next();
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
 }
 
 /**
  * Middleware: Enforce strict tenant isolation
  */
-export function requireTenantAccess(req: Request, res: Response, next: Function) {
-  requireAuth(req, res, () => {
-    const user = (req as any).user as UserRecord;
-    
-    // Platform Admins have overarching multi-tenant visibility
-    if (user.role === 'PLATFORM_ADMIN') {
-      const explicitTenant = (
-        req.params.tenantId ||
+export async function requireTenantAccess(req: Request, res: Response, next: Function) {
+  try {
+    await requireAuth(req, res, () => {
+      const user = (req as any).user as UserRecord;
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized: Valid authentication session required.'
+        });
+      }
+      
+      // Platform Admins have overarching multi-tenant visibility
+      if (user.role === 'PLATFORM_ADMIN') {
+        const explicitTenant = (
+          req.params.tenantId ||
+          req.params.businessId ||
+          req.query.tenantId ||
+          req.query.businessId ||
+          (req.headers['x-tenant-id'] as string) ||
+          req.body?.tenantId ||
+          req.body?.businessId
+        )?.toString().toLowerCase().trim();
+        (req as any).tenantId = explicitTenant || user.tenantId;
+        return next();
+      }
+
+      // Business Admins and Users belong strictly to their own tenant
+      const targetTenantId = (
+        req.params.tenantId || 
         req.params.businessId ||
-        req.query.tenantId ||
+        req.query.tenantId || 
         req.query.businessId ||
+        req.query.tenant_id ||
+        req.query.business_id ||
         (req.headers['x-tenant-id'] as string) ||
-        req.body.tenantId ||
-        req.body.businessId
+        (req.headers['x-business-id'] as string) ||
+        req.body?.tenantId ||
+        req.body?.businessId ||
+        req.body?.tenant_id ||
+        req.body?.business_id
       )?.toString().toLowerCase().trim();
-      (req as any).tenantId = explicitTenant || user.tenantId;
-      return next();
-    }
 
-    // Business Admins and Users belong strictly to their own tenant
-    const targetTenantId = (
-      req.params.tenantId || 
-      req.params.businessId ||
-      req.query.tenantId || 
-      req.query.businessId ||
-      req.query.tenant_id ||
-      req.query.business_id ||
-      (req.headers['x-tenant-id'] as string) ||
-      (req.headers['x-business-id'] as string) ||
-      req.body.tenantId ||
-      req.body.businessId ||
-      req.body.tenant_id ||
-      req.body.business_id
-    )?.toString().toLowerCase().trim();
+      if (targetTenantId && targetTenantId !== user.tenantId.toLowerCase().trim()) {
+        return res.status(403).json({
+          success: false,
+          error: 'Forbidden: Cross-tenant access is strictly prohibited.'
+        });
+      }
 
-    if (targetTenantId && targetTenantId !== user.tenantId.toLowerCase().trim()) {
-      return res.status(403).json({
-        success: false,
-        error: 'Forbidden: Cross-tenant access is strictly prohibited.'
-      });
-    }
-
-    // Always enforce the authenticated user's verified tenantId on the request
-    (req as any).tenantId = user.tenantId;
-    next();
-  });
+      // Always enforce the authenticated user's verified tenantId on the request
+      (req as any).tenantId = user.tenantId;
+      next();
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
 }
 
 export function sanitizeUser(user: UserRecord) {
@@ -375,7 +386,7 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
       role: 'BUSINESS_ADMIN'
     }, newUser.id);
 
-    const session = createSession(newUser.id, newUser.email, newUser.role, newUser.tenantId);
+    const session = await createSession(newUser.id, newUser.email, newUser.role, newUser.tenantId);
 
     return res.status(201).json({
       success: true,
@@ -481,7 +492,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
         });
       }
 
-      const session = createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
+      const session = await createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
       setSessionCookie(res, session.token);
       analyticsService.track('login_success', { email: user.email, role: user.role }, user.id);
 
@@ -559,7 +570,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
       tenant = getTenant(user.tenantId);
     }
 
-    const session = createSession(user.id, user.email, user.role, user.tenantId);
+    const session = await createSession(user.id, user.email, user.role, user.tenantId);
 
     analyticsService.track('login_success', { email: user.email, role: user.role }, user.id);
 
@@ -628,7 +639,7 @@ authRouter.post('/verify-2fa-login', authRateLimiter, async (req: Request, res: 
       return res.status(404).json({ success: false, error: 'User record not found.' });
     }
 
-    const session = createSession(user.id, user.email, user.role, user.tenantId);
+    const session = await createSession(user.id, user.email, user.role, user.tenantId);
     let tenant = user.tenantId ? getTenant(user.tenantId) : null;
 
     analyticsService.track('login_success_2fa', { email: user.email }, user.id);
@@ -782,7 +793,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
       });
     }
 
-    const session = createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
+    const session = await createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
     setSessionCookie(res, session.token);
 
     logCredentialAction({
@@ -900,9 +911,9 @@ authRouter.post('/resend-verification', authRateLimiter, async (req: Request, re
 // ----------------------------------------------------
 // 4. GET CURRENT SESSION (/me)
 // ----------------------------------------------------
-authRouter.get('/me', (req: Request, res: Response) => {
+authRouter.get('/me', async (req: Request, res: Response) => {
   const token = extractTokenFromRequest(req);
-  const session = getSession(token);
+  const session = await getSession(token);
 
   if (!session) {
     return res.status(401).json({
@@ -913,7 +924,7 @@ authRouter.get('/me', (req: Request, res: Response) => {
 
   const user = getUserById(session.userId);
   if (!user || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
-    destroySession(session.token);
+    await destroySession(session.token);
     return res.status(401).json({
       authenticated: false,
       user: null,
@@ -944,9 +955,11 @@ authRouter.get('/me', (req: Request, res: Response) => {
 // ----------------------------------------------------
 // 5. LOGOUT (/logout)
 // ----------------------------------------------------
-authRouter.post('/logout', (req: Request, res: Response) => {
+authRouter.post('/logout', async (req: Request, res: Response) => {
   const token = extractTokenFromRequest(req);
-  destroySession(token);
+  if (token) {
+    await destroySession(token);
+  }
   res.setHeader('Set-Cookie', 'agentdesk_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
   return res.json({
     success: true,
@@ -1373,7 +1386,7 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Requ
 authRouter.get(['/api/tenants', '/tenants'], async (req: Request, res: Response) => {
   try {
     const token = extractTokenFromRequest(req);
-    const session = getSession(token);
+    const session = await getSession(token);
     const user = session ? getUserById(session.userId) : null;
 
     if (!user || user.status === 'DISABLED') {
@@ -1419,7 +1432,7 @@ authRouter.get(['/api/tenants/:tenantId', '/tenants/:tenantId'], async (req: Req
     }
 
     const token = extractTokenFromRequest(req);
-    const session = getSession(token);
+    const session = await getSession(token);
     const user = session ? getUserById(session.userId) : null;
 
     if (!user || user.status === 'DISABLED') {
@@ -1732,7 +1745,7 @@ authRouter.post('/setup-account', passwordResetRateLimiter, async (req: Request,
     }
 
     // Create active session cookie so owner is logged in seamlessly
-    const session = createSession(updatedUser.id, updatedUser.email, updatedUser.role, updatedUser.tenantId);
+    const session = await createSession(updatedUser.id, updatedUser.email, updatedUser.role, updatedUser.tenantId);
     setSessionCookie(res, session.token);
 
     // Emit BUSINESS_CREATED event
@@ -2164,11 +2177,11 @@ authRouter.post('/2fa/disable', requireAuth, authRateLimiter, async (req: Reques
 // ----------------------------------------------------
 // 14. ACTIVE SESSIONS MANAGEMENT
 // ----------------------------------------------------
-authRouter.get('/sessions', requireAuth, (req: Request, res: Response) => {
+authRouter.get('/sessions', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as UserRecord;
     const currentSession = (req as any).session;
-    const allSessions = getUserSessions(user.id);
+    const allSessions = await getUserSessions(user.id);
 
     const safeSessions = allSessions.map(s => ({
       id: s.token.slice(0, 16) + '...',
@@ -2186,11 +2199,11 @@ authRouter.get('/sessions', requireAuth, (req: Request, res: Response) => {
   }
 });
 
-authRouter.post('/sessions/revoke-others', requireAuth, (req: Request, res: Response) => {
+authRouter.post('/sessions/revoke-others', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as UserRecord;
     const currentSession = (req as any).session;
-    const revokedCount = destroyOtherUserSessions(user.id, currentSession.token);
+    const revokedCount = await destroyOtherUserSessions(user.id, currentSession.token);
 
     auditLogService.logAction({
       tenantId: user.tenantId,
