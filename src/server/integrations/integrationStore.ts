@@ -123,6 +123,8 @@ class IntegrationStore {
             type: row.type,
             accountEmail: row.account_email,
             encryptedRefreshToken: row.encrypted_refresh_token || '',
+            encryptedClientId: row.encrypted_client_id || undefined,
+            encryptedClientSecret: row.encrypted_client_secret || undefined,
             status: row.status,
             connectedAt: row.connected_at || undefined,
             lastSuccessfulSendAt: row.last_successful_send_at || undefined,
@@ -151,13 +153,16 @@ class IntegrationStore {
       await postgresClient.query(`
         INSERT INTO agentdesk_integrations (
           id, provider, type, account_email, encrypted_refresh_token,
+          encrypted_client_id, encrypted_client_secret,
           status, connected_at, last_successful_send_at, last_error, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         ON CONFLICT (id) DO UPDATE SET
           provider = EXCLUDED.provider,
           type = EXCLUDED.type,
           account_email = EXCLUDED.account_email,
           encrypted_refresh_token = EXCLUDED.encrypted_refresh_token,
+          encrypted_client_id = EXCLUDED.encrypted_client_id,
+          encrypted_client_secret = EXCLUDED.encrypted_client_secret,
           status = EXCLUDED.status,
           connected_at = EXCLUDED.connected_at,
           last_successful_send_at = EXCLUDED.last_successful_send_at,
@@ -169,6 +174,8 @@ class IntegrationStore {
         record.type,
         record.accountEmail,
         record.encryptedRefreshToken || null,
+        record.encryptedClientId || null,
+        record.encryptedClientSecret || null,
         record.status,
         record.connectedAt || null,
         record.lastSuccessfulSendAt || null,
@@ -218,6 +225,28 @@ class IntegrationStore {
 
   public getAllIntegrations(): IntegrationRecord[] {
     return Array.from(this.records.values());
+  }
+
+  /**
+   * Securely encrypt and persist administrator-configured Google OAuth credentials
+   */
+  public saveClientCredentials(clientId: string, clientSecret: string): void {
+    const encryptedClientId = this.encryptSecret(clientId);
+    const encryptedClientSecret = this.encryptSecret(clientSecret);
+    this.updateIntegration('gmail_oauth', {
+      encryptedClientId,
+      encryptedClientSecret
+    });
+  }
+
+  /**
+   * Decrypt and return persisted Google OAuth credentials if stored
+   */
+  public getClientCredentials(): { clientId: string; clientSecret: string } {
+    const rec = this.getIntegration('gmail_oauth');
+    const clientId = rec?.encryptedClientId ? this.decryptSecret(rec.encryptedClientId) : '';
+    const clientSecret = rec?.encryptedClientSecret ? this.decryptSecret(rec.encryptedClientSecret) : '';
+    return { clientId, clientSecret };
   }
 
   /**

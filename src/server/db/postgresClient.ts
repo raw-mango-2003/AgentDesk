@@ -81,6 +81,9 @@ class PostgresClient {
               updated_at VARCHAR(64) NOT NULL
             );
 
+            ALTER TABLE agentdesk_integrations ADD COLUMN IF NOT EXISTS encrypted_client_id TEXT;
+            ALTER TABLE agentdesk_integrations ADD COLUMN IF NOT EXISTS encrypted_client_secret TEXT;
+
             CREATE TABLE IF NOT EXISTS agentdesk_oauth_states (
               state VARCHAR(128) PRIMARY KEY,
               user_id VARCHAR(128),

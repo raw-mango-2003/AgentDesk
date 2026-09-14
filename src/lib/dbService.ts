@@ -179,14 +179,72 @@ export function resetAllToSeedData() {
 
 export async function getAllBusinesses(): Promise<Business[]> {
   initializeDatabaseIfNeeded();
-  return getItem<Business[]>('businesses', SEED_BUSINESSES);
+  const localList = getItem<Business[]>('businesses', SEED_BUSINESSES);
+  try {
+    const token = typeof window !== 'undefined' ? (localStorage.getItem('agentdesk_auth_token') || sessionStorage.getItem('agentdesk_auth_token')) : null;
+    const res = await fetch('/api/tenants', {
+      headers: {
+        'Accept': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
+        const merged = [...localList];
+        for (const st of data.tenants) {
+          const sId = normalizeTenantId(st.id);
+          const idx = merged.findIndex(b => normalizeTenantId(b.id) === sId || normalizeTenantId(b.tenantId) === sId);
+          if (idx >= 0) {
+            merged[idx] = { ...merged[idx], ...st };
+          } else {
+            merged.push(st);
+          }
+        }
+        setItem('businesses', merged);
+        return merged;
+      }
+    }
+  } catch (err) {
+    // Graceful fallback to local storage
+  }
+  return localList;
 }
 
 export async function getBusinessById(businessId: string): Promise<Business | null> {
   if (!businessId) return null;
   const list = await getAllBusinesses();
   const targetId = normalizeTenantId(businessId);
-  const found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
+  let found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
+
+  if (!found) {
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('agentdesk_auth_token') || sessionStorage.getItem('agentdesk_auth_token')) : null;
+      const res = await fetch(`/api/tenants/${encodeURIComponent(businessId)}`, {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.tenant) {
+          found = data.tenant;
+          const currentList = getItem<Business[]>('businesses', SEED_BUSINESSES);
+          const existingIdx = currentList.findIndex(b => normalizeTenantId(b.id) === targetId);
+          if (existingIdx >= 0) {
+            currentList[existingIdx] = found!;
+          } else {
+            currentList.push(found!);
+          }
+          setItem('businesses', currentList);
+        }
+      }
+    } catch (err) {
+      // Non-fatal
+    }
+  }
+
   return found || null;
 }
 

@@ -56,6 +56,77 @@ function persistSessionsToDisk(): void {
 // Initial disk load
 loadSessionsFromDisk();
 
+/**
+ * Synchronize active sessions from PostgreSQL database
+ */
+export async function syncSessionsFromPostgres(): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+
+    const now = Date.now();
+    const res = await postgresClient.query(`
+      SELECT token, user_id, email, role, tenant_id, created_at, expires_at
+      FROM agentdesk_sessions
+      WHERE expires_at > $1
+    `, [now]);
+
+    if (res && res.rows && res.rows.length > 0) {
+      let imported = 0;
+      for (const row of res.rows) {
+        if (!activeSessions.has(row.token)) {
+          activeSessions.set(row.token, {
+            token: row.token,
+            userId: row.user_id,
+            email: row.email,
+            role: row.role,
+            tenantId: row.tenant_id,
+            createdAt: Number(row.created_at),
+            expiresAt: Number(row.expires_at)
+          });
+          imported++;
+        }
+      }
+      if (imported > 0) {
+        persistSessionsToDisk();
+      }
+    }
+  } catch (err: any) {
+    console.warn('[SessionStore:PostgresSyncWarning]', err.message);
+  }
+}
+
+// Kick off Postgres sync on startup
+syncSessionsFromPostgres().catch(() => {});
+
+// Periodic cleanup of expired sessions every 30 minutes
+setInterval(() => {
+  cleanupExpiredSessions().catch(() => {});
+}, 30 * 60 * 1000);
+
+export async function cleanupExpiredSessions(): Promise<number> {
+  const now = Date.now();
+  let count = 0;
+  for (const [token, session] of activeSessions.entries()) {
+    if (session.expiresAt <= now) {
+      activeSessions.delete(token);
+      count++;
+    }
+  }
+  if (count > 0) {
+    persistSessionsToDisk();
+  }
+
+  try {
+    const isReady = await postgresClient.initialize();
+    if (isReady) {
+      await postgresClient.query('DELETE FROM agentdesk_sessions WHERE expires_at <= $1', [now]);
+    }
+  } catch {}
+
+  return count;
+}
+
 function getSessionSecret(): string {
   const secret = (process.env.SESSION_SECRET || '').trim();
   if (secret.length < 32) {

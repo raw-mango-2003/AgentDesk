@@ -40,12 +40,14 @@ import { getCountryMetadata } from './lib/localization';
 import { 
   getBusinessById, 
   getAllBusinesses, 
+  saveBusiness,
   subscribeToTenantRegistry, 
   getNotifications, 
   markNotificationsAsRead 
 } from './lib/dbService';
 import {
   PUBLIC_AGENTDESK_DEMO_BUSINESS,
+  PLATFORM_ADMIN_BUSINESS,
   PUBLIC_DEMO_AGENT_ID,
   PUBLIC_DEMO_TENANT_ID,
   PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS
@@ -72,7 +74,8 @@ import {
   Globe,
   CreditCard,
   Code,
-  KeyRound
+  KeyRound,
+  AlertCircle
 } from 'lucide-react';
 
 export type SaaSNavTab = 
@@ -148,6 +151,8 @@ export default function App() {
   const [business, setBusiness] = useState<Business | null>(null);
   const [allBusinesses, setAllBusinesses] = useState<Business[]>([]);
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [workspaceLoadError, setWorkspaceLoadError] = useState<string | null>(null);
 
   // Drawers & Modals
   const [showCopilot, setShowCopilot] = useState(false);
@@ -212,25 +217,92 @@ export default function App() {
 
     let isMounted = true;
     async function loadWorkspaceData() {
-      if (!activeBusinessId) return;
+      const targetId = activeBusinessId || currentUser?.businessId || (currentUser?.role === 'PLATFORM_ADMIN' ? 'platform' : PUBLIC_DEMO_TENANT_ID);
+      if (!targetId) return;
 
-      if (activeBusinessId === 'platform') {
-        const list = await getAllBusinesses();
-        if (isMounted) {
-          setAllBusinesses(list);
-          if (list.length > 0 && !business) {
-            setBusiness(list[0]);
+      setWorkspaceLoading(true);
+      setWorkspaceLoadError(null);
+
+      try {
+        if (targetId === 'platform') {
+          const list = await getAllBusinesses();
+          if (isMounted) {
+            setAllBusinesses(list);
+            if (list.length > 0) {
+              setBusiness(list[0]);
+            } else {
+              setBusiness(PLATFORM_ADMIN_BUSINESS);
+            }
+            setWorkspaceLoading(false);
           }
+          return;
         }
-        return;
-      }
 
-      const biz = await getBusinessById(activeBusinessId);
-      if (isMounted) setBusiness(biz);
-      const list = await getAllBusinesses();
-      if (isMounted) setAllBusinesses(list);
-      const notifs = await getNotifications(activeBusinessId);
-      if (isMounted) setNotifications(notifs);
+        let biz = await getBusinessById(targetId);
+
+        // Fallback: If user belongs to this tenant but local storage didn't have it, create initial record
+        if (!biz && currentUser && (currentUser.businessId === targetId || currentUser.tenantId === targetId)) {
+          biz = {
+            id: targetId,
+            tenantId: targetId,
+            name: (currentUser as any).businessName || currentUser.displayName || `${currentUser.email.split('@')[0]}'s Organization`,
+            type: 'Professional Services',
+            industry: 'Professional Services',
+            description: 'AI-automated revenue operations workspace',
+            status: 'active',
+            plan: 'growth',
+            planStatus: 'ACTIVE',
+            subscriptionState: 'ACTIVE',
+            currency: 'USD',
+            phone: '',
+            email: currentUser.email,
+            website: '',
+            supportEmail: currentUser.email,
+            aiSettings: {
+              receptionistName: 'AgentDesk AI',
+              voiceTone: 'Professional',
+              bookingLink: '',
+              faq: [],
+              systemInstructions: 'You are a professional AI assistant for AgentDesk.'
+            },
+            agentSettings: {
+              activeAgentId: 'agent-' + targetId,
+              autoReplyEnabled: true,
+              callForwardingEnabled: false,
+              voiceId: 'agent-voice-1',
+              greetingMessage: 'Hello, thank you for reaching out to us. How can I assist your business today?'
+            },
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          } as unknown as Business;
+          await saveBusiness(biz);
+        }
+
+        const list = await getAllBusinesses();
+        if (isMounted) setAllBusinesses(list);
+
+        // Fallback to first available if requested workspace does not exist
+        if (!biz && list.length > 0) {
+          biz = list[0];
+        }
+
+        if (isMounted) {
+          if (biz) {
+            setBusiness(biz);
+            setWorkspaceLoadError(null);
+          } else {
+            setWorkspaceLoadError(`Workspace "${targetId}" could not be located.`);
+          }
+          const notifs = await getNotifications(biz?.id || targetId);
+          setNotifications(notifs);
+          setWorkspaceLoading(false);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setWorkspaceLoadError(err.message || 'Failed to load workspace data');
+          setWorkspaceLoading(false);
+        }
+      }
     }
     loadWorkspaceData();
 
@@ -949,10 +1021,57 @@ export default function App() {
                   <BusinessAccountSettings business={business} />
                 )}
               </div>
+            ) : workspaceLoadError ? (
+              <div className="py-16 px-4 max-w-lg mx-auto text-center">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-6 h-6" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-100 mb-2">Workspace Unavailable</h3>
+                <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+                  {workspaceLoadError}
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={() => {
+                      setWorkspaceLoading(true);
+                      setWorkspaceLoadError(null);
+                      const targetId = activeBusinessId || currentUser?.businessId || (currentUser?.role === 'PLATFORM_ADMIN' ? 'platform' : PUBLIC_DEMO_TENANT_ID);
+                      getBusinessById(targetId).then(b => {
+                        if (b) setBusiness(b);
+                        setWorkspaceLoading(false);
+                      }).catch(() => setWorkspaceLoading(false));
+                    }}
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Retry Loading</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveBusinessId(PUBLIC_DEMO_TENANT_ID);
+                      setBusiness(PUBLIC_AGENTDESK_DEMO_BUSINESS);
+                      setWorkspaceLoadError(null);
+                    }}
+                    className="inline-flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors"
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Switch to Demo Workspace</span>
+                  </button>
+                </div>
+              </div>
             ) : (
-              <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center space-y-3">
+              <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center space-y-4">
                 <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                 <span className="text-sm font-medium">Loading workspace data...</span>
+                <button
+                  onClick={() => {
+                    setActiveBusinessId(PUBLIC_DEMO_TENANT_ID);
+                    setBusiness(PUBLIC_AGENTDESK_DEMO_BUSINESS);
+                  }}
+                  className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors"
+                >
+                  Taking too long? Open demo workspace
+                </button>
               </div>
             )}
           </div>

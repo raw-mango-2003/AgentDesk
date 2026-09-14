@@ -75,11 +75,26 @@ export class GmailService {
   }
 
   /**
+   * Resolve active Google OAuth 2.0 client credentials (env vars take precedence, falls back to persistent store)
+   */
+  public getClientCredentials(): { clientId: string; clientSecret: string } {
+    const envClientId = (process.env.GOOGLE_CLIENT_ID || '').trim();
+    const envClientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    if (envClientId && envClientSecret) {
+      return { clientId: envClientId, clientSecret: envClientSecret };
+    }
+    const stored = integrationStore.getClientCredentials();
+    return {
+      clientId: envClientId || stored.clientId || (this.dynamicClientId || '').trim(),
+      clientSecret: envClientSecret || stored.clientSecret || (this.dynamicClientSecret || '').trim()
+    };
+  }
+
+  /**
    * Resolve active Google OAuth 2.0 credentials
    */
   private getCredentials(): { clientId: string; clientSecret: string; refreshToken: string } | null {
-    const clientId = (process.env.GOOGLE_CLIENT_ID || this.dynamicClientId || '').trim();
-    const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || this.dynamicClientSecret || '').trim();
+    const { clientId, clientSecret } = this.getClientCredentials();
 
     const record = integrationStore.getIntegration('gmail_oauth');
     let refreshToken = '';
@@ -115,8 +130,7 @@ export class GmailService {
   public getConnectionStatus(): GmailConnectionStatus {
     const record = integrationStore.getIntegration('gmail_oauth');
     const creds = this.getCredentials();
-    const clientId = creds?.clientId || (process.env.GOOGLE_CLIENT_ID || this.dynamicClientId || '').trim();
-    const clientSecret = creds?.clientSecret || (process.env.GOOGLE_CLIENT_SECRET || this.dynamicClientSecret || '').trim();
+    const { clientId, clientSecret } = this.getClientCredentials();
     const hasRefreshToken = !!(creds?.refreshToken);
 
     let status: 'CONNECTED' | 'NOT_CONNECTED' | 'REAUTHORIZATION_REQUIRED' = 'NOT_CONNECTED';
@@ -404,11 +418,14 @@ export class GmailService {
   }
 
   /**
-   * Set optional dynamic client credentials
+   * Set dynamic client credentials and persist them securely
    */
   public setClientCredentials(clientId: string, clientSecret: string): void {
     if (clientId) this.dynamicClientId = clientId.trim();
     if (clientSecret) this.dynamicClientSecret = clientSecret.trim();
+    if (clientId && clientSecret) {
+      integrationStore.saveClientCredentials(clientId.trim(), clientSecret.trim());
+    }
   }
 
   /**
@@ -446,7 +463,8 @@ export class GmailService {
    * Requests ONLY https://www.googleapis.com/auth/gmail.send with offline access and consent prompt
    */
   public getAuthorizationUrl(redirectUri: string, state: string, clientIdOverride?: string): string {
-    const clientId = (clientIdOverride || process.env.GOOGLE_CLIENT_ID || this.dynamicClientId || '').trim();
+    const { clientId: resolvedClientId } = this.getClientCredentials();
+    const clientId = (clientIdOverride || resolvedClientId).trim();
 
     const params = new URLSearchParams({
       client_id: clientId,
@@ -469,8 +487,7 @@ export class GmailService {
     code: string,
     redirectUri: string
   ): Promise<{ success: boolean; error?: string; accountEmail?: string }> {
-    const clientId = (process.env.GOOGLE_CLIENT_ID || this.dynamicClientId || '').trim();
-    const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || this.dynamicClientSecret || '').trim();
+    const { clientId, clientSecret } = this.getClientCredentials();
 
     if (!clientId || !clientSecret) {
       return { 

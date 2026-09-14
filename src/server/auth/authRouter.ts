@@ -38,6 +38,9 @@ import {
 import { 
   serverBusinessesStore, 
   getTenant,
+  getAllTenants,
+  setTenant,
+  PUBLIC_DEMO_TENANT_ID,
   serverAgentsStore,
   serverKnowledgeStore,
   serverTenantUsageStore
@@ -1361,6 +1364,101 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Requ
       success: false,
       error: err.message || 'Failed to create business credentials.'
     });
+  }
+});
+
+/**
+ * GET /api/tenants - Returns list of accessible tenants
+ */
+authRouter.get(['/api/tenants', '/tenants'], async (req: Request, res: Response) => {
+  try {
+    const token = extractTokenFromRequest(req);
+    const session = getSession(token);
+    const user = session ? getUserById(session.userId) : null;
+
+    if (!user || user.status === 'DISABLED') {
+      const demoTenant = getTenant(PUBLIC_DEMO_TENANT_ID);
+      return res.json({
+        success: true,
+        tenants: demoTenant ? [demoTenant] : []
+      });
+    }
+
+    if (user.role === 'PLATFORM_ADMIN') {
+      const all = getAllTenants();
+      return res.json({
+        success: true,
+        tenants: all
+      });
+    }
+
+    const userTenant = getTenant(user.tenantId);
+    return res.json({
+      success: true,
+      tenants: userTenant ? [userTenant] : []
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/tenants/:tenantId - Returns individual business record
+ */
+authRouter.get(['/api/tenants/:tenantId', '/tenants/:tenantId'], async (req: Request, res: Response) => {
+  try {
+    const { tenantId } = req.params;
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'Tenant ID required' });
+    }
+    const norm = tenantId.trim().toLowerCase();
+
+    if (norm === PUBLIC_DEMO_TENANT_ID.toLowerCase()) {
+      const demo = getTenant(PUBLIC_DEMO_TENANT_ID);
+      return res.json({ success: true, tenant: demo });
+    }
+
+    const token = extractTokenFromRequest(req);
+    const session = getSession(token);
+    const user = session ? getUserById(session.userId) : null;
+
+    if (!user || user.status === 'DISABLED') {
+      // If unauthenticated, allow public check for demo or return 401
+      return res.status(401).json({ success: false, error: 'Authentication required to access tenant details' });
+    }
+
+    if (user.role !== 'PLATFORM_ADMIN' && (user.tenantId || '').toLowerCase() !== norm) {
+      return res.status(403).json({ success: false, error: 'Access denied to this tenant' });
+    }
+
+    const biz = getTenant(norm);
+    if (!biz) {
+      return res.status(404).json({ success: false, error: 'Tenant not found' });
+    }
+
+    return res.json({ success: true, tenant: biz });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+/**
+ * PUT /api/tenants/:tenantId - Update business settings
+ */
+authRouter.put(['/api/tenants/:tenantId', '/tenants/:tenantId'], requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user as UserRecord;
+    const { tenantId } = req.params;
+    const norm = tenantId.trim().toLowerCase();
+
+    if (user.role !== 'PLATFORM_ADMIN' && (user.tenantId || '').toLowerCase() !== norm) {
+      return res.status(403).json({ success: false, error: 'Access denied: cannot modify other tenants' });
+    }
+
+    const updated = setTenant(norm, req.body);
+    return res.json({ success: true, tenant: updated });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
   }
 });
 

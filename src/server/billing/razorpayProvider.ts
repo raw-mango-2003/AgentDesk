@@ -291,8 +291,12 @@ export class RazorpayProvider implements PaymentProvider {
           .createHmac('sha256', this.keySecret)
           .update(textToSign)
           .digest('hex');
+        
+        const expectedBuf = Buffer.from(expectedSignature, 'utf-8');
+        const signatureBuf = Buffer.from(signature.trim(), 'utf-8');
+        const isMatch = expectedBuf.length === signatureBuf.length && crypto.timingSafeEqual(expectedBuf, signatureBuf);
 
-        if (expectedSignature === signature) {
+        if (isMatch) {
           return {
             verified: true,
             paymentId,
@@ -724,9 +728,11 @@ export class RazorpayProvider implements PaymentProvider {
           .update(rawPayload)
           .digest('hex');
 
-        const isValid = crypto.timingSafeEqual(
-          Buffer.from(expectedSig, 'utf-8'),
-          Buffer.from(signature.trim(), 'utf-8')
+        const expectedBuf = Buffer.from(expectedSig, 'utf-8');
+        const signatureBuf = Buffer.from(signature.trim(), 'utf-8');
+        const isValid = expectedBuf.length === signatureBuf.length && crypto.timingSafeEqual(
+          expectedBuf,
+          signatureBuf
         );
 
         if (!isValid) {

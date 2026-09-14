@@ -455,6 +455,8 @@ export interface IntegrationRecord {
   type: 'GMAIL' | string;
   accountEmail: string;
   encryptedRefreshToken: string;
+  encryptedClientId?: string;
+  encryptedClientSecret?: string;
   status: 'CONNECTED' | 'NOT_CONNECTED' | 'REAUTHORIZATION_REQUIRED';
   connectedAt?: string;
   lastSuccessfulSendAt?: string;

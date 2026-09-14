@@ -10,6 +10,11 @@ import {
   PLATFORM_ADMIN_TENANT_ID,
   PLATFORM_ADMIN_AGENT_ID
 } from '../data/demoBusiness.js';
+
+export { 
+  PUBLIC_DEMO_TENANT_ID,
+  PLATFORM_ADMIN_TENANT_ID
+};
 import { SEED_AGENTS } from '../data/seedData.js';
 import { DEFAULT_PLAN_CONFIGS } from '../data/pricing.js';
 import { Business, AIAgent, KnowledgeItem, PlanUsageLimits } from '../types.js';
