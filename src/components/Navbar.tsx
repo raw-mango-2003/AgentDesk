@@ -233,13 +233,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>Sign In</span>
                 </button>
 
-                <button
-                  onClick={() => onNavigate('get-started')}
-                  className="hidden lg:flex bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-blue-600/20 transition-all items-center gap-1.5 cursor-pointer min-h-[38px]"
-                >
-                  <span>Get Started</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
               </div>
             )}
 
@@ -273,6 +266,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               Pricing
+            </button>
+            <button
+              onClick={() => { onNavigate('get-started'); setMobileMenuOpen(false); }}
+              className="w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/20"
+            >
+              <span>Get Started</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
             {currentUser && (
               <button
