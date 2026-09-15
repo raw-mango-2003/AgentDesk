@@ -313,8 +313,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
         await fetchIntegrations();
 
         // Immediately launch OAuth flow
-        const startUrl = `/api/integrations/google/start?token=${encodeURIComponent(token)}`;
-        window.location.href = startUrl;
+        // Continue through the HttpOnly session cookie, not a query-string token.
+        window.location.href = '/api/integrations/google/start';
       } else {
         alert(data.error || `Failed to save credentials (HTTP ${res.status})`);
       }
