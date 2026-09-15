@@ -155,15 +155,26 @@ export function setSessionCookie(res: Response, token: string) {
  * Extract auth token from Authorization header or HttpOnly cookie
  */
 export function extractTokenFromRequest(req: Request): string | undefined {
-  if (req.headers.authorization) {
-    return req.headers.authorization;
+  const authorization = typeof req.headers.authorization === 'string'
+    ? req.headers.authorization.trim()
+    : '';
+
+  // Ignore empty/malformed placeholder headers so the secure HttpOnly cookie
+  // can still authenticate the request.
+  if (
+    authorization &&
+    !/^Bearer\s+(?:null|undefined)$/i.test(authorization)
+  ) {
+    return authorization;
   }
+
   if (req.headers.cookie) {
     const cookieToken = extractCookie(req.headers.cookie, 'agentdesk_session');
     if (cookieToken) {
       return cookieToken;
     }
   }
+
   return undefined;
 }
 
