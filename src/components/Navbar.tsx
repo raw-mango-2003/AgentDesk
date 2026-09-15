@@ -85,28 +85,28 @@ export const Navbar: React.FC<NavbarProps> = ({
       <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 transition-all font-sans">
         <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo & Platform Name */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <button
               onClick={() => onNavigate('landing')}
-              className="flex items-center gap-2.5 text-left group cursor-pointer"
+              className="flex items-center gap-2 sm:gap-2.5 text-left group cursor-pointer min-w-0"
             >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
-                <Bot className="w-5 h-5" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
+                <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
+              <div className="min-w-0">
+                <span className="font-extrabold text-sm sm:text-base tracking-tight text-white flex items-center gap-1.5 truncate">
                   AgentDesk
-                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wide">
+                  <span className="hidden xs:inline text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wide">
                     RevenueOS
                   </span>
                 </span>
-                <span className="text-[10px] text-slate-400 block -mt-0.5">Autonomous Receptionist & CRM</span>
+                <span className="text-[10px] text-slate-400 hidden sm:block -mt-0.5 truncate">Autonomous Receptionist & CRM</span>
               </div>
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1">
+          {/* Navigation Links (Desktop) */}
+          <nav className="hidden lg:flex items-center gap-1">
             <button
               onClick={() => onNavigate('landing')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
@@ -158,10 +158,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onOpenCopilot && (
               <button
                 onClick={onOpenCopilot}
-                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                className="hidden sm:flex px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 text-blue-300 border border-blue-500/30 text-xs font-bold items-center gap-1.5 transition-all cursor-pointer shadow-xs min-h-[38px]"
               >
                 <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span className="hidden sm:inline">AI Copilot</span>
+                <span>AI Copilot</span>
               </button>
             )}
 
@@ -169,8 +169,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onOpenNotifications && (
               <button
                 onClick={onOpenNotifications}
-                className="relative p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-all cursor-pointer"
+                className="relative p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-all cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
                 title="Notifications"
+                aria-label="View notifications"
               >
                 <Bell className="w-4 h-4" />
                 {unreadNotificationsCount > 0 && (
@@ -215,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   onClick={handleLogout}
                   title="Sign out of AgentDesk"
-                  className="hidden sm:flex px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 items-center gap-1.5 transition-all cursor-pointer"
+                  className="hidden lg:flex px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 items-center gap-1.5 transition-all cursor-pointer min-h-[38px]"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
@@ -223,9 +224,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <div className="flex items-center gap-2">
+                {/* Desktop-only Auth Buttons: Completely hidden on mobile & tablet */}
                 <button
                   onClick={() => onNavigate('login')}
-                  className="hidden sm:flex px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/70 rounded-xl transition-all items-center gap-1.5 cursor-pointer"
+                  className="hidden lg:flex px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/70 rounded-xl transition-all items-center gap-1.5 cursor-pointer min-h-[38px]"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign In</span>
@@ -233,17 +235,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => onNavigate('get-started')}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="hidden lg:flex bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-blue-600/20 transition-all items-center gap-1.5 cursor-pointer min-h-[38px]"
                 >
                   <span>Get Started</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
-            {/* Mobile Hamburger Button */}
+
+            {/* Mobile/Tablet Hamburger Button */}
             <button
+              id="mobile-nav-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="lg:hidden p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -251,12 +255,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Mobile Dropdown Menu Drawer */}
+        {/* Mobile/Tablet Dropdown Menu Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-900/95 backdrop-blur-md px-4 py-3 space-y-2">
+          <div className="lg:hidden border-t border-slate-800 bg-slate-900/98 backdrop-blur-xl px-4 py-3 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
             <button
               onClick={() => { onNavigate('landing'); setMobileMenuOpen(false); }}
-              className={`w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center ${
+              className={`w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center ${
                 currentView === 'landing' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
@@ -264,7 +268,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
-              className={`w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center ${
+              className={`w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center ${
                 currentView === 'pricing' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
@@ -273,7 +277,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser && (
               <button
                 onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
-                className={`w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                className={`w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                   currentView === 'dashboard' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
@@ -283,32 +287,58 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
             <button
               onClick={() => { onOpenDemoWidget(); setMobileMenuOpen(false); }}
-              className="w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+              className="w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <span>Test AI Receptionist</span>
             </button>
-            {currentUser ? (
+            {onOpenCopilot && (
               <button
-                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                className="w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                onClick={() => { onOpenCopilot(); setMobileMenuOpen(false); }}
+                className="w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold text-blue-400 hover:text-blue-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out ({isPlatformAdmin ? 'Platform Admin' : currentUser.email})</span>
+                <Sparkles className="w-4 h-4 text-blue-400" />
+                <span>AI Copilot</span>
               </button>
-            ) : (
-              <div className="pt-2 border-t border-slate-800/80 flex gap-2">
+            )}
+            {currentUser ? (
+              <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                {isPlatformAdmin && onOpenTenantSelect && (
+                  <button
+                    onClick={() => { onOpenTenantSelect(); setMobileMenuOpen(false); }}
+                    className="w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold text-purple-300 bg-purple-950/40 hover:bg-purple-900/40 rounded-xl transition-all flex items-center gap-2 cursor-pointer border border-purple-800/40"
+                  >
+                    <Briefcase className="w-4 h-4 text-purple-400" />
+                    <span>Inspect Tenant Workspace</span>
+                  </button>
+                )}
                 <button
-                  onClick={() => { onNavigate('login'); setMobileMenuOpen(false); }}
-                  className="flex-1 min-h-[44px] py-2 text-center text-xs font-bold text-slate-300 bg-slate-800 rounded-xl flex items-center justify-center cursor-pointer"
+                  onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+                  className="w-full min-h-[44px] text-left px-3 py-2.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  Sign In
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out ({isPlatformAdmin ? 'Platform Admin' : currentUser.email})</span>
                 </button>
+              </div>
+            ) : (
+              <div className="pt-3 border-t border-slate-800/80 space-y-2.5">
+                {/* Prominent Get Started CTA inside Hamburger Menu */}
                 <button
+                  id="mobile-nav-get-started"
                   onClick={() => { onNavigate('get-started'); setMobileMenuOpen(false); }}
-                  className="flex-1 min-h-[44px] py-2 text-center text-xs font-bold text-white bg-blue-600 rounded-xl flex items-center justify-center cursor-pointer shadow-md shadow-blue-600/25"
+                  className="w-full min-h-[48px] px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 transition-all cursor-pointer"
                 >
-                  Get Started
+                  <span>Get Started</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+                {/* Sign In button inside Hamburger Menu */}
+                <button
+                  id="mobile-nav-sign-in"
+                  onClick={() => { onNavigate('login'); setMobileMenuOpen(false); }}
+                  className="w-full min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs flex items-center justify-center gap-2 border border-slate-700/80 transition-all cursor-pointer"
+                >
+                  <LogIn className="w-4 h-4 text-slate-400" />
+                  <span>Sign In</span>
                 </button>
               </div>
             )}

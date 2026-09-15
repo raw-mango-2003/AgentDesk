@@ -96,9 +96,53 @@ export const PlatformAutomationsDashboard: React.FC = () => {
       });
       const data = await res.json();
       if (data.success) {
-        setAutomations(data.automations || []);
+        const rawList = Array.isArray(data.automations) ? data.automations : [];
+        const normalized: AutomationRule[] = rawList.map((r: any) => {
+          const successes = typeof r.successCount === 'number' ? r.successCount : 0;
+          const fails = typeof r.failedCount === 'number' ? r.failedCount : 0;
+          const totalRuns = successes + fails;
+          const calcRate = totalRuns > 0 ? (successes / totalRuns) * 100 : 100.0;
+          const successRate = typeof r.successRate === 'number' ? r.successRate : calcRate;
+
+          return {
+            id: r.id || `rule_${Math.random()}`,
+            name: r.name || 'Unnamed Automation',
+            triggerEvent: r.triggerEvent || r.eventTrigger || 'SYSTEM_EVENT',
+            action: r.action || r.description || 'Dispatch Event',
+            channel: (r.channel === 'GMAIL' ? 'Email' : (r.channel || 'Email')) as any,
+            templateId: r.templateId || r.emailTemplate,
+            active: r.active !== undefined ? Boolean(r.active) : (r.status === 'ACTIVE'),
+            successRate,
+            totalExecutions: typeof r.totalExecutions === 'number' ? r.totalExecutions : totalRuns,
+            lastExecutedAt: r.lastExecutedAt || r.lastRun
+          };
+        });
+
+        setAutomations(normalized);
+
         if (data.stats) {
-          setStats(data.stats);
+          const total = typeof data.stats.totalAutomations === 'number' ? data.stats.totalAutomations : normalized.length;
+          const active = typeof data.stats.activeAutomations === 'number' 
+            ? data.stats.activeAutomations 
+            : normalized.filter(a => a.active).length;
+          const paused = typeof data.stats.pausedAutomations === 'number'
+            ? data.stats.pausedAutomations
+            : Math.max(0, total - active);
+          const sent = typeof data.stats.emailsSentToday === 'number'
+            ? data.stats.emailsSentToday
+            : (data.stats.successfulRuns || 0);
+          const totalRuns = (data.stats.successfulRuns || 0) + (data.stats.failedRuns || 0);
+          const failRate = typeof data.stats.failureRate === 'number'
+            ? data.stats.failureRate
+            : (totalRuns > 0 ? ((data.stats.failedRuns || 0) / totalRuns) * 100 : 0.0);
+
+          setStats({
+            totalAutomations: total,
+            activeAutomations: active,
+            pausedAutomations: paused,
+            emailsSentToday: sent,
+            failureRate: isNaN(failRate) ? 0.0 : failRate
+          });
         }
       }
     } catch (err) {
@@ -181,9 +225,11 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   };
 
   const filteredAutomations = automations.filter(rule => {
-    const matchesSearch = rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          rule.triggerEvent.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          rule.action.toLowerCase().includes(searchQuery.toLowerCase());
+    const q = (searchQuery || '').toLowerCase();
+    const nameStr = (rule.name || '').toLowerCase();
+    const triggerStr = (rule.triggerEvent || '').toLowerCase();
+    const actionStr = (rule.action || '').toLowerCase();
+    const matchesSearch = nameStr.includes(q) || triggerStr.includes(q) || actionStr.includes(q);
     if (filterCategory === 'ACTIVE') return matchesSearch && rule.active;
     if (filterCategory === 'PAUSED') return matchesSearch && !rule.active;
     return matchesSearch;
@@ -264,7 +310,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs">
           <span className="text-[11px] font-semibold uppercase text-slate-500 tracking-wider">Failure Rate</span>
           <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
-            {stats.failureRate.toFixed(1)}%
+            {(typeof stats?.failureRate === 'number' ? stats.failureRate : 0).toFixed(1)}%
           </div>
           <span className="text-[10px] text-emerald-600 font-medium">Deduplicated & Retried</span>
         </div>
@@ -398,7 +444,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                        {rule.successRate.toFixed(1)}%
+                        {(typeof rule.successRate === 'number' ? rule.successRate : 100).toFixed(1)}%
                       </td>
                       <td className="px-4 py-3">
                         {rule.active ? (

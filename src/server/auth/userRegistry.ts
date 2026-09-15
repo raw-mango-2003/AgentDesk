@@ -360,7 +360,10 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
     const isReady = await postgresClient.initialize();
     if (isReady) {
       const res = await postgresClient.query(
-        'SELECT * FROM agentdesk_users WHERE LOWER(TRIM(email)) = $1 LIMIT 1',
+        `SELECT * FROM agentdesk_users 
+         WHERE LOWER(TRIM(email)) = $1 
+            OR (role = 'PLATFORM_ADMIN' AND ($1 = 'admin' OR $1 = 'admin@agentdesk' OR $1 = 'admin@agentdesk.ai' OR $1 = 'admin@agentdesk.com')) 
+         LIMIT 1`,
         [clean]
       );
       if (res && res.rows && res.rows.length > 0) {
@@ -502,8 +505,8 @@ export function getUserByEmail(email: string): UserRecord | null {
   const user = usersByEmailStore.get(clean);
   if (user) return user;
 
-  // Convenience normalization: if someone types 'admin@agentdesk.ai' or 'admin@agentdesk'
-  if (clean === 'admin@agentdesk.ai' || clean === 'admin@agentdesk') {
+  // Convenience normalization: if someone types 'admin@agentdesk.ai' or 'admin@agentdesk' or 'admin' or 'admin@agentdesk.com'
+  if (clean === 'admin@agentdesk.ai' || clean === 'admin@agentdesk' || clean === 'admin' || clean === 'admin@agentdesk.com') {
     const admin = Array.from(usersByEmailStore.values()).find(u => u.role === 'PLATFORM_ADMIN');
     if (admin) return admin;
   }

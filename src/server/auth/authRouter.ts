@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { 
   getUserByEmail, 
+  getUserByEmailAsync,
   getUserById, 
   createUser, 
   updateUser, 
@@ -688,7 +689,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const user = getUserByEmail(cleanEmail);
+    const user = await getUserByEmailAsync(cleanEmail);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -830,11 +831,20 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
     });
   } catch (err: any) {
     console.error('Platform login error:', err);
+    if (err?.message?.includes('Database') || err?.message?.includes('PostgreSQL') || err?.code === 'ECONNREFUSED' || err?.code === 'ENOTFOUND') {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: 'DATABASE_UNAVAILABLE',
+          message: 'PostgreSQL database is currently unavailable. Please verify DATABASE_URL configuration.'
+        }
+      });
+    }
     return res.status(500).json({
       success: false,
       error: {
         code: 'INTERNAL_SERVER_ERROR',
-        message: 'Server error during platform administrator authentication.'
+        message: err?.message || 'Server error during platform administrator authentication.'
       }
     });
   }
