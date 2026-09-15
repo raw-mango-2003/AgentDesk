@@ -57,16 +57,29 @@ import {
 } from '../data/seedData';
 
 export async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
+  const timeoutMs = 10000;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  const requestOptions: RequestInit = {
+    ...options,
+    signal: options?.signal || controller.signal
+  };
+
   try {
-    const res = await fetch(url, options);
+    const res = await fetch(url, requestOptions);
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
       throw new Error(errData.error || errData.message || `Request failed with status ${res.status}`);
     }
     return await res.json();
   } catch (err: any) {
-    console.error(`[safeFetchJson] Error fetching ${url}:`, err);
-    throw err;
+    const error = err?.name === 'AbortError'
+      ? new Error(`Request timed out after ${timeoutMs / 1000}s: ${url}`)
+      : err;
+    console.error(`[safeFetchJson] Error fetching ${url}:`, error);
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 
@@ -182,15 +195,13 @@ export async function getAllBusinesses(): Promise<Business[]> {
   const localList = getItem<Business[]>('businesses', SEED_BUSINESSES);
   try {
     const token = typeof window !== 'undefined' ? (localStorage.getItem('agentdesk_auth_token') || sessionStorage.getItem('agentdesk_auth_token')) : null;
-    const res = await fetch('/api/tenants', {
+    const data = await safeFetchJson('/api/tenants', {
       headers: {
         'Accept': 'application/json',
         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
       }
     });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
+    if (data?.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
         const merged = [...localList];
         for (const st of data.tenants) {
           const sId = normalizeTenantId(st.id);
@@ -220,15 +231,13 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
   if (!found) {
     try {
       const token = typeof window !== 'undefined' ? (localStorage.getItem('agentdesk_auth_token') || sessionStorage.getItem('agentdesk_auth_token')) : null;
-      const res = await fetch(`/api/tenants/${encodeURIComponent(businessId)}`, {
+      const data = await safeFetchJson(`/api/tenants/${encodeURIComponent(businessId)}`, {
         headers: {
           'Accept': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.tenant) {
+      if (data?.success && data.tenant) {
           found = data.tenant;
           const currentList = getItem<Business[]>('businesses', SEED_BUSINESSES);
           const existingIdx = currentList.findIndex(b => normalizeTenantId(b.id) === targetId);
