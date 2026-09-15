@@ -9,3 +9,5 @@ coverage/
 data/*session*.json
 *.session.json
 sessions_store.json
+data/integrations_store.json
+data/integrations_store.json.tmp
