@@ -428,16 +428,20 @@ export class GmailService {
     const encrypted = integrationStore.encryptSecret(cleanToken);
     const now = new Date().toISOString();
 
+    const existing = integrationStore.getIntegration('gmail_oauth');
     integrationStore.saveIntegration({
       id: 'gmail_oauth',
       provider: 'GOOGLE',
       type: 'GMAIL',
       accountEmail,
       encryptedRefreshToken: encrypted,
+      // Preserve the administrator-configured OAuth client credentials.
+      encryptedClientId: existing?.encryptedClientId,
+      encryptedClientSecret: existing?.encryptedClientSecret,
       status: 'CONNECTED',
       connectedAt: now,
       lastError: undefined,
-      createdAt: now,
+      createdAt: existing?.createdAt || now,
       updatedAt: now
     });
 
