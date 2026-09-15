@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { hashPassword, verifyPassword } from './passwordUtils.js';
 import { logCredentialAction } from './auditRegistry.js';
+import { postgresClient } from '../db/postgresClient.js';
 
 export type UserRole = 'PLATFORM_ADMIN' | 'BUSINESS_ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_USER';
 export type UserStatus = 'PENDING' | 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
@@ -218,11 +219,131 @@ export function seedUser(params: {
 
   usersByEmailStore.set(normEmail, record);
   usersByIdStore.set(params.id, record);
+
+  // Asynchronously persist seed user to PostgreSQL
+  persistUserToPostgres(record).catch(() => {});
   return record;
 }
 
-// Auto-initialize
+/**
+ * Persist user record to PostgreSQL database (write-through)
+ */
+export async function persistUserToPostgres(user: UserRecord): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+
+    await postgresClient.query(`
+      INSERT INTO agentdesk_users (
+        id, name, email, password_hash, role, tenant_id, status, 
+        must_change_password, email_verified, reset_token_hash, reset_token_expires,
+        verification_token_hash, verification_token_expires, setup_token_hash, setup_token_expires,
+        two_factor_enabled, two_factor_phone, failed_login_attempts, lockout_until,
+        created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        email = EXCLUDED.email,
+        password_hash = EXCLUDED.password_hash,
+        role = EXCLUDED.role,
+        tenant_id = EXCLUDED.tenant_id,
+        status = EXCLUDED.status,
+        must_change_password = EXCLUDED.must_change_password,
+        email_verified = EXCLUDED.email_verified,
+        reset_token_hash = EXCLUDED.reset_token_hash,
+        reset_token_expires = EXCLUDED.reset_token_expires,
+        verification_token_hash = EXCLUDED.verification_token_hash,
+        verification_token_expires = EXCLUDED.verification_token_expires,
+        setup_token_hash = EXCLUDED.setup_token_hash,
+        setup_token_expires = EXCLUDED.setup_token_expires,
+        two_factor_enabled = EXCLUDED.two_factor_enabled,
+        two_factor_phone = EXCLUDED.two_factor_phone,
+        failed_login_attempts = EXCLUDED.failed_login_attempts,
+        lockout_until = EXCLUDED.lockout_until,
+        updated_at = EXCLUDED.updated_at
+    `, [
+      user.id,
+      user.name,
+      user.email,
+      user.passwordHash,
+      user.role,
+      user.tenantId,
+      user.status,
+      user.mustChangePassword ?? false,
+      user.emailVerified ?? false,
+      user.resetTokenHash || null,
+      user.resetTokenExpires || null,
+      user.verificationTokenHash || null,
+      user.verificationTokenExpires || null,
+      user.setupTokenHash || null,
+      user.setupTokenExpires || null,
+      user.twoFactorEnabled ?? false,
+      user.twoFactorPhone || null,
+      user.failedLoginAttempts || 0,
+      user.lockoutUntil || null,
+      user.createdAt,
+      user.updatedAt
+    ]);
+  } catch (err: any) {
+    console.warn('[UserRegistry:PostgresPersistWarning]', err.message);
+  }
+}
+
+/**
+ * Synchronize all users from PostgreSQL into active memory store
+ */
+export async function syncUsersFromPostgres(): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+
+    const res = await postgresClient.query('SELECT * FROM agentdesk_users');
+    if (res && res.rows && res.rows.length > 0) {
+      for (const row of res.rows) {
+        const record: UserRecord = {
+          id: row.id,
+          name: row.name,
+          email: row.email.toLowerCase().trim(),
+          passwordHash: row.password_hash,
+          role: row.role as UserRole,
+          tenantId: row.tenant_id,
+          status: row.status as UserStatus,
+          mustChangePassword: row.must_change_password === true,
+          emailVerified: row.email_verified === true,
+          resetTokenHash: row.reset_token_hash || undefined,
+          resetToken: row.reset_token_hash || undefined,
+          resetTokenExpires: row.reset_token_expires ? Number(row.reset_token_expires) : undefined,
+          verificationTokenHash: row.verification_token_hash || undefined,
+          verificationToken: row.verification_token_hash || undefined,
+          verificationTokenExpires: row.verification_token_expires ? Number(row.verification_token_expires) : undefined,
+          setupTokenHash: row.setup_token_hash || undefined,
+          setupTokenExpires: row.setup_token_expires ? Number(row.setup_token_expires) : undefined,
+          twoFactorEnabled: row.two_factor_enabled === true,
+          twoFactorPhone: row.two_factor_phone || undefined,
+          failedLoginAttempts: row.failed_login_attempts ? Number(row.failed_login_attempts) : 0,
+          lockoutUntil: row.lockout_until ? Number(row.lockout_until) : undefined,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        };
+        usersByEmailStore.set(record.email, record);
+        usersByIdStore.set(record.id, record);
+      }
+      console.log(`[UserRegistry] Synchronized ${res.rows.length} users from PostgreSQL.`);
+    } else {
+      // Seed all initial in-memory users into PostgreSQL
+      for (const user of usersByIdStore.values()) {
+        await persistUserToPostgres(user);
+      }
+    }
+  } catch (err: any) {
+    console.warn('[UserRegistry:PostgresSyncWarning]', err.message);
+  }
+}
+
+// Auto-initialize memory store & start sync from PostgreSQL
 initUserRegistry();
+syncUsersFromPostgres().catch(() => {});
 
 export function getUserByEmail(email: string): UserRecord | null {
   if (!email) return null;
@@ -288,6 +409,7 @@ export function createUser(params: {
 
   usersByEmailStore.set(normEmail, record);
   usersByIdStore.set(id, record);
+  persistUserToPostgres(record).catch(() => {});
   return record;
 }
 
@@ -303,6 +425,7 @@ export function updateUser(id: string, updates: Partial<Omit<UserRecord, 'id' | 
 
   usersByIdStore.set(id, updated);
   usersByEmailStore.set(user.email, updated);
+  persistUserToPostgres(updated).catch(() => {});
   return updated;
 }
 
@@ -332,6 +455,7 @@ export function updateUserEmail(userId: string, newEmail: string): UserRecord {
 
   usersByEmailStore.set(cleanEmail, updated);
   usersByIdStore.set(userId, updated);
+  persistUserToPostgres(updated).catch(() => {});
   return updated;
 }
 
@@ -360,6 +484,7 @@ export function updateUserPassword(
 
   usersByIdStore.set(userId, updated);
   usersByEmailStore.set(user.email, updated);
+  persistUserToPostgres(updated).catch(() => {});
   return updated;
 }
 
@@ -377,6 +502,7 @@ export function updateUserStatus(userId: string, status: UserStatus): UserRecord
 
   usersByIdStore.set(userId, updated);
   usersByEmailStore.set(user.email, updated);
+  persistUserToPostgres(updated).catch(() => {});
   return updated;
 }
 
@@ -441,20 +567,31 @@ export function createEmailVerificationToken(userId: string): string {
 }
 
 export function findUserByVerificationToken(rawToken: string): UserRecord | null {
-  if (!rawToken) return null;
-  const tokenHash = hashToken(rawToken);
+  const result = validateVerificationToken(rawToken);
+  return result.valid ? (result.user || null) : null;
+}
+
+export function validateVerificationToken(rawToken: string): { 
+  valid: boolean; 
+  reason?: 'missing' | 'invalid' | 'expired'; 
+  user?: UserRecord 
+} {
+  if (!rawToken || typeof rawToken !== 'string') {
+    return { valid: false, reason: 'missing' };
+  }
+  const tokenHash = hashToken(rawToken.trim());
   const now = Date.now();
 
   for (const user of usersByEmailStore.values()) {
-    if (
-      user.verificationTokenExpires &&
-      user.verificationTokenExpires > now &&
-      (user.verificationTokenHash === tokenHash || user.verificationToken === tokenHash || user.verificationToken === rawToken)
-    ) {
-      return user;
+    if (user.verificationTokenHash === tokenHash || user.verificationToken === tokenHash || user.verificationToken === rawToken.trim()) {
+      if (user.verificationTokenExpires && user.verificationTokenExpires <= now) {
+        return { valid: false, reason: 'expired', user };
+      }
+      return { valid: true, user };
     }
   }
-  return null;
+
+  return { valid: false, reason: 'invalid' };
 }
 
 export function createAccountSetupToken(userId: string): string {

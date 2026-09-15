@@ -36,6 +36,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   if (!isOpen) return null;
 
@@ -61,13 +62,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setError(res.error || 'Failed to create account.');
         return;
       }
+      if (res.requiresEmailVerification) {
+        setVerificationSent(true);
+        return;
+      }
       onSuccess('onboarding');
       onClose();
     } else {
       const res = await loginBusiness(email, password);
       setLoading(false);
       if (!res.success) {
-        setError(res.error || 'Invalid email or password.');
+        if (res.requiresEmailVerification) {
+          setError('Email verification required. Please click the verification link sent to your inbox before signing in.');
+        } else {
+          setError(res.error || 'Invalid email or password.');
+        }
         return;
       }
       if (res.onboardingPending) {
@@ -95,22 +104,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <Bot className="w-7 h-7" />
           </div>
           <h2 className="text-xl font-extrabold text-white">
-            {isSignUp ? 'Create AgentDesk Account' : 'Sign in to AgentDesk'}
+            {verificationSent ? 'Verify Your Email' : (isSignUp ? 'Create AgentDesk Account' : 'Sign in to AgentDesk')}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Access your AI Receptionist workspace & business console
+            {verificationSent 
+              ? 'Complete email verification to activate your workspace' 
+              : 'Access your AI Receptionist workspace & business console'}
           </p>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">{error}</div>
-          </div>
-        )}
+        {verificationSent ? (
+          <div className="space-y-4 text-center">
+            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-slate-300 space-y-2">
+              <p className="font-semibold text-blue-400">
+                Verification link dispatched to:
+              </p>
+              <p className="text-white font-mono text-xs bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+                {email}
+              </p>
+              <p className="text-slate-400 text-[11px] leading-relaxed">
+                Please check your inbox (and spam folder) and click the confirmation link to activate your account.
+              </p>
+            </div>
 
-        {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+            <button
+              type="button"
+              onClick={() => {
+                setVerificationSent(false);
+                setIsSignUp(false);
+                setPassword('');
+                setConfirmPassword('');
+              }}
+              className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all"
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <>
+            {error && (
+              <div className="mb-4 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">{error}</div>
+              </div>
+            )}
+
+            {/* Auth Form */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
           {isSignUp && (
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
@@ -223,6 +263,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             Platform Administrator? Sign in here →
           </button>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

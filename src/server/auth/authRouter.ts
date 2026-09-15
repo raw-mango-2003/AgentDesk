@@ -12,6 +12,7 @@ import {
   getUsersByTenantId,
   findUserByResetToken,
   findUserByVerificationToken,
+  validateVerificationToken,
   createPasswordResetToken,
   createEmailVerificationToken,
   createAccountSetupToken,
@@ -386,14 +387,12 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
       role: 'BUSINESS_ADMIN'
     }, newUser.id);
 
-    const session = await createSession(newUser.id, newUser.email, newUser.role, newUser.tenantId);
-
+    // Option B: User must verify email before session creation. Do NOT issue token or create session.
     return res.status(201).json({
       success: true,
-      token: session.token,
-      user: sanitizeUser(newUser),
-      onboardingStep: 'business_details',
-      verificationToken: verifyToken
+      requiresEmailVerification: true,
+      email: cleanEmail,
+      message: 'Please check your email to verify your account.'
     });
   } catch (err: any) {
     console.error('Signup error:', err);
@@ -525,6 +524,20 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
         error: {
           code: 'ACCOUNT_SUSPENDED',
           message: 'Your account has been suspended. Please contact platform support.'
+        }
+      });
+    }
+
+    // Mandatory Email Verification Check (Option B)
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        success: false,
+        code: 'EMAIL_NOT_VERIFIED',
+        requiresEmailVerification: true,
+        message: 'Please verify your email before logging in.',
+        error: {
+          code: 'EMAIL_NOT_VERIFIED',
+          message: 'Please verify your email before logging in.'
         }
       });
     }
@@ -835,23 +848,70 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
 });
 
 // ----------------------------------------------------
-// 3B. EMAIL VERIFICATION ENDPOINTS
+// 3B. EMAIL VERIFICATION ENDPOINTS (GET & POST)
 // ----------------------------------------------------
-authRouter.post('/verify-email', async (req: Request, res: Response) => {
+// GET: Browser link directly clicked from email
+authRouter.get(['/verify-email', '/api/auth/verify-email', '/api/verify-email'], async (req: Request, res: Response) => {
+  try {
+    const token = (req.query.token as string || '').trim();
+    if (!token) {
+      return res.redirect('/verify-email?status=error&message=' + encodeURIComponent('Missing verification token.'));
+    }
+
+    const check = validateVerificationToken(token);
+    if (!check.valid) {
+      if (check.reason === 'expired') {
+        return res.redirect('/verify-email?status=error&message=' + encodeURIComponent('Verification link has expired. Please request a new verification email.'));
+      }
+      return res.redirect('/verify-email?status=error&message=' + encodeURIComponent('Verification link is invalid or has already been used.'));
+    }
+
+    const user = check.user!;
+    updateUser(user.id, {
+      emailVerified: true,
+      verificationToken: undefined,
+      verificationTokenHash: undefined,
+      verificationTokenExpires: undefined
+    });
+
+    // Emit EMAIL_VERIFIED event through automation engine
+    automationEngine.emit('EMAIL_VERIFIED', {
+      userId: user.id,
+      tenantId: user.tenantId,
+      email: user.email,
+      name: user.name
+    }).catch(e => console.error('[EmailVerifiedAutomationError]', e.message));
+
+    // Redirect to frontend verification-success page (no session created automatically)
+    return res.redirect('/verify-email?status=success');
+  } catch (err: any) {
+    return res.redirect('/verify-email?status=error&message=' + encodeURIComponent('An error occurred while verifying your email.'));
+  }
+});
+
+// POST: API call from SPA frontend
+authRouter.post(['/verify-email', '/api/auth/verify-email', '/api/verify-email'], async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
-    if (!token) {
+    if (!token || typeof token !== 'string') {
       return res.status(400).json({ success: false, error: 'Verification token is required.' });
     }
 
-    const user = findUserByVerificationToken(token.trim());
-    if (!user) {
+    const check = validateVerificationToken(token.trim());
+    if (!check.valid) {
+      if (check.reason === 'expired') {
+        return res.status(400).json({
+          success: false,
+          error: 'Verification link has expired. Please request a new verification email.'
+        });
+      }
       return res.status(400).json({
         success: false,
-        error: 'Verification link is invalid, already used, or expired.'
+        error: 'Verification link is invalid or has already been used.'
       });
     }
 
+    const user = check.user!;
     updateUser(user.id, {
       emailVerified: true,
       verificationToken: undefined,
@@ -869,10 +929,10 @@ authRouter.post('/verify-email', async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      message: 'Your email address has been verified successfully.'
+      message: 'Your email address has been verified successfully. You can now log in.'
     });
   } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
+    return res.status(500).json({ success: false, error: 'An error occurred during verification.' });
   }
 });
 

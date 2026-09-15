@@ -204,9 +204,10 @@ integrationsRouter.get(['/api/platform/integrations', '/platform/integrations'],
 // GMAIL OAUTH 2.0 & INTEGRATION LIFECYCLE
 // ----------------------------------------------------------------------------
 
-// 0. Gmail API Safe Diagnostic Health Endpoint (never exposes secrets)
+// 0. Gmail API Safe Diagnostic Health Endpoint (never exposes secrets, requires Platform Admin)
 integrationsRouter.get(
   ['/api/integrations/google/health', '/integrations/google/health'],
+  requirePlatformAdmin,
   async (_req: Request, res: Response) => {
     try {
       res.setHeader('Content-Type', 'application/json');
@@ -222,7 +223,6 @@ integrationsRouter.get(
         hasClientSecret: status.hasClientSecret,
         hasRefreshToken: status.hasRefreshToken,
         gmailApiReachable: reachable,
-        lastError: status.lastError || null,
         timestamp: new Date().toISOString()
       });
     } catch (err: any) {
@@ -235,7 +235,7 @@ integrationsRouter.get(
         hasClientSecret: false,
         hasRefreshToken: false,
         gmailApiReachable: false,
-        lastError: err.message || 'Error executing Gmail health check',
+        error: 'Error executing Gmail health check',
         timestamp: new Date().toISOString()
       });
     }
@@ -268,7 +268,7 @@ integrationsRouter.get(
 integrationsRouter.get(
   ['/api/integrations/google/start', '/integrations/google/start', '/platform/integrations/google/start', '/platform/integrations/gmail/start'],
   requirePlatformAdmin,
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       const user = (req as any).user as UserRecord;
       const callbackUrl = `${getAppUrl(req)}/api/integrations/google/callback`;
@@ -278,8 +278,8 @@ integrationsRouter.get(
         return res.redirect(`/?tab=integrations&gmail_status=error&message=${encodeURIComponent('GOOGLE_CLIENT_ID is not configured. Please set GOOGLE_CLIENT_ID in your environment or credentials.')}`);
       }
 
-      // Generate secure single-use CSRF token
-      const state = integrationStore.generateOAuthState(user?.id);
+      // Generate secure single-use CSRF token (PostgreSQL-authoritative)
+      const state = await integrationStore.generateOAuthState(user?.id);
 
       // Construct Google OAuth URL requesting strictly the Gmail send scope
       const authUrl = gmailService.getAuthorizationUrl(callbackUrl, state);
@@ -308,8 +308,8 @@ integrationsRouter.get(
         return res.redirect(`/?tab=integrations&gmail_status=error&message=${encodeURIComponent('Missing OAuth state parameter.')}`);
       }
 
-      // Validate and consume state to prevent CSRF
-      const stateCheck = integrationStore.validateAndConsumeOAuthState(state);
+      // Validate and atomically consume state in PostgreSQL to prevent CSRF and replay attacks
+      const stateCheck = await integrationStore.validateAndConsumeOAuthState(state);
       if (!stateCheck.valid) {
         return res.redirect(`/?tab=integrations&gmail_status=error&message=${encodeURIComponent('Invalid or expired OAuth state. Please initiate connection again.')}`);
       }

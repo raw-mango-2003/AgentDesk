@@ -13,7 +13,8 @@ import {
   Zap, 
   ChevronRight,
   ArrowLeft,
-  DollarSign
+  DollarSign,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { 
@@ -23,7 +24,7 @@ import {
   PlanConfig, 
   getPlanPricing, 
   formatPrice, 
-  formatCurrencyAmount,
+  formatCurrencyAmount, 
   getRecommendedCurrency 
 } from '../../data/pricing';
 import { RazorpayCheckoutStep } from './RazorpayCheckoutStep';
@@ -34,7 +35,7 @@ interface BusinessOnboardingFunnelProps {
   onNavigateLogin: () => void;
 }
 
-type OnboardingStep = 'account' | 'business' | 'plan' | 'payment' | 'activation';
+type OnboardingStep = 'account' | 'verification_sent' | 'business' | 'plan' | 'payment' | 'activation';
 
 export const BusinessOnboardingFunnel: React.FC<BusinessOnboardingFunnelProps> = ({
   onCompleted,
@@ -96,6 +97,11 @@ export const BusinessOnboardingFunnel: React.FC<BusinessOnboardingFunnelProps> =
 
     if (!res.success) {
       setError(res.error || 'Failed to create account. Please check your details.');
+      return;
+    }
+
+    if (res.requiresEmailVerification) {
+      setStep('verification_sent');
       return;
     }
 
@@ -300,6 +306,47 @@ export const BusinessOnboardingFunnel: React.FC<BusinessOnboardingFunnelProps> =
                 )}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* STEP: EMAIL VERIFICATION SENT */}
+        {step === 'verification_sent' && (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center mx-auto text-blue-400 shadow-inner">
+              <Mail className="w-8 h-8 animate-pulse" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-white">Check Your Email</h2>
+              <p className="text-sm text-slate-300 max-w-md mx-auto">
+                We've sent a verification link to <span className="text-blue-400 font-semibold">{email}</span>.
+              </p>
+              <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                In compliance with security policies, email verification is required before you can access your tenant workspace.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 text-left text-xs text-slate-400 space-y-2.5 max-w-md mx-auto">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>Open the verification email and click the confirmation link.</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>After verifying, sign in to configure your business workspace and AI receptionist.</span>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onNavigateLogin}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Proceed to Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 

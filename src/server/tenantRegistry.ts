@@ -239,6 +239,20 @@ export function recordTenantUsage(tenantId: string, metric: 'aiUsage' | 'voiceMi
   return true;
 }
 
+export function resetTenantQuota(tenantId: string): TenantUsageRecord {
+  const norm = tenantId.trim().toLowerCase();
+  const record: TenantUsageRecord = {
+    tenantId: norm,
+    aiUsage: 0,
+    voiceMinutes: 0,
+    knowledgeDocuments: (serverKnowledgeStore.get(norm) || []).length,
+    contacts: 0,
+    lastReset: new Date().toISOString()
+  };
+  serverTenantUsageStore.set(norm, record);
+  return record;
+}
+
 export function checkTenantQuota(tenantId: string, metric: 'aiUsage' | 'voiceMinutes'): { allowed: boolean; used: number; limit: number; error?: string } {
   const norm = tenantId.trim().toLowerCase();
   // Bypass quota for platform admin and demo

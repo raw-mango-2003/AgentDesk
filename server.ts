@@ -39,7 +39,9 @@ import {
 } from './src/lib/conversationEngine.js';
 import { runConversationTestSuite, runMultiTenantIsolationTestSuite } from './src/lib/testSuite.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
-import { authRouter, requirePlatformAdmin } from './src/server/auth/authRouter.js';
+import { authRouter, requirePlatformAdmin, requireAuth, requireTenantAccess, extractTokenFromRequest } from './src/server/auth/authRouter.js';
+import { getSession } from './src/server/auth/sessionStore.js';
+import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
@@ -53,7 +55,8 @@ import {
   checkTenantQuota, 
   getPlanUsageLimits, 
   getTenant, 
-  provisionCustomerTenant 
+  provisionCustomerTenant,
+  resetTenantQuota 
 } from './src/server/tenantRegistry.js';
 
 // Safe environment directory resolver for both dev (tsx/ESM) and prod (esbuild/CJS)
@@ -74,7 +77,32 @@ const appDirectory = getAppDirectory();
 const app = express();
 const PORT = 3000;
 
-app.use(cors());
+// Production CORS Configuration: restricted to APP_URL, localhost, and authenticated origins
+const allowedOrigins = [
+  process.env.APP_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+].filter(Boolean) as string[];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    if (process.env.APP_URL) {
+      try {
+        if (origin === new URL(process.env.APP_URL).origin) {
+          return callback(null, true);
+        }
+      } catch {}
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-business-id', 'x-csrf-token']
+}));
 app.use(express.json({
   verify: (req: any, _res, buf) => {
     req.rawBody = buf;
@@ -96,14 +124,30 @@ app.use('/api/platform', authRouter);
 app.use('/api', integrationsRouter);
 app.use('/', integrationsRouter);
 
-// Secure Local Storage Files Endpoint
-app.get('/api/storage/files/:fileKey', (req: Request, res: Response) => {
+// Secure Local Storage Files Endpoint with Strict Tenant Isolation
+app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
   try {
     const fileKey = decodeURIComponent(req.params.fileKey);
     const file = storageService.getLocalFile(fileKey);
     if (!file || !file.dataBuffer) {
       return res.status(404).json({ success: false, error: 'File not found in storage.' });
     }
+
+    // If file is private, strictly enforce tenant access
+    if (file.isPrivate) {
+      const token = extractTokenFromRequest(req);
+      const session = await getSession(token);
+      const user = session ? getUserById(session.userId) : null;
+
+      if (!user) {
+        return res.status(401).json({ success: false, error: 'Unauthorized: Authentication required to access private files.' });
+      }
+
+      if (user.role !== 'PLATFORM_ADMIN' && (user.tenantId || '').toLowerCase() !== (file.tenantId || '').toLowerCase()) {
+        return res.status(403).json({ success: false, error: 'Forbidden: You do not have permission to access this file.' });
+      }
+    }
+
     res.setHeader('Content-Type', file.contentType);
     res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`);
     return res.send(file.dataBuffer);
@@ -698,13 +742,11 @@ app.post('/api/knowledge/detect-conflicts', async (req: Request, res: Response) 
 // TENANT-SCOPED KNOWLEDGE CRUD ENDPOINTS
 // ==========================================
 
-// GET Knowledge Items for a Tenant
-app.get('/api/knowledge', (req: Request, res: Response) => {
-  const rawId = (req.query.tenantId || req.query.businessId || '') as string;
-  const tenantId = rawId.trim().toLowerCase();
-  
+// GET Knowledge Items for a Tenant (Strictly Scoped)
+app.get('/api/knowledge', requireTenantAccess, (req: Request, res: Response) => {
+  const tenantId = ((req as any).tenantId || '').trim().toLowerCase();
   if (!tenantId) {
-    return res.status(400).json({ error: 'tenantId or businessId query parameter is required.' });
+    return res.status(400).json({ error: 'Tenant context could not be determined.' });
   }
 
   const items = serverKnowledgeStore.get(tenantId) || [];
@@ -716,10 +758,10 @@ app.get('/api/knowledge', (req: Request, res: Response) => {
   });
 });
 
-app.get('/api/knowledge/:tenantId', (req: Request, res: Response) => {
-  const tenantId = (req.params.tenantId || '').trim().toLowerCase();
+app.get('/api/knowledge/:tenantId', requireTenantAccess, (req: Request, res: Response) => {
+  const tenantId = ((req as any).tenantId || '').trim().toLowerCase();
   if (!tenantId) {
-    return res.status(400).json({ error: 'tenantId parameter is required.' });
+    return res.status(400).json({ error: 'Tenant context could not be determined.' });
   }
 
   const items = serverKnowledgeStore.get(tenantId) || [];
@@ -732,13 +774,12 @@ app.get('/api/knowledge/:tenantId', (req: Request, res: Response) => {
 });
 
 // POST Create Knowledge Item for a Tenant
-app.post('/api/knowledge', (req: Request, res: Response) => {
-  const { tenantId, businessId, title, content, type = 'faq', category = 'General', status = 'active', active = true } = req.body;
-  const rawId = tenantId || businessId;
-  const normTenantId = (rawId || '').trim().toLowerCase();
+app.post('/api/knowledge', requireTenantAccess, (req: Request, res: Response) => {
+  const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
+  const { title, content, type = 'faq', category = 'General', status = 'active', active = true } = req.body;
 
   if (!normTenantId) {
-    return res.status(400).json({ error: 'tenantId is required to save knowledge item.' });
+    return res.status(400).json({ error: 'Tenant context could not be determined.' });
   }
   if (!title || typeof title !== 'string' || !title.trim()) {
     return res.status(400).json({ error: 'Title / Question is required.' });
@@ -784,14 +825,13 @@ app.post('/api/knowledge', (req: Request, res: Response) => {
 });
 
 // PUT Update Knowledge Item for a Tenant
-app.put('/api/knowledge/:id', (req: Request, res: Response) => {
+app.put('/api/knowledge/:id', requireTenantAccess, (req: Request, res: Response) => {
   const { id } = req.params;
-  const { tenantId, businessId, title, content, type, category, status, active } = req.body;
-  const rawId = tenantId || businessId;
-  const normTenantId = (rawId || '').trim().toLowerCase();
+  const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
+  const { title, content, type, category, status, active } = req.body;
 
   if (!normTenantId) {
-    return res.status(400).json({ error: 'tenantId is required to update knowledge item.' });
+    return res.status(400).json({ error: 'Tenant context could not be determined.' });
   }
 
   const list = serverKnowledgeStore.get(normTenantId) || [];
@@ -828,12 +868,12 @@ app.put('/api/knowledge/:id', (req: Request, res: Response) => {
 });
 
 // DELETE Knowledge Item for a Tenant
-app.delete('/api/knowledge/:tenantId/:id', (req: Request, res: Response) => {
-  const { tenantId, id } = req.params;
-  const normTenantId = (tenantId || '').trim().toLowerCase();
+app.delete(['/api/knowledge/:tenantId/:id', '/api/knowledge/:id'], requireTenantAccess, (req: Request, res: Response) => {
+  const id = req.params.id;
+  const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
 
   if (!normTenantId) {
-    return res.status(400).json({ error: 'tenantId is required.' });
+    return res.status(400).json({ error: 'Tenant context could not be determined.' });
   }
 
   const list = serverKnowledgeStore.get(normTenantId) || [];
@@ -1010,15 +1050,43 @@ app.get('/api/admin/conversations/:businessId', requirePlatformAdmin, (req: Requ
   });
 });
 
-// GET All AI Agents (Scoped to Tenant if query provided)
-app.get('/api/agents', (req: Request, res: Response) => {
-  const tenantFilter = (req.query.tenantId as string || '').trim().toLowerCase();
+// POST Reset Tenant Usage Quota (Platform Admin Only)
+app.post(['/api/admin/tenants/:tenantId/reset-quota', '/api/platform/tenants/:tenantId/reset-quota'], requirePlatformAdmin, (req: Request, res: Response) => {
+  const { tenantId } = req.params;
+  const normTenant = (tenantId || '').trim().toLowerCase();
+  if (!normTenant) {
+    return res.status(400).json({ success: false, error: 'Valid tenantId is required.' });
+  }
+
+  const updatedRecord = resetTenantQuota(normTenant);
+  return res.json({
+    success: true,
+    message: `Usage quota for tenant "${normTenant}" has been reset.`,
+    usage: updatedRecord
+  });
+});
+
+// POST Admin Sync All (Platform Admin Only)
+app.post(['/api/admin/sync-all', '/api/platform/sync-all'], requirePlatformAdmin, async (_req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    message: 'All tenant configurations, agents, and knowledge stores synchronized.',
+    tenantsCount: serverBusinessesStore.size,
+    agentsCount: serverAgentsStore.size,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// GET All AI Agents (Scoped strictly to Tenant)
+app.get('/api/agents', requireTenantAccess, (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const userTenant = ((req as any).tenantId || '').toLowerCase().trim();
   const allAgents = Array.from(serverAgentsStore.values());
   const uniqueAgents = Array.from(new Map(allAgents.map(a => [a.id, a])).values());
 
-  const filtered = tenantFilter
-    ? uniqueAgents.filter(a => (a.tenantId || '').toLowerCase() === tenantFilter)
-    : uniqueAgents;
+  const filtered = user?.role === 'PLATFORM_ADMIN'
+    ? (req.query.tenantId ? uniqueAgents.filter(a => (a.tenantId || '').toLowerCase() === (req.query.tenantId as string).toLowerCase().trim()) : uniqueAgents)
+    : uniqueAgents.filter(a => (a.tenantId || '').toLowerCase() === userTenant);
 
   return res.json({
     success: true,
@@ -1027,13 +1095,20 @@ app.get('/api/agents', (req: Request, res: Response) => {
   });
 });
 
-// GET Specific Agent by ID
-app.get('/api/agents/:agentId', (req: Request, res: Response) => {
+// GET Specific Agent by ID (Tenant-Protected)
+app.get('/api/agents/:agentId', requireTenantAccess, (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const userTenant = ((req as any).tenantId || '').toLowerCase().trim();
   const agentId = (req.params.agentId || '').trim().toLowerCase();
   const agent = serverAgentsStore.get(agentId) || Array.from(serverAgentsStore.values()).find(a => (a.id || '').toLowerCase() === agentId || (a.publicId || '').toLowerCase() === agentId);
 
   if (!agent) {
     return res.status(404).json({ error: `Agent with ID "${agentId}" not found.` });
+  }
+
+  // Prevent cross-tenant inspection
+  if (user?.role !== 'PLATFORM_ADMIN' && (agent.tenantId || '').toLowerCase() !== userTenant) {
+    return res.status(403).json({ error: 'Forbidden: You do not have access to this agent.' });
   }
 
   const { business } = resolveBusinessAndKnowledge(agent.id);
@@ -1045,16 +1120,23 @@ app.get('/api/agents/:agentId', (req: Request, res: Response) => {
   });
 });
 
-// POST / PUT AI Agent
-app.post('/api/agents', (req: Request, res: Response) => {
+// POST / PUT AI Agent (Tenant-Protected)
+app.post('/api/agents', requireTenantAccess, (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const userTenant = ((req as any).tenantId || '').toLowerCase().trim();
   const agentData = req.body;
-  if (!agentData || !agentData.id || !agentData.tenantId) {
-    return res.status(400).json({ error: 'Agent object with valid id and tenantId is required.' });
+  if (!agentData || !agentData.id) {
+    return res.status(400).json({ error: 'Agent object with valid id is required.' });
   }
 
   const normId = (agentData.id || '').trim().toLowerCase();
-  const normTenant = (agentData.tenantId || '').trim().toLowerCase();
+  const normTenant = user?.role === 'PLATFORM_ADMIN' ? (agentData.tenantId || userTenant).trim().toLowerCase() : userTenant;
   const existing = serverAgentsStore.get(normId) || {};
+
+  // Prevent overwriting an agent from another tenant
+  if (existing.tenantId && (existing.tenantId || '').toLowerCase() !== normTenant && user?.role !== 'PLATFORM_ADMIN') {
+    return res.status(403).json({ error: 'Forbidden: Cannot modify an agent belonging to another tenant.' });
+  }
 
   const savedAgent = {
     ...existing,

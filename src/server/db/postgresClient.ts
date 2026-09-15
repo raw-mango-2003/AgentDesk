@@ -143,6 +143,78 @@ class PostgresClient {
               timestamp VARCHAR(64) NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS agentdesk_users (
+              id VARCHAR(128) PRIMARY KEY,
+              name VARCHAR(255) NOT NULL,
+              email VARCHAR(255) UNIQUE NOT NULL,
+              password_hash TEXT NOT NULL,
+              role VARCHAR(64) NOT NULL,
+              tenant_id VARCHAR(128) NOT NULL,
+              status VARCHAR(64) NOT NULL,
+              must_change_password BOOLEAN DEFAULT FALSE,
+              email_verified BOOLEAN DEFAULT FALSE,
+              reset_token_hash TEXT,
+              reset_token_expires BIGINT,
+              verification_token_hash TEXT,
+              verification_token_expires BIGINT,
+              setup_token_hash TEXT,
+              setup_token_expires BIGINT,
+              two_factor_enabled BOOLEAN DEFAULT FALSE,
+              two_factor_phone VARCHAR(64),
+              failed_login_attempts INT DEFAULT 0,
+              lockout_until BIGINT,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS agentdesk_tenants (
+              id VARCHAR(128) PRIMARY KEY,
+              name VARCHAR(255) NOT NULL,
+              industry VARCHAR(128),
+              status VARCHAR(64) NOT NULL DEFAULT 'ACTIVE',
+              owner_id VARCHAR(128),
+              plan_id VARCHAR(64) NOT NULL DEFAULT 'trial',
+              currency VARCHAR(16) DEFAULT 'USD',
+              settings JSONB,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS agentdesk_knowledge (
+              id VARCHAR(128) PRIMARY KEY,
+              tenant_id VARCHAR(128) NOT NULL,
+              business_id VARCHAR(128),
+              title VARCHAR(512) NOT NULL,
+              content TEXT NOT NULL,
+              type VARCHAR(64) DEFAULT 'faq',
+              category VARCHAR(128) DEFAULT 'General',
+              status VARCHAR(64) DEFAULT 'active',
+              active BOOLEAN DEFAULT TRUE,
+              metadata JSONB,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_knowledge_tenant ON agentdesk_knowledge (tenant_id);
+
+            CREATE TABLE IF NOT EXISTS agentdesk_files (
+              key VARCHAR(255) PRIMARY KEY,
+              filename VARCHAR(255) NOT NULL,
+              content_type VARCHAR(128) NOT NULL,
+              size_bytes BIGINT NOT NULL,
+              tenant_id VARCHAR(128) NOT NULL,
+              is_private BOOLEAN DEFAULT TRUE,
+              uploaded_at VARCHAR(64) NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_files_tenant ON agentdesk_files (tenant_id);
+
+            CREATE TABLE IF NOT EXISTS agentdesk_rate_limits (
+              key VARCHAR(255) PRIMARY KEY,
+              count INT NOT NULL DEFAULT 1,
+              reset_at BIGINT NOT NULL
+            );
+
             CREATE TABLE IF NOT EXISTS agentdesk_invoices (
               id VARCHAR(128) PRIMARY KEY,
               tenant_id VARCHAR(128) NOT NULL,

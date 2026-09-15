@@ -251,9 +251,9 @@ class IntegrationStore {
 
   /**
    * Generate secure CSRF OAuth state with 10-minute validity
-   * Persisted in PostgreSQL and memory for multi-instance survivability
+   * Persisted in PostgreSQL (authoritative) and memory for multi-instance survivability
    */
-  public generateOAuthState(userId?: string): string {
+  public async generateOAuthState(userId?: string): Promise<string> {
     const now = Date.now();
     // Prune stale states
     for (const [key, val] of this.oauthStates.entries()) {
@@ -272,43 +272,66 @@ class IntegrationStore {
       expiresAt
     });
 
-    // Asynchronously insert into PostgreSQL
-    postgresClient.initialize().then(connected => {
+    // Write to PostgreSQL (authoritative)
+    try {
+      const connected = await postgresClient.initialize();
       if (connected) {
-        postgresClient.query(`
+        await postgresClient.query(`
           INSERT INTO agentdesk_oauth_states (state, user_id, created_at, expires_at)
           VALUES ($1, $2, $3, $4)
-          ON CONFLICT (state) DO NOTHING
-        `, [state, userId || null, now, expiresAt]).catch(() => {});
+          ON CONFLICT (state) DO UPDATE SET
+            expires_at = EXCLUDED.expires_at,
+            user_id = EXCLUDED.user_id
+        `, [state, userId || null, now, expiresAt]);
       }
-    }).catch(() => {});
+    } catch (err: any) {
+      console.warn('[OAuthState:PostgresInsertWarning]', err.message);
+    }
 
     return state;
   }
 
   /**
    * Validate and immediately consume OAuth state (one-time use)
-   * Enforces single-use consumption across memory and PostgreSQL
+   * Enforces single-use atomic consumption in PostgreSQL and memory
    */
-  public validateAndConsumeOAuthState(state: string): { valid: boolean; userId?: string } {
-    if (!state) return { valid: false };
+  public async validateAndConsumeOAuthState(state: string): Promise<{ valid: boolean; userId?: string }> {
+    if (!state || typeof state !== 'string') return { valid: false };
 
-    // Asynchronously delete from PostgreSQL to prevent replay attacks across instances
-    postgresClient.initialize().then(connected => {
+    const now = Date.now();
+
+    // 1. First attempt atomic consumption from PostgreSQL (authoritative)
+    try {
+      const connected = await postgresClient.initialize();
       if (connected) {
-        postgresClient.query('DELETE FROM agentdesk_oauth_states WHERE state = $1', [state]).catch(() => {});
-      }
-    }).catch(() => {});
+        const res = await postgresClient.query(`
+          DELETE FROM agentdesk_oauth_states 
+          WHERE state = $1 AND expires_at > $2
+          RETURNING user_id
+        `, [state, now]);
 
+        if (res && res.rows && res.rows.length > 0) {
+          this.oauthStates.delete(state);
+          return { valid: true, userId: res.rows[0].user_id || undefined };
+        }
+        // If Postgres is connected and returned 0 rows, the state is either invalid, already consumed, or expired
+        this.oauthStates.delete(state);
+        return { valid: false };
+      }
+    } catch (err: any) {
+      console.warn('[OAuthState:PostgresQueryWarning]', err.message);
+    }
+
+    // 2. Fallback to memory store if PostgreSQL is in standby
     const record = this.oauthStates.get(state);
     if (!record) {
       return { valid: false };
     }
 
-    // Consume immediately from memory (single-use)
+    // Consume immediately (single-use)
     this.oauthStates.delete(state);
 
-    if (Date.now() > record.expiresAt) {
+    if (now > record.expiresAt) {
       return { valid: false };
     }
     return { valid: true, userId: record.userId };

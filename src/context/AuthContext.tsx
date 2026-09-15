@@ -17,9 +17,9 @@ interface AuthContextType {
   loading: boolean;
   activeBusinessId: string;
   setActiveBusinessId: (id: string) => void;
-  loginBusiness: (email: string, pass: string) => Promise<{ success: boolean; error?: string; onboardingPending?: boolean; mustChangePassword?: boolean; user?: UserProfile; tenant?: TenantInfo | null }>;
+  loginBusiness: (email: string, pass: string) => Promise<{ success: boolean; error?: string; onboardingPending?: boolean; mustChangePassword?: boolean; user?: UserProfile; tenant?: TenantInfo | null; requiresEmailVerification?: boolean }>;
   loginPlatformAdmin: (email: string, pass: string) => Promise<{ success: boolean; error?: string; user?: UserProfile }>;
-  signupBusiness: (name: string, email: string, pass: string, confirmPass?: string) => Promise<{ success: boolean; error?: string; user?: UserProfile; onboardingStep?: string }>;
+  signupBusiness: (name: string, email: string, pass: string, confirmPass?: string) => Promise<{ success: boolean; error?: string; user?: UserProfile; onboardingStep?: string; requiresEmailVerification?: boolean; message?: string }>;
   logout: () => Promise<void>;
   updatePassword: (currentPassword: string, newPassword: string, confirmPassword?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
   updateProfile: (name?: string, email?: string) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -106,8 +106,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!res.success) {
-        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : 'Authentication failed');
-        return { success: false, error: errorMsg };
+        const errorMsg = res.error?.message || (typeof (res as any).error === 'string' ? (res as any).error : res.message || 'Authentication failed');
+        return { 
+          success: false, 
+          error: errorMsg,
+          requiresEmailVerification: !!((res as any).requiresEmailVerification || (res as any).code === 'EMAIL_NOT_VERIFIED' || res.error?.code === 'EMAIL_NOT_VERIFIED')
+        };
       }
 
       if (res.token) {
@@ -204,6 +208,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: true,
         user: res.user,
+        requiresEmailVerification: (res as any).requiresEmailVerification,
+        message: (res as any).message,
         onboardingStep: (res as any).onboardingStep
       };
     } catch (err: any) {
