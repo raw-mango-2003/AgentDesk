@@ -153,13 +153,13 @@ export async function createSession(
   const normEmail = email.toLowerCase().trim();
   const normTenantId = (tenantId || '').toLowerCase().trim();
 
-  // 1. Fail-closed check: If PostgreSQL is configured, verify initialization
+  // 1. Prefer PostgreSQL whenever it is configured and reachable.
+  // AI Studio deployments can run without a PostgreSQL service, so authentication
+  // falls back to the signed in-memory session cache instead of blocking login.
   const isReady = await postgresClient.initialize();
-  if (postgresClient.isConfigured() && !isReady) {
-    throw new Error('Database persistence failed: Unable to connect to PostgreSQL to persist session.');
-  }
+  const persistentSessionsRequired = process.env.REQUIRE_PERSISTENT_SESSIONS === 'true';
 
-  // 2. Persist to PostgreSQL as authoritative store
+  // 2. Persist to PostgreSQL as the authoritative store when available.
   if (isReady) {
     try {
       await postgresClient.query(`
@@ -171,11 +171,16 @@ export async function createSession(
           tenant_id = EXCLUDED.tenant_id
       `, [tokenHash, token, userId, normEmail, role, normTenantId, now, expiresAt]);
     } catch (err: any) {
-      console.error('[SessionStore] Fail-closed: Failed to write session to PostgreSQL:', err.message);
-      throw new Error('Database persistence failed: Session could not be saved to authoritative store.');
+      console.error('[SessionStore] PostgreSQL session write failed:', err.message);
+      if (persistentSessionsRequired) {
+        throw new Error('Database persistence failed: Session could not be saved to authoritative store.');
+      }
+      console.warn('[SessionStore] Continuing with signed in-memory session because REQUIRE_PERSISTENT_SESSIONS is not enabled.');
     }
-  } else if (process.env.NODE_ENV === 'production') {
-    throw new Error('Database persistence unavailable: Cannot create session without PostgreSQL in production.');
+  } else if (persistentSessionsRequired) {
+    throw new Error('Database persistence unavailable: persistent sessions are required but PostgreSQL is not reachable.');
+  } else {
+    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory session cache for this runtime.');
   }
 
   const session: ServerSession = {
