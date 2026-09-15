@@ -38,6 +38,7 @@ import {
   KnowledgeItem
 } from './src/lib/conversationEngine.js';
 import { runConversationTestSuite, runMultiTenantIsolationTestSuite } from './src/lib/testSuite.js';
+import { runProductionSmokeTests } from './src/server/tests/smokeTests.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
 import { authRouter, requirePlatformAdmin, requireAuth, requireTenantAccess, extractTokenFromRequest } from './src/server/auth/authRouter.js';
 import { getSession } from './src/server/auth/sessionStore.js';
@@ -46,6 +47,7 @@ import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
+import { conversationStore } from './src/server/db/conversationStore.js';
 import { 
   serverBusinessesStore, 
   serverAgentsStore, 
@@ -271,47 +273,9 @@ Provide a concise, helpful, and natural receptionist response:`;
   return null;
 }
 
-// Global In-Memory Conversation State & History Store (Strictly isolated by businessId:conversationId)
-const conversationsStore = new Map<string, ConversationRecord>();
-
+// Global In-Memory Conversation Acceleration Cache & PostgreSQL-Authoritative Store
 export function getOrCreateConversation(conversationId?: string, businessId?: string): ConversationRecord {
-  const normBiz = (businessId || DEMO_BUSINESS_ID).trim().toLowerCase();
-  const normId = (conversationId || `conv_${normBiz}_${Date.now()}`).trim();
-  const key = `${normBiz}:${normId}`;
-
-  if (conversationsStore.has(key)) {
-    return conversationsStore.get(key)!;
-  }
-
-  const record: ConversationRecord = {
-    conversationId: normId,
-    businessId: normBiz,
-    messages: [],
-    state: {
-      conversationId: normId,
-      businessId: normBiz,
-      currentTopic: null,
-      currentEntity: null,
-      currentEntityType: 'general',
-      lastIntent: null,
-      lastRequestedAttribute: null,
-      lastAssistantQuestion: null,
-      pendingAction: null,
-      conversationStage: 'COURSE_DISCUSSION',
-      bookingState: { stage: 'IDLE' },
-      lastAnswer: null,
-      recentEntities: [],
-      pendingQuestion: null,
-      conversationSummary: '',
-      updatedAt: new Date().toISOString()
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    status: 'AI_ACTIVE'
-  };
-
-  conversationsStore.set(key, record);
-  return record;
+  return conversationStore.getOrCreateConversationSync(conversationId, businessId);
 }
 
 function formatBusinessName(id: string): string {
@@ -997,7 +961,7 @@ app.post('/api/admin/onboard-business', requirePlatformAdmin, async (req: Reques
 });
 
 // DELETE Business Tenant Endpoint (Platform Admin - Strict Tenant Isolation)
-app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, (req: Request, res: Response) => {
+app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, async (req: Request, res: Response) => {
   const { businessId } = req.params;
   const { actorEmail } = req.body || {};
   const normBiz = (businessId || '').trim().toLowerCase();
@@ -1006,41 +970,29 @@ app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, (req: Requ
     return res.status(400).json({ error: 'Valid businessId is required.' });
   }
 
-  // 1. Wipe all conversation records from server-side store
-  let deletedCount = 0;
-  for (const key of Array.from(conversationsStore.keys())) {
-    const rec = conversationsStore.get(key);
-    if (key.startsWith(`${normBiz}:`) || rec?.businessId === normBiz) {
-      conversationsStore.delete(key);
-      deletedCount++;
-    }
-  }
+  // 1. Wipe all conversation records from PostgreSQL-authoritative store and memory cache
+  const deletedCount = await conversationStore.deleteConversationsByBusinessAsync(normBiz);
 
   // 2. Wipe from server businesses and knowledge stores
   serverBusinessesStore.delete(normBiz);
   serverKnowledgeStore.delete(normBiz);
 
-  console.log(`[Admin Tenant Management] Business "${normBiz}" and ${deletedCount} server conversation memory records deleted by ${actorEmail || 'platform-admin'}`);
+  console.log(`[Admin Tenant Management] Business "${normBiz}" and ${deletedCount} conversation records deleted by ${actorEmail || 'platform-admin'}`);
 
   return res.json({
     success: true,
-    message: `Business tenant ${normBiz} and all associated conversation history erased from server memory.`,
+    message: `Business tenant ${normBiz} and all associated conversation history erased from persistent storage.`,
     businessId: normBiz,
     deletedConversationRecords: deletedCount
   });
 });
 
 // GET Admin Live Conversation Records with Intelligence Metadata
-app.get('/api/admin/conversations/:businessId', requirePlatformAdmin, (req: Request, res: Response) => {
+app.get('/api/admin/conversations/:businessId', requirePlatformAdmin, async (req: Request, res: Response) => {
   const { businessId } = req.params;
   const normBiz = (businessId || DEMO_BUSINESS_ID).toLowerCase();
   
-  const records: ConversationRecord[] = [];
-  for (const [key, rec] of conversationsStore.entries()) {
-    if (key.startsWith(`${normBiz}:`) || rec.businessId === normBiz) {
-      records.push(rec);
-    }
-  }
+  const records = await conversationStore.getConversationsByBusinessAsync(normBiz);
 
   return res.json({
     success: true,
@@ -1361,6 +1313,9 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     // Pipeline Stage 7: Conversation State & Memory Update
     const updatedRecord = updateConversationMemory(record, safeMessage, validatedReply, extracted);
+    conversationStore.persistConversationAsync(updatedRecord).catch(err => {
+      console.warn('[ConversationStore:AsyncPersistError]', err.message);
+    });
 
     console.log(`[Widget Chat Engine] Biz: "${currentBusiness.id}" (${currentBusiness.name}) | Query: "${normInput.raw}" -> Reply: "${validatedReply}"`);
 
@@ -1458,6 +1413,22 @@ app.get('/api/test/firestore-tenant-filter', (_req: Request, res: Response) => {
     checks: audit.checks,
     timestamp: new Date().toISOString()
   });
+});
+
+// GET Automated Production Smoke Test Suite (PostgreSQL, Hashed Sessions, Integrations, Conversations, CSRF)
+app.get(['/api/test/production-smoke-tests', '/api/test/smoke-tests'], async (_req: Request, res: Response) => {
+  try {
+    const results = await runProductionSmokeTests();
+    return res.status(results.allPassed ? 200 : 500).json({
+      success: results.allPassed,
+      ...results
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Internal error while running production smoke tests'
+    });
+  }
 });
 
 // GET Business Widget Config
@@ -1592,6 +1563,9 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
     // Pipeline Stage 7: Conversation State & Memory Update
     const updatedRecord = updateConversationMemory(record, safeMessage, validatedReply, extracted);
+    conversationStore.persistConversationAsync(updatedRecord).catch(err => {
+      console.warn('[ConversationStore:AsyncPersistError]', err.message);
+    });
 
     console.log(`[Conversation Intelligence] Biz: "${currentBusiness.id}" (${currentBusiness.name}) | Intent: "${classifiedIntent.primaryType}" | Query: "${normInput.raw}" -> Reply: "${validatedReply}"`);
 

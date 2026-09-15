@@ -293,6 +293,34 @@ export async function persistUserToPostgres(user: UserRecord): Promise<void> {
 /**
  * Synchronize all users from PostgreSQL into active memory store
  */
+export function mapDbRowToUserRecord(row: any): UserRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email.toLowerCase().trim(),
+    passwordHash: row.password_hash,
+    role: row.role as UserRole,
+    tenantId: (row.tenant_id || '').toLowerCase().trim(),
+    status: row.status as UserStatus,
+    mustChangePassword: row.must_change_password === true,
+    emailVerified: row.email_verified === true,
+    resetTokenHash: row.reset_token_hash || undefined,
+    resetToken: row.reset_token_hash || undefined,
+    resetTokenExpires: row.reset_token_expires ? Number(row.reset_token_expires) : undefined,
+    verificationTokenHash: row.verification_token_hash || undefined,
+    verificationToken: row.verification_token_hash || undefined,
+    verificationTokenExpires: row.verification_token_expires ? Number(row.verification_token_expires) : undefined,
+    setupTokenHash: row.setup_token_hash || undefined,
+    setupTokenExpires: row.setup_token_expires ? Number(row.setup_token_expires) : undefined,
+    twoFactorEnabled: row.two_factor_enabled === true,
+    twoFactorPhone: row.two_factor_phone || undefined,
+    failedLoginAttempts: row.failed_login_attempts ? Number(row.failed_login_attempts) : 0,
+    lockoutUntil: row.lockout_until ? Number(row.lockout_until) : undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
 export async function syncUsersFromPostgres(): Promise<void> {
   try {
     const isReady = await postgresClient.initialize();
@@ -301,31 +329,7 @@ export async function syncUsersFromPostgres(): Promise<void> {
     const res = await postgresClient.query('SELECT * FROM agentdesk_users');
     if (res && res.rows && res.rows.length > 0) {
       for (const row of res.rows) {
-        const record: UserRecord = {
-          id: row.id,
-          name: row.name,
-          email: row.email.toLowerCase().trim(),
-          passwordHash: row.password_hash,
-          role: row.role as UserRole,
-          tenantId: row.tenant_id,
-          status: row.status as UserStatus,
-          mustChangePassword: row.must_change_password === true,
-          emailVerified: row.email_verified === true,
-          resetTokenHash: row.reset_token_hash || undefined,
-          resetToken: row.reset_token_hash || undefined,
-          resetTokenExpires: row.reset_token_expires ? Number(row.reset_token_expires) : undefined,
-          verificationTokenHash: row.verification_token_hash || undefined,
-          verificationToken: row.verification_token_hash || undefined,
-          verificationTokenExpires: row.verification_token_expires ? Number(row.verification_token_expires) : undefined,
-          setupTokenHash: row.setup_token_hash || undefined,
-          setupTokenExpires: row.setup_token_expires ? Number(row.setup_token_expires) : undefined,
-          twoFactorEnabled: row.two_factor_enabled === true,
-          twoFactorPhone: row.two_factor_phone || undefined,
-          failedLoginAttempts: row.failed_login_attempts ? Number(row.failed_login_attempts) : 0,
-          lockoutUntil: row.lockout_until ? Number(row.lockout_until) : undefined,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at
-        };
+        const record = mapDbRowToUserRecord(row);
         usersByEmailStore.set(record.email, record);
         usersByIdStore.set(record.id, record);
       }
@@ -344,6 +348,153 @@ export async function syncUsersFromPostgres(): Promise<void> {
 // Auto-initialize memory store & start sync from PostgreSQL
 initUserRegistry();
 syncUsersFromPostgres().catch(() => {});
+
+/**
+ * PostgreSQL Authoritative User Lookup by Email (PostgreSQL -> cache)
+ */
+export async function getUserByEmailAsync(email: string): Promise<UserRecord | null> {
+  if (!email) return null;
+  const clean = email.toLowerCase().trim();
+
+  try {
+    const isReady = await postgresClient.initialize();
+    if (isReady) {
+      const res = await postgresClient.query(
+        'SELECT * FROM agentdesk_users WHERE LOWER(TRIM(email)) = $1 LIMIT 1',
+        [clean]
+      );
+      if (res && res.rows && res.rows.length > 0) {
+        const record = mapDbRowToUserRecord(res.rows[0]);
+        usersByEmailStore.set(record.email, record);
+        usersByIdStore.set(record.id, record);
+        return record;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[UserRegistry:PostgresLookupError]', err.message);
+  }
+
+  // Fallback to cache / memory store
+  return getUserByEmail(clean);
+}
+
+/**
+ * PostgreSQL Authoritative User Lookup by ID (PostgreSQL -> cache)
+ */
+export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
+  if (!id) return null;
+  const cleanId = id.trim();
+
+  try {
+    const isReady = await postgresClient.initialize();
+    if (isReady) {
+      const res = await postgresClient.query(
+        'SELECT * FROM agentdesk_users WHERE id = $1 LIMIT 1',
+        [cleanId]
+      );
+      if (res && res.rows && res.rows.length > 0) {
+        const record = mapDbRowToUserRecord(res.rows[0]);
+        usersByEmailStore.set(record.email, record);
+        usersByIdStore.set(record.id, record);
+        return record;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[UserRegistry:PostgresLookupError]', err.message);
+  }
+
+  return getUserById(cleanId);
+}
+
+/**
+ * PostgreSQL Authoritative User Creation (fail-closed, DB-first)
+ */
+export async function createUserAsync(params: {
+  name: string;
+  email: string;
+  passwordPlain: string;
+  role?: UserRole;
+  tenantId?: string;
+  status?: UserStatus;
+  mustChangePassword?: boolean;
+  emailVerified?: boolean;
+}): Promise<UserRecord> {
+  const normEmail = params.email.toLowerCase().trim();
+  const id = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const now = new Date().toISOString();
+  const passwordHash = hashPassword(params.passwordPlain);
+  const role = params.role || 'BUSINESS_ADMIN';
+  const tenantId = (params.tenantId || '').toLowerCase().trim();
+  const status = params.status || 'ACTIVE';
+  const mustChangePassword = params.mustChangePassword ?? false;
+  const emailVerified = params.emailVerified ?? false;
+
+  const record: UserRecord = {
+    id,
+    name: params.name.trim(),
+    email: normEmail,
+    passwordHash,
+    role,
+    tenantId,
+    status,
+    mustChangePassword,
+    emailVerified,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  const isReady = await postgresClient.initialize();
+  if (isReady) {
+    try {
+      await postgresClient.query(`
+        INSERT INTO agentdesk_users (
+          id, name, email, password_hash, role, tenant_id, status,
+          must_change_password, email_verified, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `, [
+        id, record.name, normEmail, passwordHash, role, tenantId, status,
+        mustChangePassword, emailVerified, now, now
+      ]);
+    } catch (err: any) {
+      if (err.code === '23505' || err.message?.includes('duplicate key') || err.message?.includes('unique')) {
+        throw new Error(`An account with email "${normEmail}" already exists.`);
+      }
+      throw new Error(`Database persistence failed: ${err.message}`);
+    }
+  } else if (process.env.NODE_ENV === 'production') {
+    throw new Error('Database persistence unavailable: Cannot create user in production without PostgreSQL.');
+  }
+
+  // Update memory cache after DB persistence
+  usersByEmailStore.set(normEmail, record);
+  usersByIdStore.set(id, record);
+  return record;
+}
+
+/**
+ * PostgreSQL Authoritative User Update
+ */
+export async function updateUserAsync(
+  id: string,
+  updates: Partial<Omit<UserRecord, 'id' | 'email' | 'createdAt'>>
+): Promise<UserRecord | null> {
+  const cleanId = id.trim();
+  const now = new Date().toISOString();
+
+  const isReady = await postgresClient.initialize();
+  if (isReady) {
+    const existing = await getUserByIdAsync(cleanId);
+    if (!existing) return null;
+
+    const merged: UserRecord = { ...existing, ...updates, updatedAt: now };
+    await persistUserToPostgres(merged);
+    usersByIdStore.set(cleanId, merged);
+    usersByEmailStore.set(merged.email, merged);
+    return merged;
+  }
+
+  return updateUser(cleanId, updates);
+}
 
 export function getUserByEmail(email: string): UserRecord | null {
   if (!email) return null;

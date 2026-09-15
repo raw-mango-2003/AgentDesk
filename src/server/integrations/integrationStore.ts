@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import { IntegrationRecord } from './interfaces.js';
 import { postgresClient } from '../db/postgresClient.js';
@@ -7,6 +5,9 @@ import { postgresClient } from '../db/postgresClient.js';
 interface OAuthStateRecord {
   state: string;
   userId?: string;
+  tenantId?: string;
+  provider?: string;
+  redirectUrl?: string;
   createdAt: number;
   expiresAt: number;
 }
@@ -14,19 +15,20 @@ interface OAuthStateRecord {
 class IntegrationStore {
   private records: Map<string, IntegrationRecord> = new Map();
   private oauthStates: Map<string, OAuthStateRecord> = new Map();
-  private filePath: string;
 
   constructor() {
-    this.filePath = path.join(process.cwd(), 'data', 'integrations_store.json');
     this.initStorage();
   }
 
   private getEncryptionKey(): Buffer {
     const secret = (process.env.SESSION_SECRET || '').trim();
     if (secret.length < 32) {
-      throw new Error(
-        'SESSION_SECRET must be configured with at least 32 characters.'
-      );
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'SESSION_SECRET must be configured with at least 32 characters in production.'
+        );
+      }
+      return crypto.createHash('sha256').update('agentdesk-secure-local-session-secret-32-chars-minimum-fallback').digest();
     }
     return crypto.createHash('sha256').update(secret).digest();
   }
@@ -71,45 +73,25 @@ class IntegrationStore {
   }
 
   private initStorage(): void {
-    try {
-      const dataDir = path.dirname(this.filePath);
-      if (!fs.existsSync(dataDir)) {
-        fs.mkdirSync(dataDir, { recursive: true });
-      }
+    // Ensure default Gmail integration record exists in cache
+    const now = new Date().toISOString();
+    const defaultGmail: IntegrationRecord = {
+      id: 'gmail_oauth',
+      provider: 'GOOGLE',
+      type: 'GMAIL',
+      accountEmail: 'hello.agentdesktech@gmail.com',
+      encryptedRefreshToken: '',
+      status: 'NOT_CONNECTED',
+      createdAt: now,
+      updatedAt: now
+    };
+    this.records.set('gmail_oauth', defaultGmail);
 
-      if (fs.existsSync(this.filePath)) {
-        const raw = fs.readFileSync(this.filePath, 'utf-8');
-        const list = JSON.parse(raw) as IntegrationRecord[];
-        for (const item of list) {
-          this.records.set(item.id, item);
-        }
-      }
-    } catch (err) {
-      console.warn('[IntegrationStore:InitWarning] Could not load integrations file from disk:', err);
-    }
-
-    // Ensure default Gmail integration record exists
-    if (!this.records.has('gmail_oauth')) {
-      const now = new Date().toISOString();
-      const defaultGmail: IntegrationRecord = {
-        id: 'gmail_oauth',
-        provider: 'GOOGLE',
-        type: 'GMAIL',
-        accountEmail: 'hello.agentdesktech@gmail.com',
-        encryptedRefreshToken: '',
-        status: 'NOT_CONNECTED',
-        createdAt: now,
-        updatedAt: now
-      };
-      this.records.set('gmail_oauth', defaultGmail);
-      this.saveToDisk();
-    }
-
-    // Sync with PostgreSQL
+    // Sync with PostgreSQL as source of truth
     this.syncWithPostgres().catch(() => {});
   }
 
-  private async syncWithPostgres(): Promise<void> {
+  public async syncWithPostgres(): Promise<void> {
     try {
       const connected = await postgresClient.initialize();
       if (!connected) return;
@@ -133,22 +115,26 @@ class IntegrationStore {
             updatedAt: row.updated_at
           });
         }
-        this.saveToDisk();
       } else {
-        // Seed Postgres with existing records
+        // Seed Postgres with default records
         for (const record of this.records.values()) {
           await this.persistRecordToPostgres(record);
         }
       }
     } catch (err: any) {
-      // Non-fatal if postgres is offline
+      console.warn('[IntegrationStore:SyncWarning]', err.message);
     }
   }
 
-  private async persistRecordToPostgres(record: IntegrationRecord): Promise<void> {
+  public async persistRecordToPostgres(record: IntegrationRecord): Promise<void> {
     try {
       const isReady = await postgresClient.initialize();
-      if (!isReady) return;
+      if (!isReady) {
+        if (postgresClient.isConfigured() || process.env.NODE_ENV === 'production') {
+          throw new Error('Database connection failed: Cannot persist integration without PostgreSQL.');
+        }
+        return;
+      }
 
       await postgresClient.query(`
         INSERT INTO agentdesk_integrations (
@@ -184,16 +170,8 @@ class IntegrationStore {
         record.updatedAt
       ]);
     } catch (err: any) {
-      console.warn('[IntegrationStore:PostgresWarning]', err.message);
-    }
-  }
-
-  private saveToDisk(): void {
-    try {
-      const list = Array.from(this.records.values());
-      fs.writeFileSync(this.filePath, JSON.stringify(list, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('[IntegrationStore:SaveError] Failed to persist integrations to disk:', err);
+      console.error('[IntegrationStore:PostgresError]', err.message);
+      throw err;
     }
   }
 
@@ -201,11 +179,51 @@ class IntegrationStore {
     return this.records.get(id) || null;
   }
 
+  public async getIntegrationAsync(id: string): Promise<IntegrationRecord | null> {
+    try {
+      const isReady = await postgresClient.initialize();
+      if (isReady) {
+        const res = await postgresClient.query('SELECT * FROM agentdesk_integrations WHERE id = $1 LIMIT 1', [id]);
+        if (res && res.rows && res.rows.length > 0) {
+          const row = res.rows[0];
+          const record: IntegrationRecord = {
+            id: row.id,
+            provider: row.provider,
+            type: row.type,
+            accountEmail: row.account_email,
+            encryptedRefreshToken: row.encrypted_refresh_token || '',
+            encryptedClientId: row.encrypted_client_id || undefined,
+            encryptedClientSecret: row.encrypted_client_secret || undefined,
+            status: row.status,
+            connectedAt: row.connected_at || undefined,
+            lastSuccessfulSendAt: row.last_successful_send_at || undefined,
+            lastError: row.last_error || undefined,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          };
+          this.records.set(id, record);
+          return record;
+        }
+      }
+    } catch (err: any) {
+      console.warn('[IntegrationStore:LookupError]', err.message);
+    }
+    return this.getIntegration(id);
+  }
+
   public saveIntegration(record: IntegrationRecord): IntegrationRecord {
     record.updatedAt = new Date().toISOString();
     this.records.set(record.id, record);
-    this.saveToDisk();
-    this.persistRecordToPostgres(record).catch(() => {});
+    this.persistRecordToPostgres(record).catch((err) => {
+      console.error('[IntegrationStore:SaveFailed]', err.message);
+    });
+    return record;
+  }
+
+  public async saveIntegrationAsync(record: IntegrationRecord): Promise<IntegrationRecord> {
+    record.updatedAt = new Date().toISOString();
+    await this.persistRecordToPostgres(record);
+    this.records.set(record.id, record);
     return record;
   }
 
@@ -218,8 +236,22 @@ class IntegrationStore {
       updatedAt: new Date().toISOString()
     };
     this.records.set(id, updated);
-    this.saveToDisk();
-    this.persistRecordToPostgres(updated).catch(() => {});
+    this.persistRecordToPostgres(updated).catch((err) => {
+      console.error('[IntegrationStore:UpdateFailed]', err.message);
+    });
+    return updated;
+  }
+
+  public async updateIntegrationAsync(id: string, updates: Partial<IntegrationRecord>): Promise<IntegrationRecord | null> {
+    const existing = await this.getIntegrationAsync(id);
+    if (!existing) return null;
+    const updated: IntegrationRecord = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date().toISOString()
+    };
+    await this.persistRecordToPostgres(updated);
+    this.records.set(id, updated);
     return updated;
   }
 
@@ -253,9 +285,14 @@ class IntegrationStore {
    * Generate secure CSRF OAuth state with 10-minute validity
    * Persisted in PostgreSQL (authoritative) and memory for multi-instance survivability
    */
-  public async generateOAuthState(userId?: string): Promise<string> {
+  public async generateOAuthState(
+    userId?: string,
+    tenantId?: string,
+    redirectUrl?: string,
+    provider: string = 'GOOGLE'
+  ): Promise<string> {
     const now = Date.now();
-    // Prune stale states
+    // Prune stale states from cache
     for (const [key, val] of this.oauthStates.entries()) {
       if (val.expiresAt < now) {
         this.oauthStates.delete(key);
@@ -268,6 +305,9 @@ class IntegrationStore {
     this.oauthStates.set(state, {
       state,
       userId,
+      tenantId,
+      provider,
+      redirectUrl,
       createdAt: now,
       expiresAt
     });
@@ -277,15 +317,21 @@ class IntegrationStore {
       const connected = await postgresClient.initialize();
       if (connected) {
         await postgresClient.query(`
-          INSERT INTO agentdesk_oauth_states (state, user_id, created_at, expires_at)
-          VALUES ($1, $2, $3, $4)
+          INSERT INTO agentdesk_oauth_states (state, user_id, tenant_id, provider, redirect_url, created_at, expires_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           ON CONFLICT (state) DO UPDATE SET
             expires_at = EXCLUDED.expires_at,
-            user_id = EXCLUDED.user_id
-        `, [state, userId || null, now, expiresAt]);
+            user_id = EXCLUDED.user_id,
+            tenant_id = EXCLUDED.tenant_id
+        `, [state, userId || null, tenantId || null, provider, redirectUrl || null, now, expiresAt]);
+      } else if (postgresClient.isConfigured() || process.env.NODE_ENV === 'production') {
+        throw new Error('Database unavailable: Cannot persist OAuth state.');
       }
     } catch (err: any) {
       console.warn('[OAuthState:PostgresInsertWarning]', err.message);
+      if (process.env.NODE_ENV === 'production') {
+        throw err;
+      }
     }
 
     return state;
@@ -295,7 +341,10 @@ class IntegrationStore {
    * Validate and immediately consume OAuth state (one-time use)
    * Enforces single-use atomic consumption in PostgreSQL and memory
    */
-  public async validateAndConsumeOAuthState(state: string): Promise<{ valid: boolean; userId?: string }> {
+  public async validateAndConsumeOAuthState(
+    state: string,
+    expectedTenantId?: string
+  ): Promise<{ valid: boolean; userId?: string; tenantId?: string; redirectUrl?: string }> {
     if (!state || typeof state !== 'string') return { valid: false };
 
     const now = Date.now();
@@ -307,12 +356,23 @@ class IntegrationStore {
         const res = await postgresClient.query(`
           DELETE FROM agentdesk_oauth_states 
           WHERE state = $1 AND expires_at > $2
-          RETURNING user_id
+          RETURNING user_id, tenant_id, redirect_url, provider
         `, [state, now]);
 
         if (res && res.rows && res.rows.length > 0) {
+          const row = res.rows[0];
           this.oauthStates.delete(state);
-          return { valid: true, userId: res.rows[0].user_id || undefined };
+
+          if (expectedTenantId && row.tenant_id && row.tenant_id.toLowerCase() !== expectedTenantId.toLowerCase()) {
+            return { valid: false };
+          }
+
+          return {
+            valid: true,
+            userId: row.user_id || undefined,
+            tenantId: row.tenant_id || undefined,
+            redirectUrl: row.redirect_url || undefined
+          };
         }
         // If Postgres is connected and returned 0 rows, the state is either invalid, already consumed, or expired
         this.oauthStates.delete(state);
@@ -334,7 +394,17 @@ class IntegrationStore {
     if (now > record.expiresAt) {
       return { valid: false };
     }
-    return { valid: true, userId: record.userId };
+
+    if (expectedTenantId && record.tenantId && record.tenantId.toLowerCase() !== expectedTenantId.toLowerCase()) {
+      return { valid: false };
+    }
+
+    return {
+      valid: true,
+      userId: record.userId,
+      tenantId: record.tenantId,
+      redirectUrl: record.redirectUrl
+    };
   }
 }
 

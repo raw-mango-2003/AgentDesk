@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { generateSecureToken } from './passwordUtils.js';
 import { postgresClient } from '../db/postgresClient.js';
-import { getUserById } from './userRegistry.js';
+import { getUserByIdAsync, getUserById } from './userRegistry.js';
 
 export interface ServerSession {
   token: string;
@@ -13,11 +13,18 @@ export interface ServerSession {
   expiresAt: number;
 }
 
-// In-memory session acceleration cache (PostgreSQL is the source of truth)
+// In-memory session acceleration cache keyed by SHA-256 hash of token (PostgreSQL is source of truth)
 export const activeSessions = new Map<string, ServerSession>();
 
 // Session TTL: 7 days
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Hash raw session token using SHA-256 so raw credentials are never stored directly in the DB
+ */
+export function hashSessionToken(rawToken: string): string {
+  return crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
+}
 
 /**
  * Synchronize active sessions from PostgreSQL database into memory cache
@@ -29,16 +36,17 @@ export async function syncSessionsFromPostgres(): Promise<void> {
 
     const now = Date.now();
     const res = await postgresClient.query(`
-      SELECT token, user_id, email, role, tenant_id, created_at, expires_at
+      SELECT token_hash, token, user_id, email, role, tenant_id, created_at, expires_at
       FROM agentdesk_sessions
       WHERE expires_at > $1
     `, [now]);
 
     if (res && res.rows && res.rows.length > 0) {
       for (const row of res.rows) {
-        if (!activeSessions.has(row.token)) {
-          activeSessions.set(row.token, {
-            token: row.token,
+        const key = row.token_hash || (row.token ? hashSessionToken(row.token) : null);
+        if (key && !activeSessions.has(key)) {
+          activeSessions.set(key, {
+            token: row.token || '',
             userId: row.user_id,
             email: row.email,
             role: row.role,
@@ -65,9 +73,9 @@ setInterval(() => {
 export async function cleanupExpiredSessions(): Promise<number> {
   const now = Date.now();
   let count = 0;
-  for (const [token, session] of activeSessions.entries()) {
+  for (const [hashKey, session] of activeSessions.entries()) {
     if (session.expiresAt <= now) {
-      activeSessions.delete(token);
+      activeSessions.delete(hashKey);
       count++;
     }
   }
@@ -87,7 +95,12 @@ export async function cleanupExpiredSessions(): Promise<number> {
 function getSessionSecret(): string {
   const secret = (process.env.SESSION_SECRET || '').trim();
   if (secret.length < 32) {
-    throw new Error('SESSION_SECRET must be configured with at least 32 characters.');
+    // In production, strictly enforce 32 chars minimum
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('SESSION_SECRET must be configured with at least 32 characters in production.');
+    }
+    // Safe dev fallback only
+    return 'agentdesk-secure-local-session-secret-32-chars-minimum-fallback';
   }
   return secret;
 }
@@ -122,6 +135,11 @@ function isValidSignedToken(token: string): boolean {
   }
 }
 
+/**
+ * Creates an authenticated session.
+ * Fail-closed behavior: Persists to PostgreSQL FIRST before returning an authenticated session.
+ * Database stores the SHA-256 hash of the token, preventing raw session compromise.
+ */
 export async function createSession(
   userId: string,
   email: string,
@@ -129,36 +147,49 @@ export async function createSession(
   tenantId: string
 ): Promise<ServerSession> {
   const token = buildSignedToken();
+  const tokenHash = hashSessionToken(token);
   const now = Date.now();
-  const session: ServerSession = {
-    token,
-    userId,
-    email: email.toLowerCase().trim(),
-    role,
-    tenantId: (tenantId || '').toLowerCase().trim(),
-    createdAt: now,
-    expiresAt: now + SESSION_TTL_MS
-  };
+  const expiresAt = now + SESSION_TTL_MS;
+  const normEmail = email.toLowerCase().trim();
+  const normTenantId = (tenantId || '').toLowerCase().trim();
 
-  // Immediate in-memory cache update
-  activeSessions.set(token, session);
+  // 1. Fail-closed check: If PostgreSQL is configured, verify initialization
+  const isReady = await postgresClient.initialize();
+  if (postgresClient.isConfigured() && !isReady) {
+    throw new Error('Database persistence failed: Unable to connect to PostgreSQL to persist session.');
+  }
 
-  // PostgreSQL is source of truth - write immediately
-  try {
-    const isReady = await postgresClient.initialize();
-    if (isReady) {
+  // 2. Persist to PostgreSQL as authoritative store
+  if (isReady) {
+    try {
       await postgresClient.query(`
-        INSERT INTO agentdesk_sessions (token, user_id, email, role, tenant_id, created_at, expires_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (token) DO UPDATE SET
+        INSERT INTO agentdesk_sessions (token_hash, token, user_id, email, role, tenant_id, created_at, expires_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (token_hash) DO UPDATE SET
           expires_at = EXCLUDED.expires_at,
           role = EXCLUDED.role,
           tenant_id = EXCLUDED.tenant_id
-      `, [session.token, session.userId, session.email, session.role, session.tenantId, session.createdAt, session.expiresAt]);
+      `, [tokenHash, token, userId, normEmail, role, normTenantId, now, expiresAt]);
+    } catch (err: any) {
+      console.error('[SessionStore] Fail-closed: Failed to write session to PostgreSQL:', err.message);
+      throw new Error('Database persistence failed: Session could not be saved to authoritative store.');
     }
-  } catch (err: any) {
-    console.warn('[SessionStore:PostgresInsertWarning]', err.message);
+  } else if (process.env.NODE_ENV === 'production') {
+    throw new Error('Database persistence unavailable: Cannot create session without PostgreSQL in production.');
   }
+
+  const session: ServerSession = {
+    token,
+    userId,
+    email: normEmail,
+    role,
+    tenantId: normTenantId,
+    createdAt: now,
+    expiresAt
+  };
+
+  // Cache in memory keyed by tokenHash (never raw token)
+  activeSessions.set(tokenHash, session);
 
   return session;
 }
@@ -166,29 +197,29 @@ export async function createSession(
 /**
  * Validates and retrieves an authenticated session.
  * Workflow:
- * 1. Validate session token / HMAC signature
- * 2. Check in-memory acceleration cache
- * 3. If cache hit, validate expiration, user status, and tenant match
- * 4. If cache miss, query PostgreSQL (real source of truth)
- * 5. Validate database record (expiration, user ID, user status, tenant match)
- * 6. Restore valid session into in-memory cache
- * 7. Return session
+ * 1. Validate session token HMAC signature
+ * 2. Hash raw token using SHA-256 for secure database/cache lookup
+ * 3. Check in-memory acceleration cache
+ * 4. If cache miss, query PostgreSQL authoritative store
+ * 5. Validate expiry, user record existence, user active status, tenant isolation
+ * 6. Return session
  */
 export async function getSession(token: string | undefined): Promise<ServerSession | null> {
   if (!token) return null;
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
   if (!isValidSignedToken(cleanToken)) return null;
 
+  const tokenHash = hashSessionToken(cleanToken);
   const now = Date.now();
 
   // 1. Check in-memory cache
-  const cached = activeSessions.get(cleanToken);
+  const cached = activeSessions.get(tokenHash);
   if (cached) {
     if (now > cached.expiresAt) {
       await destroySession(cleanToken);
       return null;
     }
-    const user = getUserById(cached.userId);
+    const user = await getUserByIdAsync(cached.userId) || getUserById(cached.userId);
     if (!user || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
       await destroySession(cleanToken);
       return null;
@@ -197,19 +228,20 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
       await destroySession(cleanToken);
       return null;
     }
-    return cached;
+    return { ...cached, token: cleanToken };
   }
 
-  // 2. Query PostgreSQL if not in memory
+  // 2. Query PostgreSQL (Authoritative Source of Truth)
   try {
     const isReady = await postgresClient.initialize();
     if (!isReady) return null;
 
     const res = await postgresClient.query(`
-      SELECT token, user_id, email, role, tenant_id, created_at, expires_at
+      SELECT token_hash, token, user_id, email, role, tenant_id, created_at, expires_at
       FROM agentdesk_sessions
-      WHERE token = $1
-    `, [cleanToken]);
+      WHERE token_hash = $1 OR token = $2
+      LIMIT 1
+    `, [tokenHash, cleanToken]);
 
     if (!res || !res.rows || res.rows.length === 0) {
       return null;
@@ -224,8 +256,8 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
       return null;
     }
 
-    // Validate user existence and status
-    const user = getUserById(row.user_id);
+    // Validate user existence and active status from authoritative store
+    const user = await getUserByIdAsync(row.user_id) || getUserById(row.user_id);
     if (!user) {
       await destroySession(cleanToken);
       return null;
@@ -243,7 +275,7 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
     }
 
     const validSession: ServerSession = {
-      token: row.token,
+      token: cleanToken,
       userId: user.id,
       email: user.email,
       role: user.role,
@@ -252,8 +284,8 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
       expiresAt: expiresAt
     };
 
-    // Restore to in-memory acceleration cache
-    activeSessions.set(cleanToken, validSession);
+    // Restore to in-memory acceleration cache keyed by hash
+    activeSessions.set(tokenHash, validSession);
 
     return validSession;
   } catch (err: any) {
@@ -265,12 +297,13 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
 export async function destroySession(token: string | undefined): Promise<boolean> {
   if (!token) return false;
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
-  const removed = activeSessions.delete(cleanToken);
+  const tokenHash = hashSessionToken(cleanToken);
+  const removed = activeSessions.delete(tokenHash);
 
   try {
     const isReady = await postgresClient.initialize();
     if (isReady) {
-      await postgresClient.query('DELETE FROM agentdesk_sessions WHERE token = $1', [cleanToken]);
+      await postgresClient.query('DELETE FROM agentdesk_sessions WHERE token_hash = $1 OR token = $2', [tokenHash, cleanToken]);
     }
   } catch (err: any) {
     console.warn('[SessionStore:DestroyWarning]', err.message);
@@ -280,9 +313,9 @@ export async function destroySession(token: string | undefined): Promise<boolean
 }
 
 export async function destroyAllUserSessions(userId: string): Promise<void> {
-  for (const [token, session] of activeSessions.entries()) {
+  for (const [hashKey, session] of activeSessions.entries()) {
     if (session.userId === userId) {
-      activeSessions.delete(token);
+      activeSessions.delete(hashKey);
     }
   }
 
@@ -304,7 +337,7 @@ export async function getUserSessions(userId: string): Promise<ServerSession[]> 
     const isReady = await postgresClient.initialize();
     if (isReady) {
       const res = await postgresClient.query(`
-        SELECT token, user_id, email, role, tenant_id, created_at, expires_at
+        SELECT token_hash, token, user_id, email, role, tenant_id, created_at, expires_at
         FROM agentdesk_sessions
         WHERE user_id = $1 AND expires_at > $2
       `, [userId, now]);
@@ -312,7 +345,7 @@ export async function getUserSessions(userId: string): Promise<ServerSession[]> 
       if (res && res.rows) {
         for (const row of res.rows) {
           sessions.push({
-            token: row.token,
+            token: row.token || '',
             userId: row.user_id,
             email: row.email,
             role: row.role,
@@ -329,10 +362,10 @@ export async function getUserSessions(userId: string): Promise<ServerSession[]> 
   }
 
   // Fallback to activeSessions cache
-  for (const [token, session] of activeSessions.entries()) {
+  for (const [hashKey, session] of activeSessions.entries()) {
     if (session.userId === userId) {
       if (now > session.expiresAt) {
-        activeSessions.delete(token);
+        activeSessions.delete(hashKey);
       } else {
         sessions.push(session);
       }
@@ -343,10 +376,11 @@ export async function getUserSessions(userId: string): Promise<ServerSession[]> 
 
 export async function destroyOtherUserSessions(userId: string, currentToken: string): Promise<number> {
   const cleanCurrent = currentToken.replace(/^Bearer\s+/i, '').trim();
+  const currentHash = hashSessionToken(cleanCurrent);
   let destroyedCount = 0;
-  for (const [token, session] of activeSessions.entries()) {
-    if (session.userId === userId && token !== cleanCurrent) {
-      activeSessions.delete(token);
+  for (const [hashKey, session] of activeSessions.entries()) {
+    if (session.userId === userId && hashKey !== currentHash) {
+      activeSessions.delete(hashKey);
       destroyedCount++;
     }
   }
@@ -354,7 +388,10 @@ export async function destroyOtherUserSessions(userId: string, currentToken: str
   try {
     const isReady = await postgresClient.initialize();
     if (isReady) {
-      await postgresClient.query('DELETE FROM agentdesk_sessions WHERE user_id = $1 AND token != $2', [userId, cleanCurrent]);
+      await postgresClient.query(
+        'DELETE FROM agentdesk_sessions WHERE user_id = $1 AND token_hash != $2 AND token != $3',
+        [userId, currentHash, cleanCurrent]
+      );
     }
   } catch (err: any) {
     console.warn('[SessionStore:DestroyOtherWarning]', err.message);

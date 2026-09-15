@@ -256,7 +256,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="md:hidden border-t border-slate-800 bg-slate-900/95 backdrop-blur-md px-4 py-3 space-y-2">
             <button
               onClick={() => { onNavigate('landing'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center ${
                 currentView === 'landing' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
@@ -264,7 +264,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
             <button
               onClick={() => { onNavigate('pricing'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              className={`w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center ${
                 currentView === 'pricing' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
               }`}
             >
@@ -273,7 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser && (
               <button
                 onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
-                className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                className={`w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
                   currentView === 'dashboard' ? 'text-white bg-slate-800' : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
                 }`}
               >
@@ -283,7 +283,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
             <button
               onClick={() => { onOpenDemoWidget(); setMobileMenuOpen(false); }}
-              className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+              className="w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-emerald-400" />
               <span>Test AI Receptionist</span>
@@ -291,7 +291,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {currentUser ? (
               <button
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+                className="w-full min-h-[44px] text-left px-3 py-2 text-xs font-semibold text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all flex items-center gap-2 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Sign Out ({isPlatformAdmin ? 'Platform Admin' : currentUser.email})</span>
@@ -300,13 +300,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="pt-2 border-t border-slate-800/80 flex gap-2">
                 <button
                   onClick={() => { onNavigate('login'); setMobileMenuOpen(false); }}
-                  className="flex-1 py-2 text-center text-xs font-bold text-slate-300 bg-slate-800 rounded-xl"
+                  className="flex-1 min-h-[44px] py-2 text-center text-xs font-bold text-slate-300 bg-slate-800 rounded-xl flex items-center justify-center cursor-pointer"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => { onNavigate('get-started'); setMobileMenuOpen(false); }}
-                  className="flex-1 py-2 text-center text-xs font-bold text-white bg-blue-600 rounded-xl"
+                  className="flex-1 min-h-[44px] py-2 text-center text-xs font-bold text-white bg-blue-600 rounded-xl flex items-center justify-center cursor-pointer shadow-md shadow-blue-600/25"
                 >
                   Get Started
                 </button>

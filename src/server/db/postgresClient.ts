@@ -107,12 +107,24 @@ class PostgresClient {
             CREATE TABLE IF NOT EXISTS agentdesk_oauth_states (
               state VARCHAR(128) PRIMARY KEY,
               user_id VARCHAR(128),
+              tenant_id VARCHAR(128),
+              provider VARCHAR(64) DEFAULT 'GOOGLE',
+              redirect_url TEXT,
               created_at BIGINT NOT NULL,
-              expires_at BIGINT NOT NULL
+              expires_at BIGINT NOT NULL,
+              used_at BIGINT
             );
 
+            ALTER TABLE agentdesk_oauth_states ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(128);
+            ALTER TABLE agentdesk_oauth_states ADD COLUMN IF NOT EXISTS provider VARCHAR(64) DEFAULT 'GOOGLE';
+            ALTER TABLE agentdesk_oauth_states ADD COLUMN IF NOT EXISTS redirect_url TEXT;
+            ALTER TABLE agentdesk_oauth_states ADD COLUMN IF NOT EXISTS used_at BIGINT;
+            CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON agentdesk_oauth_states (expires_at);
+            CREATE INDEX IF NOT EXISTS idx_oauth_states_tenant ON agentdesk_oauth_states (tenant_id);
+
             CREATE TABLE IF NOT EXISTS agentdesk_sessions (
-              token VARCHAR(255) PRIMARY KEY,
+              token_hash VARCHAR(255) PRIMARY KEY,
+              token VARCHAR(255),
               user_id VARCHAR(128) NOT NULL,
               email VARCHAR(255) NOT NULL,
               role VARCHAR(64) NOT NULL,
@@ -120,6 +132,12 @@ class PostgresClient {
               created_at BIGINT NOT NULL,
               expires_at BIGINT NOT NULL
             );
+
+            ALTER TABLE agentdesk_sessions ADD COLUMN IF NOT EXISTS token_hash VARCHAR(255);
+            ALTER TABLE agentdesk_sessions ADD COLUMN IF NOT EXISTS token VARCHAR(255);
+            CREATE INDEX IF NOT EXISTS idx_sessions_user ON agentdesk_sessions (user_id);
+            CREATE INDEX IF NOT EXISTS idx_sessions_expires ON agentdesk_sessions (expires_at);
+            CREATE INDEX IF NOT EXISTS idx_sessions_tenant ON agentdesk_sessions (tenant_id);
 
             CREATE TABLE IF NOT EXISTS agentdesk_webhook_events (
               event_id VARCHAR(255) PRIMARY KEY,
@@ -252,15 +270,23 @@ class PostgresClient {
             CREATE TABLE IF NOT EXISTS agentdesk_conversations (
               id VARCHAR(128) PRIMARY KEY,
               business_id VARCHAR(128) NOT NULL,
+              tenant_id VARCHAR(128),
+              user_id VARCHAR(128),
               visitor_id VARCHAR(128),
               status VARCHAR(64) DEFAULT 'ACTIVE',
               messages JSONB DEFAULT '[]',
               summary TEXT,
               intelligence JSONB,
+              state JSONB,
               created_at VARCHAR(64) NOT NULL,
               updated_at VARCHAR(64) NOT NULL
             );
+            ALTER TABLE agentdesk_conversations ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(128);
+            ALTER TABLE agentdesk_conversations ADD COLUMN IF NOT EXISTS user_id VARCHAR(128);
+            ALTER TABLE agentdesk_conversations ADD COLUMN IF NOT EXISTS state JSONB;
             CREATE INDEX IF NOT EXISTS idx_conversations_business ON agentdesk_conversations (business_id);
+            CREATE INDEX IF NOT EXISTS idx_conversations_tenant ON agentdesk_conversations (tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_conversations_user ON agentdesk_conversations (user_id);
 
             CREATE TABLE IF NOT EXISTS agentdesk_appointments (
               id VARCHAR(128) PRIMARY KEY,
@@ -325,8 +351,16 @@ class PostgresClient {
     return this.pool.query(text, params);
   }
 
+  public isConfigured(): boolean {
+    return isValidConfiguredDatabaseUrl(process.env.DATABASE_URL || '');
+  }
+
+  public isDbConnected(): boolean {
+    return this.isConnected;
+  }
+
   public getStatus(): DbStatus {
-    const isConfigured = isValidConfiguredDatabaseUrl(process.env.DATABASE_URL || '');
+    const isConfigured = this.isConfigured();
     return {
       isConnected: this.isConnected,
       isConfigured,
