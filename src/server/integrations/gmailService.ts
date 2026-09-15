@@ -137,7 +137,9 @@ export class GmailService {
     if (record) {
       if (record.status === 'REAUTHORIZATION_REQUIRED') {
         status = 'REAUTHORIZATION_REQUIRED';
-      } else if (record.status === 'CONNECTED' && hasRefreshToken && clientId && clientSecret) {
+      } else if (hasRefreshToken && clientId && clientSecret) {
+        // Treat a complete persisted credential set as connected even if an
+        // older record has a stale NOT_CONNECTED status flag.
         status = 'CONNECTED';
       } else {
         status = 'NOT_CONNECTED';
