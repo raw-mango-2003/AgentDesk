@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import { IntegrationRecord } from './interfaces.js';
 import { postgresClient } from '../db/postgresClient.js';
 
@@ -15,6 +17,7 @@ interface OAuthStateRecord {
 class IntegrationStore {
   private records: Map<string, IntegrationRecord> = new Map();
   private oauthStates: Map<string, OAuthStateRecord> = new Map();
+  private readonly filePath: string = path.join(process.cwd(), 'data', 'integrations_store.json');
 
   constructor() {
     this.initStorage();
@@ -73,7 +76,6 @@ class IntegrationStore {
   }
 
   private initStorage(): void {
-    // Ensure default Gmail integration record exists in cache
     const now = new Date().toISOString();
     const defaultGmail: IntegrationRecord = {
       id: 'gmail_oauth',
@@ -85,10 +87,47 @@ class IntegrationStore {
       createdAt: now,
       updatedAt: now
     };
-    this.records.set('gmail_oauth', defaultGmail);
 
-    // Sync with PostgreSQL as source of truth
+    // Load the encrypted local integration store first. This is important for
+    // Google AI Studio deployments where PostgreSQL is not configured and the
+    // process may restart. Secrets are never written in plaintext.
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          for (const record of parsed) {
+            if (record?.id) this.records.set(record.id, record as IntegrationRecord);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('[IntegrationStore:DiskLoadWarning]', err.message);
+    }
+
+    if (!this.records.has('gmail_oauth')) {
+      this.records.set('gmail_oauth', defaultGmail);
+      this.persistToDisk();
+    }
+
+    // PostgreSQL remains the preferred source of truth when configured.
     this.syncWithPostgres().catch(() => {});
+  }
+
+  private persistToDisk(): void {
+    try {
+      const dir = path.dirname(this.filePath);
+      fs.mkdirSync(dir, { recursive: true });
+      const tempPath = `${this.filePath}.tmp`;
+      fs.writeFileSync(
+        tempPath,
+        JSON.stringify(Array.from(this.records.values()), null, 2),
+        { encoding: 'utf-8', mode: 0o600 }
+      );
+      fs.renameSync(tempPath, this.filePath);
+    } catch (err: any) {
+      console.warn('[IntegrationStore:DiskSaveWarning]', err.message);
+    }
   }
 
   public async syncWithPostgres(): Promise<void> {
@@ -214,6 +253,7 @@ class IntegrationStore {
   public saveIntegration(record: IntegrationRecord): IntegrationRecord {
     record.updatedAt = new Date().toISOString();
     this.records.set(record.id, record);
+    this.persistToDisk();
     this.persistRecordToPostgres(record).catch((err) => {
       console.error('[IntegrationStore:SaveFailed]', err.message);
     });
@@ -224,6 +264,7 @@ class IntegrationStore {
     record.updatedAt = new Date().toISOString();
     await this.persistRecordToPostgres(record);
     this.records.set(record.id, record);
+    this.persistToDisk();
     return record;
   }
 
@@ -236,6 +277,7 @@ class IntegrationStore {
       updatedAt: new Date().toISOString()
     };
     this.records.set(id, updated);
+    this.persistToDisk();
     this.persistRecordToPostgres(updated).catch((err) => {
       console.error('[IntegrationStore:UpdateFailed]', err.message);
     });
@@ -252,6 +294,7 @@ class IntegrationStore {
     };
     await this.persistRecordToPostgres(updated);
     this.records.set(id, updated);
+    this.persistToDisk();
     return updated;
   }
 
