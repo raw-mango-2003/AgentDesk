@@ -209,33 +209,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
       {/* 1. Hero Section */}
-      <section className="relative pt-20 pb-20 px-4 sm:px-8 overflow-hidden">
+      <section className="relative pt-12 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-8 overflow-hidden">
         {/* Background glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/15 blur-[140px] rounded-full pointer-events-none" />
         
         <div className="max-w-6xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-6 shadow-md">
-            <Sparkles className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-4 sm:mb-6 shadow-md">
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
             <span>AgentDesk Technologies • AI RevenueOS Platform</span>
           </div>
 
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-white tracking-tight leading-[1.1] mb-6">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-4 sm:mb-6">
             One AI system for{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
               every customer interaction.
             </span>
           </h1>
 
-          <p className="text-base sm:text-xl text-slate-300 max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
+          <p className="text-sm sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-10 font-normal">
             Turn every customer interaction into revenue. AI RevenueOS is the complete AI-powered customer revenue and operations platform: 
             <span className="text-white font-semibold"> AI Receptionist + CRM + Follow-Up + Re-Engagement + Revenue Automation</span>.
           </p>
 
           {/* Action CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 max-w-sm sm:max-w-none mx-auto">
             <button
               onClick={onNavigateGetStarted || onOpenAuth}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 group cursor-pointer"
             >
               <span>Get Started</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -243,7 +243,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               onClick={onNavigateLogin || onOpenAuth}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogIn className="w-4 h-4 text-blue-400" />
               <span>Sign In</span>
@@ -251,7 +251,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               onClick={onOpenDemo}
-              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/80 text-slate-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 sm:px-6 sm:py-4 rounded-2xl bg-slate-900/50 hover:bg-slate-800/80 border border-slate-800/80 text-slate-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <Bot className="w-4 h-4 text-emerald-400" />
               <span>Test AI Receptionist</span>
@@ -259,17 +259,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Trust badges */}
-          <div className="mt-12 pt-8 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
+          <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400">
             <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>12-Step Full Implementation</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Lock className="w-4 h-4 text-blue-400" />
+              <Lock className="w-4 h-4 text-blue-400 shrink-0" />
               <span>Managed AI Operations & SLA</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Globe className="w-4 h-4 text-purple-400" />
+              <Globe className="w-4 h-4 text-purple-400 shrink-0" />
               <span>Global Multi-Currency Native (USD • INR • GBP)</span>
             </div>
           </div>

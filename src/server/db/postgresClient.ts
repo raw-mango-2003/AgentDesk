@@ -226,6 +226,80 @@ class PostgresClient {
               created_at VARCHAR(64) NOT NULL,
               updated_at VARCHAR(64) NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS agentdesk_2fa_challenges (
+              token_hash VARCHAR(128) PRIMARY KEY,
+              user_id VARCHAR(128) NOT NULL,
+              email VARCHAR(255) NOT NULL,
+              role VARCHAR(64) NOT NULL,
+              tenant_id VARCHAR(128) NOT NULL,
+              phone VARCHAR(64) NOT NULL,
+              expires_at BIGINT NOT NULL,
+              created_at BIGINT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS agentdesk_agents (
+              id VARCHAR(128) PRIMARY KEY,
+              tenant_id VARCHAR(128) NOT NULL,
+              public_id VARCHAR(128),
+              name VARCHAR(255) NOT NULL,
+              config JSONB NOT NULL,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_agents_tenant ON agentdesk_agents (tenant_id);
+
+            CREATE TABLE IF NOT EXISTS agentdesk_conversations (
+              id VARCHAR(128) PRIMARY KEY,
+              business_id VARCHAR(128) NOT NULL,
+              visitor_id VARCHAR(128),
+              status VARCHAR(64) DEFAULT 'ACTIVE',
+              messages JSONB DEFAULT '[]',
+              summary TEXT,
+              intelligence JSONB,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_conversations_business ON agentdesk_conversations (business_id);
+
+            CREATE TABLE IF NOT EXISTS agentdesk_appointments (
+              id VARCHAR(128) PRIMARY KEY,
+              tenant_id VARCHAR(128) NOT NULL,
+              customer_name VARCHAR(255) NOT NULL,
+              customer_email VARCHAR(255),
+              customer_phone VARCHAR(64),
+              service_type VARCHAR(128),
+              scheduled_at VARCHAR(64) NOT NULL,
+              status VARCHAR(64) DEFAULT 'CONFIRMED',
+              notes TEXT,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_appointments_tenant ON agentdesk_appointments (tenant_id);
+
+            CREATE TABLE IF NOT EXISTS agentdesk_leads (
+              id VARCHAR(128) PRIMARY KEY,
+              tenant_id VARCHAR(128) NOT NULL,
+              name VARCHAR(255) NOT NULL,
+              email VARCHAR(255),
+              phone VARCHAR(64),
+              source VARCHAR(128),
+              status VARCHAR(64) DEFAULT 'NEW',
+              score INT DEFAULT 0,
+              details JSONB,
+              created_at VARCHAR(64) NOT NULL,
+              updated_at VARCHAR(64) NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_leads_tenant ON agentdesk_leads (tenant_id);
+
+            CREATE TABLE IF NOT EXISTS agentdesk_usage (
+              tenant_id VARCHAR(128) PRIMARY KEY,
+              ai_usage INT DEFAULT 0,
+              voice_minutes INT DEFAULT 0,
+              knowledge_documents INT DEFAULT 0,
+              contacts INT DEFAULT 0,
+              last_reset VARCHAR(64) NOT NULL
+            );
           `);
 
           console.log('[PostgresClient] PostgreSQL schema successfully verified and connected.');

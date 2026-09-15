@@ -183,19 +183,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Authenticated User Status vs Public Auth CTAs */}
             {currentUser ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* Role & Workspace Badge */}
-                <div className={`px-2.5 py-1.5 text-xs font-medium rounded-xl border flex items-center gap-2 ${
+                <div className={`px-2 py-1 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl border flex items-center gap-1.5 sm:gap-2 max-w-[120px] sm:max-w-xs ${
                   isPlatformAdmin
                     ? 'bg-purple-950/60 text-purple-200 border-purple-800/80 shadow-xs'
                     : 'bg-slate-800 text-blue-300 border-slate-700 shadow-xs'
                 }`}>
                   {isPlatformAdmin ? (
-                    <Briefcase className="w-3.5 h-3.5 text-purple-400" />
+                    <Briefcase className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                   ) : (
-                    <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                    <Building2 className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                   )}
-                  <span className="font-bold text-white text-[11px]">
+                  <span className="font-bold text-white text-[11px] truncate">
                     {isPlatformAdmin ? 'Platform Admin' : (activeBusiness?.name || currentUser.displayName || 'Business User')}
                   </span>
 
@@ -204,28 +204,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <button
                       onClick={onOpenTenantSelect}
                       title="Inspect Specific Tenant Workspace"
-                      className="ml-1 text-[10px] bg-purple-900 hover:bg-purple-800 text-purple-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                      className="hidden sm:inline ml-1 text-[10px] bg-purple-900 hover:bg-purple-800 text-purple-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors shrink-0"
                     >
-                      Inspect Tenant
+                      Inspect
                     </button>
                   )}
                 </div>
 
-                {/* Sign Out Button */}
+                {/* Sign Out Button (Desktop only; on mobile it is in mobile menu drawer) */}
                 <button
                   onClick={handleLogout}
                   title="Sign out of AgentDesk"
-                  className="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="hidden sm:flex px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Sign Out</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => onNavigate('login')}
-                  className="px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/70 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="hidden sm:flex px-3.5 py-2 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/70 rounded-xl transition-all items-center gap-1.5 cursor-pointer"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign In</span>
@@ -233,7 +233,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={() => onNavigate('get-started')}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl shadow-md shadow-blue-600/20 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Get Started</span>
                   <ArrowRight className="w-3.5 h-3.5" />

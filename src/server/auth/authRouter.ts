@@ -47,6 +47,10 @@ import {
   serverTenantUsageStore
 } from '../tenantRegistry.js';
 import {
+  saveTwoFactorChallenge,
+  consumeTwoFactorChallenge
+} from './twoFactorChallengeStore.js';
+import {
   emailService,
   otpService,
   notificationService,
@@ -59,16 +63,8 @@ import {
 
 export const authRouter = Router();
 
-// In-Memory Two-Factor pending challenge store (expires in 5 minutes)
-export interface PendingTwoFactorChallenge {
-  userId: string;
-  email: string;
-  role: string;
-  tenantId: string;
-  phone: string;
-  expiresAt: number;
-}
-export const pendingTwoFactorChallenges = new Map<string, PendingTwoFactorChallenge>();
+// Re-export PendingTwoFactorChallenge for backward compatibility
+export type { PendingTwoFactorChallenge } from './twoFactorChallengeStore.js';
 
 export function isAccountLocked(user: UserRecord): boolean {
   if (user.lockoutUntil && user.lockoutUntil > Date.now()) {
@@ -555,7 +551,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
       }
 
       const twoFactorToken = `2fa_${generateSecureToken(32)}`;
-      pendingTwoFactorChallenges.set(twoFactorToken, {
+      await saveTwoFactorChallenge(twoFactorToken, {
         userId: user.id,
         email: user.email,
         role: user.role,
@@ -564,7 +560,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
         expiresAt: Date.now() + 5 * 60 * 1000
       });
 
-      const otpResult = await otpService.sendOTP(user.twoFactorPhone, 'sms');
+      await otpService.sendOTP(user.twoFactorPhone, 'sms');
       const maskedPhone = `${user.twoFactorPhone.slice(0, 3)}***${user.twoFactorPhone.slice(-4)}`;
 
       return res.json({
@@ -572,7 +568,6 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
         requiresTwoFactor: true,
         twoFactorToken,
         phoneMasked: maskedPhone,
-        debugCode: otpResult.debugCode,
         message: `A 6-digit verification code has been dispatched to ${maskedPhone}.`
       });
     }
@@ -629,9 +624,8 @@ authRouter.post('/verify-2fa-login', authRateLimiter, async (req: Request, res: 
       });
     }
 
-    const pending = pendingTwoFactorChallenges.get(twoFactorToken);
+    const pending = await consumeTwoFactorChallenge(twoFactorToken);
     if (!pending || pending.expiresAt < Date.now()) {
-      pendingTwoFactorChallenges.delete(twoFactorToken);
       return res.status(400).json({
         success: false,
         error: 'Two-factor session has expired. Please sign in again.'
@@ -646,13 +640,13 @@ authRouter.post('/verify-2fa-login', authRateLimiter, async (req: Request, res: 
       });
     }
 
-    pendingTwoFactorChallenges.delete(twoFactorToken);
     const user = getUserById(pending.userId);
     if (!user) {
       return res.status(404).json({ success: false, error: 'User record not found.' });
     }
 
     const session = await createSession(user.id, user.email, user.role, user.tenantId);
+    setSessionCookie(res, session.token);
     let tenant = user.tenantId ? getTenant(user.tenantId) : null;
 
     analyticsService.track('login_success_2fa', { email: user.email }, user.id);
@@ -784,7 +778,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
       }
 
       const twoFactorToken = `2fa_${generateSecureToken(32)}`;
-      pendingTwoFactorChallenges.set(twoFactorToken, {
+      await saveTwoFactorChallenge(twoFactorToken, {
         userId: user.id,
         email: user.email,
         role: user.role,
@@ -793,7 +787,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
         expiresAt: Date.now() + 5 * 60 * 1000
       });
 
-      const otpResult = await otpService.sendOTP(user.twoFactorPhone, 'sms');
+      await otpService.sendOTP(user.twoFactorPhone, 'sms');
       const maskedPhone = `${user.twoFactorPhone.slice(0, 3)}***${user.twoFactorPhone.slice(-4)}`;
 
       return res.json({
@@ -801,7 +795,6 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
         requiresTwoFactor: true,
         twoFactorToken,
         phoneMasked: maskedPhone,
-        debugCode: otpResult.debugCode,
         message: `Admin security code sent to ${maskedPhone}.`
       });
     }
@@ -2123,7 +2116,7 @@ authRouter.post('/2fa/setup', requireAuth, authRateLimiter, async (req: Request,
 
     // Create challenge for enabling 2FA
     const challengeId = `2fa_setup_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-    pendingTwoFactorChallenges.set(challengeId, {
+    await saveTwoFactorChallenge(challengeId, {
       userId: user.id,
       email: user.email,
       role: user.role,
@@ -2151,9 +2144,8 @@ authRouter.post('/2fa/enable', requireAuth, authRateLimiter, async (req: Request
       return res.status(400).json({ success: false, error: 'Challenge ID and 6-digit code are required.' });
     }
 
-    const challenge = pendingTwoFactorChallenges.get(challengeId);
+    const challenge = await consumeTwoFactorChallenge(challengeId);
     if (!challenge || challenge.userId !== user.id || challenge.expiresAt < Date.now()) {
-      pendingTwoFactorChallenges.delete(challengeId);
       return res.status(400).json({ success: false, error: '2FA setup challenge is invalid or has expired.' });
     }
 
@@ -2161,8 +2153,6 @@ authRouter.post('/2fa/enable', requireAuth, authRateLimiter, async (req: Request
     if (!verifyRes.success) {
       return res.status(400).json({ success: false, error: 'Invalid verification code. Please try again.' });
     }
-
-    pendingTwoFactorChallenges.delete(challengeId);
 
     // Update user record
     updateUser(user.id, {

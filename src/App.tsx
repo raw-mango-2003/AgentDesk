@@ -75,7 +75,9 @@ import {
   CreditCard,
   Code,
   KeyRound,
-  AlertCircle
+  AlertCircle,
+  Menu,
+  X
 } from 'lucide-react';
 
 export type SaaSNavTab = 
@@ -163,6 +165,32 @@ export default function App() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<string | undefined>();
   const [upgradeFeatureReason, setUpgradeFeatureReason] = useState<string | undefined>();
+  const [mobileDashboardDrawerOpen, setMobileDashboardDrawerOpen] = useState(false);
+
+  const getActiveTabLabel = (tab: SaaSNavTab): string => {
+    switch (tab) {
+      case 'overview': return 'Overview';
+      case 'voice_receptionist': return 'AI Voice Receptionist';
+      case 'missed_calls': return 'Missed Call Recovery';
+      case 'leads': return 'Leads & Qualification';
+      case 'crm': return 'CRM & Deals Pipeline';
+      case 'followup': return 'Follow-Up Cadence';
+      case 'reengagement': return 'Re-Engagement';
+      case 'reviews': return 'Reviews';
+      case 'appointments': return 'Appointments';
+      case 'estimates': return 'Estimates';
+      case 'outreach': return 'Cold Outreach';
+      case 'knowledge': return 'Knowledge Base';
+      case 'conversations': return 'Transcripts';
+      case 'integrations': return 'Integrations';
+      case 'billing': return 'Billing & Usage';
+      case 'localization': return 'Localization';
+      case 'embed': return 'Deploy & Embed';
+      case 'account_credentials': return 'Account & Credentials';
+      case 'admin': return 'Platform Admin';
+      default: return 'Overview';
+    }
+  };
 
   const handleOpenUpgradeModal = (feature?: string, targetPlan?: string) => {
     setUpgradeFeatureReason(feature);
@@ -660,8 +688,8 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Omnichannel Suite Tabs Bar */}
-              <div className="flex items-center gap-1.5 pt-4 overflow-x-auto pb-1 text-xs">
+              {/* Omnichannel Suite Tabs Bar (Desktop: Horizontal, Mobile: Mobile Drawer) */}
+              <div className="hidden xl:flex items-center gap-1.5 pt-4 overflow-x-auto pb-1 text-xs">
                 {/* 1. Overview */}
                 <button
                   onClick={() => setActiveTab('overview')}
@@ -914,7 +942,227 @@ export default function App() {
                   </button>
                 )}
               </div>
+
+              {/* Mobile Dashboard Navigation Bar (< xl Viewports) */}
+              <div className="xl:hidden pt-3.5 mt-3 border-t border-slate-800/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-[11px] text-slate-400 font-medium shrink-0">Current View:</span>
+                  <div className="px-3 py-1.5 rounded-xl bg-blue-600/20 text-blue-300 border border-blue-500/30 text-xs font-bold truncate flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 animate-pulse" />
+                    <span className="truncate">{getActiveTabLabel(activeTab)}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setMobileDashboardDrawerOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs shrink-0"
+                  aria-label="Open Navigation Modules Drawer"
+                >
+                  <Menu className="w-4 h-4 text-blue-400" />
+                  <span>Modules</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 font-black">
+                    {18 + (currentUser?.role === 'PLATFORM_ADMIN' ? 1 : 0)}
+                  </span>
+                </button>
+              </div>
             </div>
+
+            {/* Mobile Navigation Drawer */}
+            {mobileDashboardDrawerOpen && (
+              <div 
+                className="fixed inset-0 z-50 xl:hidden flex justify-end bg-black/75 backdrop-blur-xs animate-in fade-in duration-200"
+                onClick={() => setMobileDashboardDrawerOpen(false)}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Modules Navigation Drawer"
+              >
+                <div 
+                  className="w-full max-w-xs sm:max-w-sm h-full bg-slate-900 border-l border-slate-800 flex flex-col shadow-2xl overflow-hidden"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/80">
+                    <div>
+                      <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                        <span>RevenueOS Suite</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase">
+                          Modules
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-slate-400 truncate max-w-[200px]">
+                        {business?.name || 'Workspace Console'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setMobileDashboardDrawerOpen(false)}
+                      className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                      aria-label="Close Drawer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Grouped Modules */}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-4">
+                    {/* 1. Core Operations */}
+                    <div className="space-y-1">
+                      <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Core Operations
+                      </div>
+                      {[
+                        { id: 'overview', label: 'Overview', icon: LayoutDashboard, color: 'text-blue-400' },
+                        { id: 'voice_receptionist', label: 'AI Voice Receptionist', icon: PhoneCall, color: 'text-emerald-400' },
+                        { id: 'missed_calls', label: 'Missed Call Recovery', icon: PhoneMissed, color: 'text-amber-400' },
+                        { id: 'appointments', label: 'Appointments', icon: Calendar, color: 'text-blue-400' },
+                      ].map(item => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setActiveTab(item.id as SaaSNavTab);
+                              setMobileDashboardDrawerOpen(false);
+                            }}
+                            className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
+                              isActive
+                                ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/25'
+                                : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : item.color}`} />
+                            <span className="flex-1">{item.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* 2. Revenue & CRM */}
+                    <div className="space-y-1">
+                      <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Revenue & CRM Pipeline
+                      </div>
+                      {[
+                        { id: 'leads', label: 'Leads & Qualification', icon: Users, color: 'text-purple-400' },
+                        { id: 'crm', label: 'CRM & Deals Pipeline', icon: Users, color: 'text-blue-400' },
+                        { id: 'followup', label: 'Follow-Up Cadence', icon: Repeat, color: 'text-emerald-400' },
+                        { id: 'reengagement', label: 'Re-Engagement', icon: RotateCcw, color: 'text-purple-400' },
+                        { id: 'reviews', label: 'Reviews & Reputation', icon: Star, color: 'text-amber-400' },
+                        { id: 'estimates', label: 'Estimates & Quotes', icon: FileText, color: 'text-indigo-400' },
+                        { id: 'outreach', label: 'Cold Outreach', icon: Send, color: 'text-blue-400' },
+                      ].map(item => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setActiveTab(item.id as SaaSNavTab);
+                              setMobileDashboardDrawerOpen(false);
+                            }}
+                            className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
+                              isActive
+                                ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/25'
+                                : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : item.color}`} />
+                            <span className="flex-1">{item.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* 3. AI & Knowledge */}
+                    <div className="space-y-1">
+                      <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Intelligence & Knowledge
+                      </div>
+                      {[
+                        { id: 'knowledge', label: 'Knowledge Base', icon: Database, color: 'text-slate-400' },
+                        { id: 'conversations', label: 'Transcripts & Logs', icon: MessageSquare, color: 'text-slate-400' },
+                        { id: 'embed', label: 'Deploy & Embed Widget', icon: Code, color: 'text-blue-400' },
+                      ].map(item => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setActiveTab(item.id as SaaSNavTab);
+                              setMobileDashboardDrawerOpen(false);
+                            }}
+                            className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
+                              isActive
+                                ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/25'
+                                : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : item.color}`} />
+                            <span className="flex-1">{item.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* 4. Settings & Administration */}
+                    <div className="space-y-1">
+                      <div className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Settings & Account
+                      </div>
+                      {[
+                        { id: 'integrations', label: 'Integrations', icon: Sliders, color: 'text-blue-400' },
+                        { id: 'billing', label: 'Billing & Usage Quotas', icon: CreditCard, color: 'text-emerald-400' },
+                        { id: 'localization', label: 'Localization & Market', icon: Globe, color: 'text-blue-400' },
+                        { id: 'account_credentials', label: 'Account & Credentials', icon: KeyRound, color: 'text-amber-400' },
+                        ...(currentUser?.role === 'PLATFORM_ADMIN' ? [
+                          { id: 'admin', label: 'Platform Multi-Tenant Oversight', icon: ShieldCheck, color: 'text-purple-400' }
+                        ] : [])
+                      ].map(item => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setActiveTab(item.id as SaaSNavTab);
+                              setMobileDashboardDrawerOpen(false);
+                            }}
+                            className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
+                              isActive
+                                ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-600/25'
+                                : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : item.color}`} />
+                            <span className="flex-1">{item.label}</span>
+                            {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Drawer Footer */}
+                  <div className="p-3.5 border-t border-slate-800 bg-slate-950/80 text-xs text-slate-400 flex items-center justify-between">
+                    <span className="text-[11px] font-medium">AgentDesk RevenueOS</span>
+                    <button
+                      onClick={() => {
+                        setShowCopilot(true);
+                        setMobileDashboardDrawerOpen(false);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-blue-600/20 text-blue-300 border border-blue-500/30 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer hover:bg-blue-600/30"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Copilot</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Dashboard Content Container */}
             {activeTab === 'admin' ? (

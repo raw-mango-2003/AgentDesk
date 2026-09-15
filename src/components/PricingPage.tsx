@@ -488,7 +488,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
 
         <div className="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-2xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
+            <table className="w-full min-w-[640px] text-left text-xs text-slate-300">
               <thead className="bg-slate-950/90 text-slate-400 font-bold border-b border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="py-4 px-6 w-2/5">Capability / Architecture</th>

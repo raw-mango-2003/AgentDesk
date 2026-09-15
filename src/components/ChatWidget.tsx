@@ -867,19 +867,26 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         id="agentdesk-chat-bubble"
         onClick={handleOpenWidget}
         style={{ backgroundColor: primaryColor }}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 text-white font-medium rounded-full shadow-xl hover:opacity-95 transition-all transform hover:scale-105 active:scale-95"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-2.5 p-3 sm:px-4 sm:py-3 text-white font-medium rounded-full shadow-xl hover:opacity-95 transition-all transform hover:scale-105 active:scale-95 touch-manipulation cursor-pointer"
+        aria-label={`Open chat with ${business?.agentSettings?.agentName || business?.name || 'AI Assistant'}`}
       >
-        <div className="relative">
-          <Bot className="w-6 h-6" />
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 border-2 border-white rounded-full animate-pulse" />
+        <div className="relative flex items-center justify-center">
+          <Bot className="w-5 h-5" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 border-2 border-white rounded-full animate-pulse" />
         </div>
-        <span>Chat with {business?.agentSettings?.agentName || business?.name || 'AI Agent'}</span>
+        <span className="hidden sm:inline text-xs font-semibold">
+          Chat with {business?.agentSettings?.agentName || business?.name || 'AI Agent'}
+        </span>
       </button>
     );
   }
 
   return (
-    <div className={`flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden font-sans ${isEmbedded ? 'w-full h-[600px]' : 'fixed bottom-6 right-6 w-[380px] sm:w-[420px] h-[580px] z-50'}`}>
+    <div className={`flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden font-sans ${
+      isEmbedded 
+        ? 'w-full h-[600px]' 
+        : 'fixed inset-x-2 bottom-2 top-14 sm:top-auto sm:inset-x-auto sm:bottom-6 sm:right-6 w-auto sm:w-[420px] max-w-[calc(100vw-1rem)] h-[calc(100dvh-4rem)] sm:h-[580px] z-50'
+    }`}>
       {/* Header */}
       <div 
         className="px-5 py-3 text-white shadow-md flex flex-col gap-2"

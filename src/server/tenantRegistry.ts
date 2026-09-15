@@ -19,6 +19,8 @@ import { SEED_AGENTS } from '../data/seedData.js';
 import { DEFAULT_PLAN_CONFIGS } from '../data/pricing.js';
 import { Business, AIAgent, KnowledgeItem, PlanUsageLimits } from '../types.js';
 import { getUserByEmail, updateUser, createUser } from './auth/userRegistry.js';
+import { postgresClient } from './db/postgresClient.js';
+import { generateSecureToken } from './auth/passwordUtils.js';
 
 // Server-side Tenant Businesses Store (Multi-Tenant Persistence)
 export const serverBusinessesStore = new Map<string, any>();
@@ -101,6 +103,221 @@ export function initTenantRegistry() {
 // Auto-initialize on import
 initTenantRegistry();
 
+export async function persistTenantToPostgres(biz: any): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+    const now = new Date().toISOString();
+    await postgresClient.query(`
+      INSERT INTO agentdesk_tenants (id, name, industry, status, owner_id, plan_id, currency, settings, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        industry = EXCLUDED.industry,
+        status = EXCLUDED.status,
+        owner_id = EXCLUDED.owner_id,
+        plan_id = EXCLUDED.plan_id,
+        currency = EXCLUDED.currency,
+        settings = EXCLUDED.settings,
+        updated_at = EXCLUDED.updated_at
+    `, [
+      biz.id,
+      biz.name || biz.businessName || 'Business',
+      biz.industry || 'General',
+      biz.status || 'ACTIVE',
+      biz.owner_id || biz.ownerId || null,
+      biz.plan || 'starter',
+      biz.currency || 'USD',
+      JSON.stringify(biz),
+      biz.createdAt || now,
+      now
+    ]);
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresPersistTenantWarning]', err.message);
+  }
+}
+
+export async function persistAgentToPostgres(agent: any): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+    const now = new Date().toISOString();
+    await postgresClient.query(`
+      INSERT INTO agentdesk_agents (id, tenant_id, public_id, name, config, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (id) DO UPDATE SET
+        tenant_id = EXCLUDED.tenant_id,
+        public_id = EXCLUDED.public_id,
+        name = EXCLUDED.name,
+        config = EXCLUDED.config,
+        updated_at = EXCLUDED.updated_at
+    `, [
+      agent.id,
+      agent.tenantId || agent.businessId || '',
+      agent.publicId || null,
+      agent.name || 'AI Receptionist',
+      JSON.stringify(agent),
+      agent.createdAt || now,
+      now
+    ]);
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresPersistAgentWarning]', err.message);
+  }
+}
+
+export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+    const now = new Date().toISOString();
+    await postgresClient.query(`
+      INSERT INTO agentdesk_knowledge (id, tenant_id, business_id, title, content, type, category, status, active, metadata, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (id) DO UPDATE SET
+        title = EXCLUDED.title,
+        content = EXCLUDED.content,
+        type = EXCLUDED.type,
+        category = EXCLUDED.category,
+        status = EXCLUDED.status,
+        active = EXCLUDED.active,
+        metadata = EXCLUDED.metadata,
+        updated_at = EXCLUDED.updated_at
+    `, [
+      item.id,
+      item.tenantId,
+      item.businessId || item.tenantId,
+      item.title,
+      item.content,
+      item.type || 'faq',
+      item.category || 'General',
+      item.status || 'active',
+      item.active !== false,
+      JSON.stringify(item),
+      item.createdAt || now,
+      now
+    ]);
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresPersistKnowledgeWarning]', err.message);
+  }
+}
+
+export async function deleteKnowledgeFromPostgres(itemId: string): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+    await postgresClient.query(`DELETE FROM agentdesk_knowledge WHERE id = $1`, [itemId]);
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresDeleteKnowledgeWarning]', err.message);
+  }
+}
+
+export async function persistUsageToPostgres(usage: TenantUsageRecord): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+    await postgresClient.query(`
+      INSERT INTO agentdesk_usage (tenant_id, ai_usage, voice_minutes, knowledge_documents, contacts, last_reset)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (tenant_id) DO UPDATE SET
+        ai_usage = EXCLUDED.ai_usage,
+        voice_minutes = EXCLUDED.voice_minutes,
+        knowledge_documents = EXCLUDED.knowledge_documents,
+        contacts = EXCLUDED.contacts,
+        last_reset = EXCLUDED.last_reset
+    `, [
+      usage.tenantId,
+      usage.aiUsage,
+      usage.voiceMinutes,
+      usage.knowledgeDocuments,
+      usage.contacts,
+      usage.lastReset
+    ]);
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresPersistUsageWarning]', err.message);
+  }
+}
+
+export async function syncAllTenantDataFromPostgres(): Promise<void> {
+  try {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return;
+
+    // 1. Sync tenants
+    const tenantsRes = await postgresClient.query(`SELECT id, settings FROM agentdesk_tenants`);
+    if (tenantsRes && tenantsRes.rows) {
+      for (const row of tenantsRes.rows) {
+        if (row.settings && typeof row.settings === 'object') {
+          serverBusinessesStore.set(row.id.toLowerCase(), row.settings);
+        }
+      }
+    }
+
+    // 2. Sync agents
+    const agentsRes = await postgresClient.query(`SELECT id, public_id, config FROM agentdesk_agents`);
+    if (agentsRes && agentsRes.rows) {
+      for (const row of agentsRes.rows) {
+        if (row.config && typeof row.config === 'object') {
+          serverAgentsStore.set(row.id.toLowerCase(), row.config);
+          if (row.public_id) {
+            serverAgentsStore.set(row.public_id.toLowerCase(), row.config);
+          }
+        }
+      }
+    }
+
+    // 3. Sync knowledge
+    const knowledgeRes = await postgresClient.query(`SELECT id, tenant_id, metadata, title, content, type, category, status, active, created_at, updated_at FROM agentdesk_knowledge`);
+    if (knowledgeRes && knowledgeRes.rows) {
+      for (const row of knowledgeRes.rows) {
+        const tId = (row.tenant_id || '').toLowerCase();
+        if (tId) {
+          const existing = serverKnowledgeStore.get(tId) || [];
+          const idx = existing.findIndex(k => k.id === row.id);
+          const item: KnowledgeItem = row.metadata && typeof row.metadata === 'object' ? row.metadata : {
+            id: row.id,
+            tenantId: tId,
+            businessId: tId,
+            title: row.title,
+            content: row.content,
+            type: row.type || 'faq',
+            category: row.category || 'General',
+            status: row.status || 'active',
+            active: row.active !== false,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          };
+          if (idx >= 0) {
+            existing[idx] = item;
+          } else {
+            existing.push(item);
+          }
+          serverKnowledgeStore.set(tId, existing);
+        }
+      }
+    }
+
+    // 4. Sync usage
+    const usageRes = await postgresClient.query(`SELECT tenant_id, ai_usage, voice_minutes, knowledge_documents, contacts, last_reset FROM agentdesk_usage`);
+    if (usageRes && usageRes.rows) {
+      for (const row of usageRes.rows) {
+        serverTenantUsageStore.set(row.tenant_id.toLowerCase(), {
+          tenantId: row.tenant_id.toLowerCase(),
+          aiUsage: Number(row.ai_usage) || 0,
+          voiceMinutes: Number(row.voice_minutes) || 0,
+          knowledgeDocuments: Number(row.knowledge_documents) || 0,
+          contacts: Number(row.contacts) || 0,
+          lastReset: row.last_reset || new Date().toISOString()
+        });
+      }
+    }
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresSyncWarning]', err.message);
+  }
+}
+
+// Initial hydration from Postgres
+syncAllTenantDataFromPostgres().catch(() => {});
+
 export function getTenant(tenantId: string): any | null {
   if (!tenantId) return null;
   const norm = tenantId.trim().toLowerCase();
@@ -116,6 +333,7 @@ export function setTenant(tenantId: string, businessData: any): any {
   const existing = serverBusinessesStore.get(norm) || {};
   const merged = { ...existing, ...businessData, id: norm, tenantId: norm };
   serverBusinessesStore.set(norm, merged);
+  persistTenantToPostgres(merged).catch(() => {});
   return merged;
 }
 
@@ -195,6 +413,7 @@ export function addKnowledgeItem(tenantId: string, item: any): { success: boolea
 
   existing.push(newItem);
   serverKnowledgeStore.set(norm, existing);
+  persistKnowledgeToPostgres(newItem).catch(() => {});
   return { success: true, item: newItem };
 }
 
@@ -204,6 +423,7 @@ export function deleteKnowledgeItem(tenantId: string, itemId: string): boolean {
   const filtered = existing.filter(k => k.id !== itemId);
   if (filtered.length !== existing.length) {
     serverKnowledgeStore.set(norm, filtered);
+    deleteKnowledgeFromPostgres(itemId).catch(() => {});
     return true;
   }
   return false;
@@ -236,6 +456,7 @@ export function recordTenantUsage(tenantId: string, metric: 'aiUsage' | 'voiceMi
   const norm = tenantId.trim().toLowerCase();
   const usage = getTenantUsage(norm);
   usage[metric] += amount;
+  persistUsageToPostgres(usage).catch(() => {});
   return true;
 }
 
@@ -250,6 +471,7 @@ export function resetTenantQuota(tenantId: string): TenantUsageRecord {
     lastReset: new Date().toISOString()
   };
   serverTenantUsageStore.set(norm, record);
+  persistUsageToPostgres(record).catch(() => {});
   return record;
 }
 
@@ -448,7 +670,7 @@ export function provisionCustomerTenant(params: {
     lastReset: new Date().toISOString()
   });
 
-  // 6. Activate User Account & Assign BUSINESS_ADMIN Role
+  // 6. Activate User Account & Assign BUSINESS_ADMIN Role with secure credentials
   let user = getUserByEmail(customerEmail);
   if (user) {
     updateUser(user.id, {
@@ -459,18 +681,28 @@ export function provisionCustomerTenant(params: {
     newBusiness.owner_id = user.id;
     newBusiness.ownerId = user.id;
   } else {
-    // Generate secure randomized password placeholder if provisioned via webhook directly
+    // Generate secure randomized password placeholder (never exposed in cleartext)
+    const secureRandomPassword = generateSecureToken(16);
     const createdUser = createUser({
       name: customerName || `${businessName} Admin`,
       email: customerEmail,
-      passwordPlain: `Welcome${Date.now()}!`,
+      passwordPlain: secureRandomPassword,
       role: 'BUSINESS_ADMIN',
       tenantId: normTenant,
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      emailVerified: true
     });
     newBusiness.owner_id = createdUser.id;
     newBusiness.ownerId = createdUser.id;
   }
+
+  // Persist newly provisioned entities to PostgreSQL
+  persistTenantToPostgres(newBusiness).catch(() => {});
+  persistAgentToPostgres(newAgent).catch(() => {});
+  for (const k of initialKnowledge) {
+    persistKnowledgeToPostgres(k).catch(() => {});
+  }
+  persistUsageToPostgres(serverTenantUsageStore.get(normTenant)!).catch(() => {});
 
   console.log(`[Tenant Provisioning] Successfully provisioned tenant "${normTenant}" with plan "${planKey}" for customer "${customerEmail}"`);
 
