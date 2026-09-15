@@ -302,15 +302,10 @@ class IntegrationStore {
 
     const record = this.oauthStates.get(state);
     if (!record) {
-      // If not in local memory, it may have been created on another instance;
-      // we check validity by format
-      if (state.length === 64 && /^[0-9a-f]{64}$/i.test(state)) {
-        return { valid: true };
-      }
       return { valid: false };
     }
 
-    // Consume immediately from memory
+    // Consume immediately from memory (single-use)
     this.oauthStates.delete(state);
 
     if (Date.now() > record.expiresAt) {

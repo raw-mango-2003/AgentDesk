@@ -64,7 +64,7 @@ export function getAppUrl(req?: Request): string {
 // 1. PLATFORM ADMIN: INTEGRATIONS MANAGEMENT
 // ----------------------------------------------------------------------------
 
-integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Request, res: Response) => {
+integrationsRouter.get(['/api/platform/integrations', '/platform/integrations'], requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const gmailStatus = gmailService.getConnectionStatus();
 
@@ -203,6 +203,44 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
 // ----------------------------------------------------------------------------
 // GMAIL OAUTH 2.0 & INTEGRATION LIFECYCLE
 // ----------------------------------------------------------------------------
+
+// 0. Gmail API Safe Diagnostic Health Endpoint (never exposes secrets)
+integrationsRouter.get(
+  ['/api/integrations/google/health', '/integrations/google/health'],
+  async (_req: Request, res: Response) => {
+    try {
+      res.setHeader('Content-Type', 'application/json');
+      const status = gmailService.getConnectionStatus();
+      const reachable = await gmailService.checkGmailApiReachable();
+
+      return res.json({
+        success: true,
+        service: 'gmail',
+        configured: status.isConfigured,
+        oauthConnected: status.status === 'CONNECTED',
+        hasClientId: status.hasClientId,
+        hasClientSecret: status.hasClientSecret,
+        hasRefreshToken: status.hasRefreshToken,
+        gmailApiReachable: reachable,
+        lastError: status.lastError || null,
+        timestamp: new Date().toISOString()
+      });
+    } catch (err: any) {
+      return res.status(500).json({
+        success: false,
+        service: 'gmail',
+        configured: false,
+        oauthConnected: false,
+        hasClientId: false,
+        hasClientSecret: false,
+        hasRefreshToken: false,
+        gmailApiReachable: false,
+        lastError: err.message || 'Error executing Gmail health check',
+        timestamp: new Date().toISOString()
+      });
+    }
+  }
+);
 
 // 1. Get Gmail Connection Health & OAuth Details
 integrationsRouter.get(
@@ -374,8 +412,9 @@ integrationsRouter.post(
   ['/api/integrations/google/test-email', '/integrations/google/test-email', '/platform/integrations/test-email', '/platform/integrations/gmail/test-email'],
   requirePlatformAdmin,
   async (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
     try {
-      const recipient = (req.body.to || req.body.recipient || req.body.email || 'hello.agentdesktech@gmail.com').trim();
+      const recipient = (req.body?.to || req.body?.recipient || req.body?.email || 'hello.agentdesktech@gmail.com').trim();
       
       // Validate email format
       if (!recipient || !recipient.includes('@') || !recipient.includes('.')) {
@@ -443,10 +482,11 @@ integrationsRouter.post(
         message: `Email dispatch failed: ${result.error || 'Unknown error'}`
       });
     } catch (err: any) {
+      console.error('[GMAIL TEST] Unexpected error in test-email handler:', err);
       return res.status(500).json({ 
         success: false, 
         status: 'FAILED',
-        error: err.message 
+        error: err.message || 'An unexpected error occurred while executing Gmail test dispatch'
       });
     }
   }

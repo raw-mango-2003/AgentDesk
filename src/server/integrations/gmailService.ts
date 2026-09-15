@@ -197,10 +197,23 @@ export class GmailService {
         body: params.toString()
       });
 
-      const data = await response.json() as any;
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = {};
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
+      } else {
+        const text = await response.text();
+        data = { error: text || `HTTP ${response.status}` };
+      }
 
       if (!response.ok) {
-        const errorDesc = data.error_description || data.error || `HTTP ${response.status}`;
+        console.error(`[GMAIL TEST] HTTP ${response.status}`);
+        const errorDesc = data.error_description || data.error?.message || (typeof data.error === 'string' ? data.error : null) || `HTTP ${response.status}`;
+        console.error(`[GMAIL TEST] Gmail API error: ${errorDesc}`);
         
         // Handle revoked or expired tokens
         if (data.error === 'invalid_grant' || response.status === 400 || response.status === 401) {
@@ -208,9 +221,11 @@ export class GmailService {
             status: 'REAUTHORIZATION_REQUIRED',
             lastError: `OAuth authorization revoked or expired: ${errorDesc}`
           });
+          this.cachedAccessToken = null;
+          this.tokenExpiresAt = 0;
         }
 
-        const fullErr = `OAuth Token Refresh Failed: ${errorDesc}`;
+        const fullErr = `OAuth Token Refresh Failed (${response.status}): ${errorDesc}`;
         return { token: null, error: fullErr };
       }
 
@@ -320,10 +335,33 @@ export class GmailService {
         body: JSON.stringify({ raw: rawMessage })
       });
 
-      const data = await response.json() as any;
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = {};
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch {
+          data = {};
+        }
+      } else {
+        const text = await response.text();
+        data = { error: { message: text || `HTTP ${response.status}` } };
+      }
 
       if (!response.ok) {
-        const errMsg = data.error?.message || `Gmail API returned HTTP ${response.status}`;
+        console.error(`[GMAIL TEST] HTTP ${response.status}`);
+        let errMsg = data?.error?.message;
+        if (!errMsg && typeof data?.error === 'string') {
+          errMsg = data.error;
+        }
+        if (!errMsg && data?.error_description) {
+          errMsg = data.error_description;
+        }
+        if (!errMsg) {
+          errMsg = `Gmail API rejected request with HTTP ${response.status}`;
+        }
+
+        console.error(`[GMAIL TEST] Gmail API error: ${errMsg}`);
         
         if (response.status === 401 || response.status === 403) {
           integrationStore.updateIntegration('gmail_oauth', {
@@ -331,6 +369,7 @@ export class GmailService {
             lastError: errMsg
           });
           this.cachedAccessToken = null;
+          this.tokenExpiresAt = 0;
         } else {
           integrationStore.updateIntegration('gmail_oauth', {
             lastError: errMsg
@@ -546,6 +585,23 @@ export class GmailService {
       return { success: true, accountEmail: this.senderEmail };
     } catch (err: any) {
       return { success: false, error: err.message || 'Exception during token exchange' };
+    }
+  }
+
+  /**
+   * Diagnostic check: test reachability of Google Gmail API endpoints without exposing secrets
+   */
+  public async checkGmailApiReachable(): Promise<boolean> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch('https://gmail.googleapis.com/$discovery/rest?version=v1', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return res.status < 500;
+    } catch {
+      return false;
     }
   }
 }

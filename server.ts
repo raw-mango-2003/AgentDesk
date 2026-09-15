@@ -594,9 +594,15 @@ function checkAndIncrementConversationTurns(convId: string, maxTurns: number = 3
 }
 
 // API Routes
-app.get('/api/health', (_req: Request, res: Response) => {
+app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.setHeader('Content-Type', 'application/json');
+  res.json({
+    success: true,
+    service: 'AgentDesk',
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // GET Automated Conversation Intelligence Test Suite Results
