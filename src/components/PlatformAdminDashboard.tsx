@@ -50,7 +50,8 @@ import {
   getAdminPlans,
   saveAdminPlan,
   resetAdminPlansToDefault,
-  getAllAgents
+  getAllAgents,
+  safeFetchJson
 } from '../lib/dbService';
 import { 
   PLAN_CONFIGS, 
@@ -216,6 +217,11 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   const [planError, setPlanError] = useState<string | null>(null);
   const [showPlanComparison, setShowPlanComparison] = useState(false);
 
+  const getAdminAuthHeaders = (): Record<string, string> => {
+    const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -230,55 +236,39 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
       setAuditLogs(aLogs);
       setAdminPlans(pConfigs);
 
-      // Load webhook status, admin subscriptions, pending signups, payment records, and tax settings
-      try {
-        const [whRes, subsRes, pendingRes, paymentsRes, taxRes] = await Promise.all([
-          fetch('/api/webhooks/status'),
-          fetch('/api/billing/admin/subscriptions'),
-          fetch('/api/billing/admin/pending-signups'),
-          fetch('/api/billing/admin/payment-records'),
-          fetch('/api/billing/tax-settings')
-        ]);
-        if (whRes.ok) {
-          const whData = await whRes.json();
-          setWebhookStatus(whData);
-        }
-        if (subsRes.ok) {
-          const subsData = await subsRes.json();
-          if (subsData.subscriptions) {
-            setSubscriptionsList(subsData.subscriptions);
-          }
-        }
-        if (pendingRes.ok) {
-          const pData = await pendingRes.json();
-          if (pData.signups) {
-            setPendingSignupsList(pData.signups);
-          }
-        }
-        if (paymentsRes.ok) {
-          const payData = await paymentsRes.json();
-          if (payData.records) {
-            setPaymentRecordsList(payData.records);
-          }
-        }
-        if (taxRes && taxRes.ok) {
-          const taxData = await taxRes.json();
-          if (taxData.taxConfig) {
-            setTaxConfig(taxData.taxConfig);
-            setTaxEnabledInput(Boolean(taxData.taxConfig.enabled));
-            setTaxRegStatusInput(taxData.taxConfig.registration_status || 'NOT_REGISTERED');
-            setTaxGstinInput(taxData.taxConfig.gstin || '');
-            setTaxSubRateInput(Math.round((taxData.taxConfig.subscription_tax_rate || 0.18) * 100));
-            setTaxSetupRateInput(Math.round((taxData.taxConfig.setup_tax_rate || 0.00) * 100));
-            setTaxLabelInput(taxData.taxConfig.tax_label || '18% GST (Recurring Subscription Only)');
-            setTaxDisclaimerInput(taxData.taxConfig.tax_disclaimer || '');
-          }
-        }
-      } catch (e) {
-        console.warn('Could not load webhook or subscription status:', e);
+      // Optional platform diagnostics must never block the core admin dashboard.
+      const adminHeaders = getAdminAuthHeaders();
+      const requests = [
+        safeFetchJson('/api/webhooks/status', { credentials: 'include', headers: adminHeaders }).catch(() => null),
+        safeFetchJson('/api/billing/admin/subscriptions', { credentials: 'include', headers: adminHeaders }).catch(() => null),
+        safeFetchJson('/api/billing/admin/pending-signups', { credentials: 'include', headers: adminHeaders }).catch(() => null),
+        safeFetchJson('/api/billing/admin/payment-records', { credentials: 'include', headers: adminHeaders }).catch(() => null),
+        safeFetchJson('/api/billing/tax-settings', { credentials: 'include', headers: adminHeaders }).catch(() => null)
+      ];
+
+      const [whData, subsData, pendingData, paymentsData, taxData] = await Promise.all(requests);
+
+      if (whData) setWebhookStatus(whData);
+      if (subsData?.subscriptions) setSubscriptionsList(subsData.subscriptions);
+      if (pendingData?.signups) setPendingSignupsList(pendingData.signups);
+      if (paymentsData?.records) setPaymentRecordsList(paymentsData.records);
+
+      if (taxData?.taxConfig) {
+        setTaxConfig(taxData.taxConfig);
+        setTaxEnabledInput(Boolean(taxData.taxConfig.enabled));
+        setTaxRegStatusInput(taxData.taxConfig.registration_status || 'NOT_REGISTERED');
+        setTaxGstinInput(taxData.taxConfig.gstin || '');
+        setTaxSubRateInput(Math.round((taxData.taxConfig.subscription_tax_rate || 0.18) * 100));
+        setTaxSetupRateInput(Math.round((taxData.taxConfig.setup_tax_rate || 0.00) * 100));
+        setTaxLabelInput(taxData.taxConfig.tax_label || '18% GST (Recurring Subscription Only)');
+        setTaxDisclaimerInput(taxData.taxConfig.tax_disclaimer || '');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading platform data:', err);
+      setNotification({
+        type: 'error',
+        message: err?.message || 'Some platform data could not be loaded. Core dashboard remains available.'
+      });
     } finally {
       setLoading(false);
     }
