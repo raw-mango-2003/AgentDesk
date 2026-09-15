@@ -34,7 +34,8 @@ import {
   CreditCard,
   KeyRound,
   Send,
-  Sliders
+  Sliders,
+  Menu
 } from 'lucide-react';
 import { Business, AuditLog, AIAgent } from '../types';
 import { 
@@ -729,7 +730,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
               className="lg:hidden p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
               aria-label="Open Platform Admin Menu"
             >
-              <Sliders className="w-5 h-5" />
+              <Menu className="w-5 h-5" />
             </button>
 
             <div className="min-w-0">
