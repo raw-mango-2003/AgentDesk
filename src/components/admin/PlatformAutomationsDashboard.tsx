@@ -69,6 +69,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
     failureRate: 0.0
   });
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -87,14 +88,23 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'rules' | 'test_runner' | 'logs'>('rules');
 
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+  };
+
   const fetchAutomations = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
       const res = await fetch('/api/platform/automations', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: getAuthHeaders()
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error?.message || data?.error || `Unable to load automations (HTTP ${res.status})`);
+      }
       if (data.success) {
         const rawList = Array.isArray(data.automations) ? data.automations : [];
         const normalized: AutomationRule[] = rawList.map((r: any) => {
@@ -144,9 +154,12 @@ export const PlatformAutomationsDashboard: React.FC = () => {
             failureRate: isNaN(failRate) ? 0.0 : failRate
           });
         }
+      } else {
+        throw new Error(data?.error?.message || data?.error || 'Automation service returned an invalid response.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load automations:', err);
+      setLoadError(err?.message || 'Unable to load automation workflows.');
     } finally {
       setLoading(false);
     }
@@ -155,9 +168,9 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const fetchLogs = async () => {
     setLoadingLogs(true);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
       const res = await fetch('/api/platform/email-logs?limit=50', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: getAuthHeaders()
       });
       const data = await res.json();
       if (data.success && data.logs) {
@@ -177,10 +190,10 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const handleToggle = async (id: string) => {
     setTogglingId(id);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
       const res = await fetch(`/api/platform/automations/${id}/toggle`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: getAuthHeaders()
       });
       const data = await res.json();
       if (data.success && data.rule) {
@@ -203,10 +216,10 @@ export const PlatformAutomationsDashboard: React.FC = () => {
     setRunningTestSuite(true);
     setTestSuiteResults(null);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
       const res = await fetch('/api/platform/automations/test-suite', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: getAuthHeaders()
       });
       const data = await res.json();
       if (data.success) {
@@ -272,6 +285,21 @@ export const PlatformAutomationsDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div className="bg-rose-950/60 border border-rose-800 rounded-2xl p-4 text-sm text-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="font-bold">Automation data could not be loaded</div>
+            <div className="text-xs text-rose-300/90 mt-1">{loadError}</div>
+          </div>
+          <button
+            onClick={fetchAutomations}
+            className="shrink-0 px-3 py-2 bg-rose-900 hover:bg-rose-800 border border-rose-700 rounded-xl text-xs font-bold"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* KPI Metrics Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
