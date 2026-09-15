@@ -265,9 +265,9 @@ export const PlatformIntegrationsManager: React.FC = () => {
       return;
     }
 
-    const token = getAuthToken();
-    const startUrl = `/api/integrations/google/start?token=${encodeURIComponent(token)}`;
-    window.location.href = startUrl;
+    // The authenticated session is already stored in the HttpOnly cookie.
+    // Never place the session token in the OAuth URL.
+    window.location.href = '/api/integrations/google/start';
   };
 
   // Save Google OAuth Client Credentials
