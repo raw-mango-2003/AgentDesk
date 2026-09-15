@@ -93,12 +93,30 @@ export const PlatformAutomationsDashboard: React.FC = () => {
     return token ? { 'Authorization': `Bearer ${token}` } : {};
   };
 
+  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, {
+        ...options,
+        credentials: 'include',
+        signal: options.signal || controller.signal
+      });
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        throw new Error(`Request timed out after ${timeoutMs / 1000}s.`);
+      }
+      throw err;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  };
+
   const fetchAutomations = async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch('/api/platform/automations', {
-        credentials: 'include',
+      const res = await fetchWithTimeout('/api/platform/automations', {
         headers: getAuthHeaders()
       });
       const data = await res.json().catch(() => ({}));
@@ -168,8 +186,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const fetchLogs = async () => {
     setLoadingLogs(true);
     try {
-      const res = await fetch('/api/platform/email-logs?limit=50', {
-        credentials: 'include',
+      const res = await fetchWithTimeout('/api/platform/email-logs?limit=50', {
         headers: getAuthHeaders()
       });
       const data = await res.json();
@@ -190,9 +207,8 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const handleToggle = async (id: string) => {
     setTogglingId(id);
     try {
-      const res = await fetch(`/api/platform/automations/${id}/toggle`, {
+      const res = await fetchWithTimeout(`/api/platform/automations/${id}/toggle`, {
         method: 'POST',
-        credentials: 'include',
         headers: getAuthHeaders()
       });
       const data = await res.json();
@@ -216,9 +232,8 @@ export const PlatformAutomationsDashboard: React.FC = () => {
     setRunningTestSuite(true);
     setTestSuiteResults(null);
     try {
-      const res = await fetch('/api/platform/automations/test-suite', {
+      const res = await fetchWithTimeout('/api/platform/automations/test-suite', {
         method: 'POST',
-        credentials: 'include',
         headers: getAuthHeaders()
       });
       const data = await res.json();
@@ -232,6 +247,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to run test suite:', err);
+      setLoadError(err?.message || 'Automation verification could not be completed. Please retry.');
     } finally {
       setRunningTestSuite(false);
     }
