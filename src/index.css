@@ -22,3 +22,66 @@ html, body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.8);
 }
+
+/* Customer-facing landing page polish. Kept CSS-only so existing flows, auth and billing are untouched. */
+.min-h-screen.bg-slate-950.text-slate-100.font-sans {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(37, 99, 235, 0.14), transparent 34rem),
+    radial-gradient(circle at 90% 28%, rgba(124, 58, 237, 0.08), transparent 28rem),
+    #020617;
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child {
+  min-height: 640px;
+  display: flex;
+  align-items: center;
+  background:
+    linear-gradient(180deg, rgba(2, 6, 23, 0.18), rgba(2, 6, 23, 0.9)),
+    radial-gradient(circle at 50% 35%, rgba(59, 130, 246, 0.12), transparent 30rem);
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child h1 {
+  text-wrap: balance;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child p {
+  text-wrap: balance;
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child button {
+  min-height: 52px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child button:first-child {
+  box-shadow: 0 14px 36px rgba(37, 99, 235, 0.24);
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:nth-child(2) {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.52), rgba(15, 23, 42, 0.18));
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:nth-child(2) > div > div:last-child > div {
+  backdrop-filter: blur(10px);
+  background: rgba(15, 23, 42, 0.68);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:nth-child(2) > div > div:last-child > div:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.32);
+}
+
+.min-h-screen.bg-slate-950.text-slate-100.font-sans button:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child {
+    min-height: auto;
+  }
+}
