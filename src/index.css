@@ -40,10 +40,6 @@ html, body {
     radial-gradient(circle at 50% 35%, rgba(59, 130, 246, 0.12), transparent 30rem);
 }
 
-.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child > div {
-  width: 100%;
-}
-
 .min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child h1 {
   text-wrap: balance;
   max-width: 980px;
@@ -62,25 +58,6 @@ html, body {
 
 .min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child button:first-child {
   box-shadow: 0 14px 36px rgba(37, 99, 235, 0.24);
-}
-
-/* Make the product promise visually obvious before the visitor scrolls. */
-.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child > div::after {
-  content: "Customer message  →  AI responds  →  Lead captured  →  Follow-up  →  Appointment";
-  display: block;
-  width: fit-content;
-  max-width: 100%;
-  margin: 28px auto 0;
-  padding: 12px 18px;
-  border: 1px solid rgba(71, 85, 105, 0.55);
-  border-radius: 9999px;
-  background: rgba(15, 23, 42, 0.62);
-  color: rgba(226, 232, 240, 0.86);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.28);
-  backdrop-filter: blur(12px);
 }
 
 .min-h-screen.bg-slate-950.text-slate-100.font-sans > section:nth-child(2) {
@@ -103,16 +80,34 @@ html, body {
   outline-offset: 3px;
 }
 
+/* AI employee dashboard polish. Visual-only: existing data, navigation and automation behavior stay unchanged. */
+.space-y-8.animate-fadeIn > div:first-child {
+  box-shadow: 0 24px 70px rgba(2, 6, 23, 0.18);
+}
+
+.space-y-8.animate-fadeIn > div:nth-child(3) {
+  position: relative;
+}
+
+.space-y-8.animate-fadeIn > div:nth-child(3) > div {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.space-y-8.animate-fadeIn > div:nth-child(3) > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+}
+
+.space-y-8.animate-fadeIn > div:nth-child(4) > div {
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.space-y-8.animate-fadeIn > div:nth-child(4) > div:hover {
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.07);
+}
+
 @media (max-width: 640px) {
   .min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child {
     min-height: auto;
-  }
-
-  .min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child > div::after {
-    content: "Customer → AI → Lead → Follow-up → Booking";
-    margin-top: 22px;
-    padding: 10px 13px;
-    border-radius: 16px;
-    line-height: 1.5;
   }
 }
