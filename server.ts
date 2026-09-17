@@ -115,7 +115,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Mount Billing & Webhooks API Router
 app.use('/api/billing', billingRouter);
-app.use('/api', billingRouter);
 
 // Mount Authentication API Router
 app.use('/api/auth', authRouter);
