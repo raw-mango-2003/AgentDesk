@@ -57,12 +57,17 @@ import {
 } from '../data/seedData';
 
 export async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
-  const timeoutMs = 10000;
+  const timeoutMs = 12000;
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = typeof window !== 'undefined' ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
   const requestOptions: RequestInit = {
+    credentials: 'include',
     ...options,
-    signal: options?.signal || controller.signal
+    signal: options?.signal || controller.signal,
+    headers: {
+      'Accept': 'application/json',
+      ...(options?.headers || {})
+    }
   };
 
   try {
@@ -76,10 +81,12 @@ export async function safeFetchJson(url: string, options?: RequestInit): Promise
     const error = err?.name === 'AbortError'
       ? new Error(`Request timed out after ${timeoutMs / 1000}s: ${url}`)
       : err;
-    console.error(`[safeFetchJson] Error fetching ${url}:`, error);
+    console.warn(`[safeFetchJson] Notice while fetching ${url}:`, error?.message || error);
     throw error;
   } finally {
-    window.clearTimeout(timeoutId);
+    if (timeoutId !== null && typeof window !== 'undefined') {
+      window.clearTimeout(timeoutId);
+    }
   }
 }
 
@@ -190,18 +197,37 @@ export function resetAllToSeedData() {
 // ORGANIZATIONS / BUSINESSES (TENANTS)
 // ----------------------------------------------------
 
+let inFlightFetchBusinesses: Promise<Business[]> | null = null;
+
+function getStoredAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return (
+    localStorage.getItem('agentdesk_session_token') ||
+    sessionStorage.getItem('agentdesk_session_token') ||
+    localStorage.getItem('agentdesk_auth_token') ||
+    sessionStorage.getItem('agentdesk_auth_token') ||
+    null
+  );
+}
+
 export async function getAllBusinesses(): Promise<Business[]> {
   initializeDatabaseIfNeeded();
   const localList = getItem<Business[]>('businesses', SEED_BUSINESSES);
-  try {
-    const token = typeof window !== 'undefined' ? (localStorage.getItem('agentdesk_auth_token') || sessionStorage.getItem('agentdesk_auth_token')) : null;
-    const data = await safeFetchJson('/api/tenants', {
-      headers: {
-        'Accept': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      }
-    });
-    if (data?.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
+
+  if (inFlightFetchBusinesses) {
+    return inFlightFetchBusinesses;
+  }
+
+  inFlightFetchBusinesses = (async () => {
+    try {
+      const token = getStoredAuthToken();
+      const data = await safeFetchJson('/api/tenants', {
+        headers: {
+          'Accept': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (data?.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
         const merged = [...localList];
         for (const st of data.tenants) {
           const sId = normalizeTenantId(st.id);
@@ -215,10 +241,15 @@ export async function getAllBusinesses(): Promise<Business[]> {
         setItem('businesses', merged);
         return merged;
       }
-  } catch (err) {
-    // Graceful fallback to local storage
-  }
-  return localList;
+    } catch (err) {
+      // Graceful fallback to local storage
+    } finally {
+      inFlightFetchBusinesses = null;
+    }
+    return localList;
+  })();
+
+  return inFlightFetchBusinesses;
 }
 
 export async function getBusinessById(businessId: string): Promise<Business | null> {
@@ -229,7 +260,7 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
 
   if (!found) {
     try {
-      const token = typeof window !== 'undefined' ? (localStorage.getItem('agentdesk_auth_token') || sessionStorage.getItem('agentdesk_auth_token')) : null;
+      const token = getStoredAuthToken();
       const data = await safeFetchJson(`/api/tenants/${encodeURIComponent(businessId)}`, {
         headers: {
           'Accept': 'application/json',
@@ -237,16 +268,16 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
         }
       });
       if (data?.success && data.tenant) {
-          found = data.tenant;
-          const currentList = getItem<Business[]>('businesses', SEED_BUSINESSES);
-          const existingIdx = currentList.findIndex(b => normalizeTenantId(b.id) === targetId);
-          if (existingIdx >= 0) {
-            currentList[existingIdx] = found!;
-          } else {
-            currentList.push(found!);
-          }
-          setItem('businesses', currentList);
+        found = data.tenant;
+        const currentList = getItem<Business[]>('businesses', SEED_BUSINESSES);
+        const existingIdx = currentList.findIndex(b => normalizeTenantId(b.id) === targetId);
+        if (existingIdx >= 0) {
+          currentList[existingIdx] = found!;
+        } else {
+          currentList.push(found);
         }
+        setItem('businesses', currentList);
+      }
     } catch (err) {
       // Non-fatal
     }

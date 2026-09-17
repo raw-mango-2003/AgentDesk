@@ -224,7 +224,7 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
       await destroySession(cleanToken);
       return null;
     }
-    const user = await getUserByIdAsync(cached.userId) || getUserById(cached.userId);
+    const user = getUserById(cached.userId) || await getUserByIdAsync(cached.userId);
     if (!user || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
       await destroySession(cleanToken);
       return null;
@@ -262,7 +262,7 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
     }
 
     // Validate user existence and active status from authoritative store
-    const user = await getUserByIdAsync(row.user_id) || getUserById(row.user_id);
+    const user = getUserById(row.user_id) || await getUserByIdAsync(row.user_id);
     if (!user) {
       await destroySession(cleanToken);
       return null;
