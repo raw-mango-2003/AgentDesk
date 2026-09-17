@@ -108,12 +108,12 @@ export function initUserRegistry() {
  *   - Do NOT overwrite the existing administrator's password.
  *   - Report that the existing platform admin account is already configured.
  * If NO PLATFORM_ADMIN account exists, bootstrap the initial platform administrator:
- *   Email: admin@agentdesk (or process.env.PLATFORM_ADMIN_EMAIL / INITIAL_ADMIN_EMAIL)
+ *   Email: process.env.PLATFORM_ADMIN_EMAIL (or INITIAL_ADMIN_EMAIL)
  *   Password: process.env.PLATFORM_ADMIN_INITIAL_PASSWORD (strictly required, minimum 8 characters)
  *   Role: PLATFORM_ADMIN
  *   Status: ACTIVE
  *   Password MUST be securely hashed before being stored.
- *   There is NEVER a default or hardcoded administrator password.
+ *   There is NEVER a default or hardcoded administrator credential.
  */
 export function bootstrapPlatformAdmin(): { created: boolean; email: string; message: string } {
   // Check the database for an existing PLATFORM_ADMIN account
@@ -124,8 +124,18 @@ export function bootstrapPlatformAdmin(): { created: boolean; email: string; mes
   const initialEmail = (
     process.env.PLATFORM_ADMIN_EMAIL ||
     process.env.INITIAL_ADMIN_EMAIL ||
-    'admin@agentdesk'
+    ''
   ).toLowerCase().trim();
+
+  if (!initialEmail) {
+    const errorMsg = '[Auth Bootstrap Error] PLATFORM_ADMIN_EMAIL is not configured. Administrator bootstrap aborted without creating an account with a default email.';
+    console.error(errorMsg);
+    return {
+      created: false,
+      email: '',
+      message: errorMsg
+    };
+  }
 
   // Check if admin account matching target initialEmail or existing PLATFORM_ADMIN exists
   const existingByEmail = getUserByEmail(initialEmail);
@@ -467,7 +477,7 @@ export async function createUserAsync(params: {
       ]);
     } catch (err: any) {
       if (err.code === '23505' || err.message?.includes('duplicate key') || err.message?.includes('unique')) {
-        throw new Error(`An account with email "${normEmail}" already exists.`);
+        throw new Error(`An account with email \"${normEmail}\" already exists.`);
       }
       throw new Error(`Database persistence failed: ${err.message}`);
     }
@@ -553,7 +563,7 @@ export function createUser(params: {
 }): UserRecord {
   const normEmail = params.email.toLowerCase().trim();
   if (usersByEmailStore.has(normEmail)) {
-    throw new Error(`An account with email "${normEmail}" already exists.`);
+    throw new Error(`An account with email \"${normEmail}\" already exists.`);
   }
 
   const id = `usr_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -607,7 +617,7 @@ export function updateUserEmail(userId: string, newEmail: string): UserRecord {
   }
 
   if (cleanEmail !== user.email && usersByEmailStore.has(cleanEmail)) {
-    throw new Error(`The email address "${cleanEmail}" is already registered to another account.`);
+    throw new Error(`The email address \"${cleanEmail}\" is already registered to another account.`);
   }
 
   usersByEmailStore.delete(user.email);
