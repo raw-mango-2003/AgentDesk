@@ -49,42 +49,53 @@ export function initUserRegistry() {
   if (isUsersInitialized) return;
   isUsersInitialized = true;
 
-  // 1. Demo Customer Business Admins
-  seedUser({
-    id: 'usr_summit_admin',
-    name: 'David Miller',
-    email: 'summit@example.com',
-    passwordPlain: 'Summit2026!',
-    role: 'BUSINESS_ADMIN',
-    tenantId: 'summit-home-services',
-    status: 'ACTIVE',
-    mustChangePassword: false,
-    emailVerified: true
-  });
+  // Demo users are opt-in and their passwords must come from environment variables.
+  // No demo password is embedded in production source code.
+  if (process.env.ENABLE_DEMO_USERS === 'true') {
+    const demoUsers = [
+      {
+        id: 'usr_summit_admin',
+        name: 'David Miller',
+        email: 'summit@example.com',
+        passwordPlain: process.env.DEMO_SUMMIT_PASSWORD?.trim() || '',
+        role: 'BUSINESS_ADMIN' as UserRole,
+        tenantId: 'summit-home-services',
+        status: 'ACTIVE' as UserStatus,
+        mustChangePassword: false,
+        emailVerified: true
+      },
+      {
+        id: 'usr_sharma_admin',
+        name: 'Dr. Rahul Sharma',
+        email: 'sharma@example.com',
+        passwordPlain: process.env.DEMO_SHARMA_PASSWORD?.trim() || '',
+        role: 'BUSINESS_ADMIN' as UserRole,
+        tenantId: 'sharma-dental-care',
+        status: 'ACTIVE' as UserStatus,
+        mustChangePassword: false,
+        emailVerified: true
+      },
+      {
+        id: 'usr_london_admin',
+        name: 'Victoria Hastings',
+        email: 'london@example.com',
+        passwordPlain: process.env.DEMO_LONDON_PASSWORD?.trim() || '',
+        role: 'BUSINESS_ADMIN' as UserRole,
+        tenantId: 'london-growth-partners',
+        status: 'ACTIVE' as UserStatus,
+        mustChangePassword: false,
+        emailVerified: true
+      }
+    ];
 
-  seedUser({
-    id: 'usr_sharma_admin',
-    name: 'Dr. Rahul Sharma',
-    email: 'sharma@example.com',
-    passwordPlain: 'Sharma2026!',
-    role: 'BUSINESS_ADMIN',
-    tenantId: 'sharma-dental-care',
-    status: 'ACTIVE',
-    mustChangePassword: false,
-    emailVerified: true
-  });
-
-  seedUser({
-    id: 'usr_london_admin',
-    name: 'Victoria Hastings',
-    email: 'london@example.com',
-    passwordPlain: 'London2026!',
-    role: 'BUSINESS_ADMIN',
-    tenantId: 'london-growth-partners',
-    status: 'ACTIVE',
-    mustChangePassword: false,
-    emailVerified: true
-  });
+    for (const demoUser of demoUsers) {
+      if (!demoUser.passwordPlain) {
+        console.warn(`[UserRegistry] Skipping demo user ${demoUser.email}: required demo password is not configured.`);
+        continue;
+      }
+      seedUser(demoUser);
+    }
+  }
 
   // 2. Initial Platform Admin Check and Creation
   bootstrapPlatformAdmin();
