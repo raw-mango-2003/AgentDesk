@@ -1173,15 +1173,6 @@ export class BillingService {
 
     this.planPricesStore.set(key, record);
 
-    // Sync back to FIXED_PLAN_PRICES for backward compatibility
-    if (FIXED_PLAN_PRICES[cleanPlanId]) {
-      const curObj = FIXED_PLAN_PRICES[cleanPlanId][currency as 'INR' | 'USD' | 'GBP'];
-      if (curObj) {
-        curObj.monthly = monthlyFee;
-        curObj.setup = setupFee;
-      }
-    }
-
     return record;
   }
 
