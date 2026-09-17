@@ -85,13 +85,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     return (
       <div className="p-8 text-center text-slate-500">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-sm">Loading workspace dashboard...</p>
+        <p className="text-sm">Loading your AI workspace...</p>
       </div>
     );
   }
 
   const voiceLimit = analytics.voiceUsage?.limitMinutes ?? 0;
   const voiceUsed = analytics.voiceUsage?.usedMinutes ?? 0;
+  const aiIsLive = business.agentStatus === 'PUBLISHED';
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -118,49 +119,67 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       )}
 
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 border border-blue-700/50">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5 mb-2">
-            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-200 text-xs font-semibold rounded-full border border-blue-400/30">
-              Workspace: {business.name}
-            </span>
-            <span className={`px-2.5 py-0.5 text-xs font-semibold rounded-full border ${
-              business.agentStatus === 'PUBLISHED'
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                : business.agentStatus === 'TESTING'
-                ? 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-                : 'bg-amber-500/20 text-amber-300 border-amber-400/30'
-            }`}>
-              Status: {business.agentStatus || 'PUBLISHED'}
-            </span>
-            <span className="px-2 py-0.5 bg-purple-500/20 text-purple-200 text-xs font-medium rounded-full">
-              Plan: {getPlanConfig(business.plan).name}
-            </span>
+      {/* AI Employee Command Center */}
+      <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950/70 p-6 sm:p-8 text-white shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div>
+            <div className="flex flex-wrap items-center gap-2.5 mb-3">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-200 text-[11px] font-bold border border-blue-400/20">
+                <Bot className="w-3.5 h-3.5" /> AI EMPLOYEE
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                aiIsLive
+                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-400/20'
+                  : 'bg-amber-500/15 text-amber-300 border-amber-400/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${aiIsLive ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                {aiIsLive ? 'LIVE' : (business.agentStatus || 'SETUP')}
+              </span>
+              <span className="text-slate-400 text-[11px]">{getPlanConfig(business.plan).name} plan</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight">Your AI employee is {aiIsLive ? 'working' : 'almost ready'}.</h1>
+            <p className="mt-2 max-w-2xl text-sm text-slate-300 leading-relaxed">
+              {aiIsLive
+                ? 'It can handle customer conversations, capture leads, answer from your knowledge base, and hand important conversations to your team.'
+                : 'Finish your setup and your AI employee will be ready to handle customer conversations on your behalf.'}
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome back to {business.name}
-          </h1>
-          <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-xl">
-            Your 24/7 Voice AI Receptionist and Text Agent are live and ready to answer customer calls & chats.
-          </p>
+          <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+            <button
+              onClick={onOpenDemoWidget}
+              className="px-5 py-3 rounded-xl bg-white text-slate-950 hover:bg-slate-100 text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg"
+            >
+              <Sparkles className="w-4 h-4" />
+              Test My AI
+            </button>
+            <button
+              onClick={() => onNavigateTab('knowledge')}
+              className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/15 transition-all flex items-center justify-center gap-2"
+            >
+              Train AI
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={onOpenDemoWidget}
-            className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl shadow-lg transition-all flex items-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Test Live Agent</span>
-          </button>
-          <button
-            onClick={() => onNavigateTab('widget')}
-            className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl border border-white/20 transition-all flex items-center gap-2"
-          >
-            <ExternalLink className="w-4 h-4" />
-            <span>Embed Snippet</span>
-          </button>
+        <div className="relative z-10 mt-7 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { icon: MessageSquare, title: 'Responds', text: 'Customer questions' },
+            { icon: Users, title: 'Captures', text: 'New leads' },
+            { icon: Repeat, title: 'Follows up', text: 'Without manual chasing' },
+            { icon: Calendar, title: 'Books', text: 'Appointments' }
+          ].map(({ icon: Icon, title, text }) => (
+            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-blue-300" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-white">{title}</div>
+                <div className="text-[10px] text-slate-400">{text}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -171,12 +190,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                <h2 className="font-bold text-slate-900 text-base">Client Onboarding Checklist</h2>
+                <h2 className="font-bold text-slate-900 text-base">Get your AI employee ready</h2>
                 <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-200">
-                  {onboarding.completed} / {onboarding.total} Completed
+                  {onboarding.completed} / {onboarding.total}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Complete these steps to fully optimize your AI Receptionist</p>
+              <p className="text-xs text-slate-500 mt-1">A few setup steps now means less work for your team later.</p>
             </div>
             <div className="w-full sm:w-48 bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
               <div 
@@ -216,211 +235,73 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       )}
 
-      {/* Metric Cards Bento Grid */}
+      {/* Outcome Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        {/* Card 1: Total Conversations */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Chats</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
-              <MessageSquare className="w-4 h-4" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Customer Chats</span><div className="p-2 bg-blue-50 text-blue-600 rounded-2xl"><MessageSquare className="w-4 h-4" /></div></div>
           <div className="text-3xl font-black text-slate-900">{analytics.totalConversations}</div>
-          <div className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>+18% this week</span>
-          </div>
+          <div className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /><span>Conversations handled</span></div>
         </div>
 
-        {/* Card 2: Voice AI Call Minutes */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Voice AI Minutes</span>
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl">
-              <Mic className="w-4 h-4" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Voice Minutes</span><div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl"><Mic className="w-4 h-4" /></div></div>
           <div className="text-3xl font-black text-indigo-900">{voiceUsed}m</div>
-          <div className="text-[11px] text-indigo-600 font-bold mt-1.5">
-            {voiceUsed} / {voiceLimit} included mins
-          </div>
+          <div className="text-[11px] text-indigo-600 font-bold mt-1.5">{voiceUsed} / {voiceLimit} included mins</div>
         </div>
 
-        {/* Card 3: AI Resolved */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Resolved</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <CheckCircle className="w-4 h-4" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Resolved</span><div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl"><CheckCircle className="w-4 h-4" /></div></div>
           <div className="text-3xl font-black text-slate-900">{analytics.aiResolvedCount}</div>
-          <div className="text-[11px] text-emerald-600 font-bold mt-1.5">
-            0% Hallucination
-          </div>
+          <div className="text-[11px] text-emerald-600 font-bold mt-1.5">Handled without handoff</div>
         </div>
 
-        {/* Card 4: Human Handoffs */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team Handoffs</span>
-            <div className="p-2 bg-amber-50 text-amber-600 rounded-2xl">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team Handoffs</span><div className="p-2 bg-amber-50 text-amber-600 rounded-2xl"><AlertTriangle className="w-4 h-4" /></div></div>
           <div className="text-3xl font-black text-slate-900">{analytics.humanHandoffCount}</div>
-          <div className="text-[11px] text-amber-600 font-bold mt-1.5">
-            Human escalation
-          </div>
+          <div className="text-[11px] text-amber-600 font-bold mt-1.5">Needs your team</div>
         </div>
 
-        {/* Card 5: Leads Captured */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Leads Captured</span>
-            <div className="p-2 bg-purple-50 text-purple-600 rounded-2xl">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Leads Captured</span><div className="p-2 bg-purple-50 text-purple-600 rounded-2xl"><Users className="w-4 h-4" /></div></div>
           <div className="text-3xl font-black text-slate-900">{analytics.leadsCapturedCount}</div>
-          <div className="text-[11px] text-purple-600 font-bold mt-1.5">
-            High intent contacts
-          </div>
+          <div className="text-[11px] text-purple-600 font-bold mt-1.5">Potential customers</div>
         </div>
 
-        {/* Card 6: AI Resolution Rate */}
         <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Success</span>
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
-              <Bot className="w-4 h-4" />
-            </div>
-          </div>
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Resolution</span><div className="p-2 bg-blue-50 text-blue-600 rounded-2xl"><Bot className="w-4 h-4" /></div></div>
           <div className="text-3xl font-black text-blue-600">{analytics.aiResolutionRate}%</div>
-          <div className="w-full bg-slate-100 h-2.5 rounded-full mt-2.5 overflow-hidden p-0.5 border border-slate-200/60">
-            <div 
-              className="bg-blue-600 h-full rounded-full transition-all" 
-              style={{ width: `${analytics.aiResolutionRate}%` }} 
-            />
-          </div>
+          <div className="w-full bg-slate-100 h-2.5 rounded-full mt-2.5 overflow-hidden p-0.5 border border-slate-200/60"><div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${analytics.aiResolutionRate}%` }} /></div>
         </div>
       </div>
 
       {/* Main Grid: Recent Conversations + Activity Chart */}
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Left 2 Cols: Recent Conversations */}
         <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-            <div>
-              <h2 className="font-bold text-lg text-slate-900">Recent Customer Conversations</h2>
-              <p className="text-xs text-slate-500">Live chat interactions recorded by your AI Receptionist</p>
-            </div>
-            <button
-              onClick={() => onNavigateTab('conversations')}
-              className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1"
-            >
-              <span>View All</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div><h2 className="font-bold text-lg text-slate-900">What your AI is handling</h2><p className="text-xs text-slate-500">Recent customer conversations and outcomes</p></div>
+            <button onClick={() => onNavigateTab('conversations')} className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1"><span>View All</span><ChevronRight className="w-4 h-4" /></button>
           </div>
 
           <div className="space-y-3">
             {(conversations || []).slice(0, 4).map((conv) => (
-              <div 
-                key={conv.id}
-                onClick={() => onNavigateTab('conversations')}
-                className="p-4 border border-slate-200/70 hover:border-blue-300 rounded-xl flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/80 transition-all"
-              >
+              <div key={conv.id} onClick={() => onNavigateTab('conversations')} className="p-4 border border-slate-200/70 hover:border-blue-300 rounded-xl flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/80 transition-all">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">
-                    {conv.customerName ? conv.customerName.charAt(0) : 'C'}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-900 text-sm flex items-center gap-2">
-                      <span>{conv.customerName || 'Anonymous Visitor'}</span>
-                      {conv.leadCaptured && (
-                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-full">
-                          Lead Captured
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-                      {conv.messages?.[conv.messages.length - 1]?.text || 'No messages'}
-                    </p>
-                  </div>
+                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">{conv.customerName ? conv.customerName.charAt(0) : 'C'}</div>
+                  <div><div className="font-semibold text-slate-900 text-sm flex items-center gap-2"><span>{conv.customerName || 'Anonymous Visitor'}</span>{conv.leadCaptured && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-full">Lead Captured</span>}</div><p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{conv.messages?.[conv.messages.length - 1]?.text || 'No messages'}</p></div>
                 </div>
-
-                <div className="text-right shrink-0">
-                  <span className={`inline-block px-2.5 py-1 text-[11px] font-semibold rounded-full ${
-                    conv.status === 'RESOLVED' 
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : conv.status === 'HUMAN_REQUIRED'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
-                    {(conv.status || 'OPEN').replace('_', ' ')}
-                  </span>
-                  <div className="text-[10px] text-slate-400 mt-1">
-                    {new Date(conv.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
+                <div className="text-right shrink-0"><span className={`inline-block px-2.5 py-1 text-[11px] font-semibold rounded-full ${conv.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : conv.status === 'HUMAN_REQUIRED' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>{(conv.status || 'OPEN').replace('_', ' ')}</span><div className="text-[10px] text-slate-400 mt-1">{new Date(conv.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>
               </div>
             ))}
           </div>
-          {/* Unanswered Questions 1-Click Knowledge Base Improvement Loop */}
+
           {(unanswered || []).length > 0 && (
             <div className="mt-6 border-t border-slate-100 pt-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <HelpCircle className="w-4 h-4 text-amber-600" />
-                  <h3 className="font-bold text-slate-900 text-sm">Questions AI Couldn't Answer</h3>
-                </div>
-                <span className="text-[11px] text-slate-500">1-click addition to Knowledge Base</span>
-              </div>
-
+              <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><HelpCircle className="w-4 h-4 text-amber-600" /><h3 className="font-bold text-slate-900 text-sm">Questions AI couldn't answer</h3></div><span className="text-[11px] text-slate-500">Teach AI once</span></div>
               <div className="space-y-3">
                 {(unanswered || []).map((uq) => (
                   <div key={uq.id} className="p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl">
-                    <div className="flex items-start justify-between gap-3 mb-1.5">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">"{uq.question}"</div>
-                        <div className="text-[10px] text-amber-700 font-medium">Asked {uq.count || 1} times • Reason: {uq.reason || 'Not in KB'}</div>
-                      </div>
-                      {answeringId !== uq.id ? (
-                        <button
-                          onClick={() => { setAnsweringId(uq.id); setAnswerDraft(''); }}
-                          className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shrink-0"
-                        >
-                          + Teach AI
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setAnsweringId(null)}
-                          className="px-2 py-1 bg-slate-200 text-slate-700 text-[11px] font-medium rounded-lg shrink-0"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-
-                    {answeringId === uq.id && (
-                      <div className="mt-2 space-y-2">
-                        <textarea
-                          value={answerDraft}
-                          onChange={(e) => setAnswerDraft(e.target.value)}
-                          placeholder="Type authoritative answer for this question..."
-                          className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                          rows={2}
-                        />
-                        <button
-                          onClick={() => handleAddUnansweredToKB(uq.id)}
-                          className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm"
-                        >
-                          Save & Add to Knowledge Base
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-start justify-between gap-3 mb-1.5"><div><div className="text-xs font-bold text-slate-900">"{uq.question}"</div><div className="text-[10px] text-amber-700 font-medium">Asked {uq.count || 1} times • Reason: {uq.reason || 'Not in KB'}</div></div>{answeringId !== uq.id ? <button onClick={() => { setAnsweringId(uq.id); setAnswerDraft(''); }} className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shrink-0">+ Teach AI</button> : <button onClick={() => setAnsweringId(null)} className="px-2 py-1 bg-slate-200 text-slate-700 text-[11px] font-medium rounded-lg shrink-0">Cancel</button>}</div>
+                    {answeringId === uq.id && <div className="mt-2 space-y-2"><textarea value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder="Type the authoritative answer..." className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" rows={2} /><button onClick={() => handleAddUnansweredToKB(uq.id)} className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm">Save & Add to Knowledge Base</button></div>}
                   </div>
                 ))}
               </div>
@@ -428,52 +309,16 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           )}
         </div>
 
-        {/* Right Col: Quick Actions & Top Questions */}
         <div className="space-y-6">
-          {/* Quick Actions */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-3">
-            <h3 className="font-bold text-slate-900 text-sm mb-2">Quick Workspace Actions</h3>
-            
-            <button
-              onClick={() => onNavigateTab('knowledge')}
-              className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center gap-3 group"
-            >
-              <div className="p-2 bg-blue-100 text-blue-700 rounded-lg group-hover:scale-110 transition-transform">
-                <Plus className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-slate-900">Add Knowledge FAQ</div>
-                <div className="text-[11px] text-slate-500">Train AI on new courses or prices</div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => onNavigateTab('agent-settings')}
-              className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center gap-3 group"
-            >
-              <div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg group-hover:scale-110 transition-transform">
-                <Bot className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-xs font-semibold text-slate-900">Customize AI Receptionist</div>
-                <div className="text-[11px] text-slate-500">Change name, welcome text & tone</div>
-              </div>
-            </button>
+            <div className="flex items-center justify-between mb-2"><h3 className="font-bold text-slate-900 text-sm">Make your AI smarter</h3><Bot className="w-4 h-4 text-blue-600" /></div>
+            <button onClick={() => onNavigateTab('knowledge')} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center gap-3 group"><div className="p-2 bg-blue-100 text-blue-700 rounded-lg group-hover:scale-110 transition-transform"><Plus className="w-4 h-4" /></div><div><div className="text-xs font-semibold text-slate-900">Add Knowledge FAQ</div><div className="text-[11px] text-slate-500">Give your AI better answers</div></div></button>
+            <button onClick={() => onNavigateTab('agent-settings')} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center gap-3 group"><div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg group-hover:scale-110 transition-transform"><Bot className="w-4 h-4" /></div><div><div className="text-xs font-semibold text-slate-900">Customize AI Employee</div><div className="text-[11px] text-slate-500">Name, tone & behavior</div></div></button>
           </div>
 
-          {/* Top Asked Questions */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-slate-900 text-sm mb-3">Top Customer Questions</h3>
-            <div className="space-y-2.5">
-              {(analytics.topQuestions || []).map((q, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded-lg">
-                  <span className="text-slate-700 font-medium truncate max-w-[200px]">{q.question}</span>
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-bold rounded-full text-[10px]">
-                    {q.count}x
-                  </span>
-                </div>
-              ))}
-            </div>
+            <h3 className="font-bold text-slate-900 text-sm mb-3">What customers ask</h3>
+            <div className="space-y-2.5">{(analytics.topQuestions || []).map((q, idx) => <div key={idx} className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded-lg"><span className="text-slate-700 font-medium truncate max-w-[200px]">{q.question}</span><span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-bold rounded-full text-[10px]">{q.count}x</span></div>)}</div>
           </div>
         </div>
       </div>
