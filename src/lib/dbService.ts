@@ -215,7 +215,6 @@ export async function getAllBusinesses(): Promise<Business[]> {
         setItem('businesses', merged);
         return merged;
       }
-    }
   } catch (err) {
     // Graceful fallback to local storage
   }
@@ -248,7 +247,6 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
           }
           setItem('businesses', currentList);
         }
-      }
     } catch (err) {
       // Non-fatal
     }
