@@ -99,20 +99,6 @@ billingRouter.get('/available-payment-methods', async (req: Request, res: Respon
   }
 });
 
-billingRouter.post('/available-payment-methods', async (req: Request, res: Response) => {
-  try {
-    const { currency = 'INR', country, planId, plan } = req.body;
-    const result = await billingService.getAvailablePaymentMethods({
-      currency: currency as any,
-      country,
-      planId: planId || plan
-    });
-    return res.json(result);
-  } catch (err: any) {
-    return res.status(400).json({ success: false, error: err.message });
-  }
-});
-
 // 2.53. Provider Health Check Endpoint
 billingRouter.get('/providers/health', async (_req: Request, res: Response) => {
   try {
