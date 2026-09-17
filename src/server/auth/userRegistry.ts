@@ -39,6 +39,7 @@ export function hashToken(rawToken: string): string {
 }
 
 // In-Memory User Store (Email -> UserRecord)
+// PostgreSQL is authoritative; these maps are only a runtime cache.
 export const usersByEmailStore = new Map<string, UserRecord>();
 export const usersByIdStore = new Map<string, UserRecord>();
 
@@ -220,7 +221,8 @@ export function seedUser(params: {
   usersByEmailStore.set(normEmail, record);
   usersByIdStore.set(params.id, record);
 
-  // Asynchronously persist seed user to PostgreSQL
+  // Seed/demo initialization is intentionally best-effort; production user
+  // mutations use the DB-first async APIs below.
   persistUserToPostgres(record).catch(() => {});
   return record;
 }
@@ -231,7 +233,12 @@ export function seedUser(params: {
 export async function persistUserToPostgres(user: UserRecord): Promise<void> {
   try {
     const isReady = await postgresClient.initialize();
-    if (!isReady) return;
+    if (!isReady) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('Database persistence unavailable in production.');
+      }
+      return;
+    }
 
     await postgresClient.query(`
       INSERT INTO agentdesk_users (
@@ -287,44 +294,22 @@ export async function persistUserToPostgres(user: UserRecord): Promise<void> {
     ]);
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresPersistWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
   }
 }
 
 /**
  * Synchronize all users from PostgreSQL into active memory store
  */
-export function mapDbRowToUserRecord(row: any): UserRecord {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email.toLowerCase().trim(),
-    passwordHash: row.password_hash,
-    role: row.role as UserRole,
-    tenantId: (row.tenant_id || '').toLowerCase().trim(),
-    status: row.status as UserStatus,
-    mustChangePassword: row.must_change_password === true,
-    emailVerified: row.email_verified === true,
-    resetTokenHash: row.reset_token_hash || undefined,
-    resetToken: row.reset_token_hash || undefined,
-    resetTokenExpires: row.reset_token_expires ? Number(row.reset_token_expires) : undefined,
-    verificationTokenHash: row.verification_token_hash || undefined,
-    verificationToken: row.verification_token_hash || undefined,
-    verificationTokenExpires: row.verification_token_expires ? Number(row.verification_token_expires) : undefined,
-    setupTokenHash: row.setup_token_hash || undefined,
-    setupTokenExpires: row.setup_token_expires ? Number(row.setup_token_expires) : undefined,
-    twoFactorEnabled: row.two_factor_enabled === true,
-    twoFactorPhone: row.two_factor_phone || undefined,
-    failedLoginAttempts: row.failed_login_attempts ? Number(row.failed_login_attempts) : 0,
-    lockoutUntil: row.lockout_until ? Number(row.lockout_until) : undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  };
-}
-
 export async function syncUsersFromPostgres(): Promise<void> {
   try {
     const isReady = await postgresClient.initialize();
-    if (!isReady) return;
+    if (!isReady) {
+      if (process.env.NODE_ENV === 'production') {
+        console.warn('[UserRegistry] PostgreSQL unavailable; memory cache will not be treated as authoritative.');
+      }
+      return;
+    }
 
     const res = await postgresClient.query('SELECT * FROM agentdesk_users');
     if (res && res.rows && res.rows.length > 0) {
@@ -335,7 +320,7 @@ export async function syncUsersFromPostgres(): Promise<void> {
       }
       console.log(`[UserRegistry] Synchronized ${res.rows.length} users from PostgreSQL.`);
     } else {
-      // Seed all initial in-memory users into PostgreSQL
+      // Seed all initial in-memory users into PostgreSQL only for an empty DB.
       for (const user of usersByIdStore.values()) {
         await persistUserToPostgres(user);
       }
@@ -372,12 +357,17 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
         usersByIdStore.set(record.id, record);
         return record;
       }
+      // PostgreSQL is authoritative when reachable: a miss is a real miss.
+      return null;
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source in production.');
+    }
   }
 
-  // Fallback to cache / memory store
+  // Development-only compatibility fallback when PostgreSQL is unavailable.
   return getUserByEmail(clean);
 }
 
@@ -401,11 +391,17 @@ export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
         usersByIdStore.set(record.id, record);
         return record;
       }
+      // PostgreSQL is authoritative when reachable: a miss is a real miss.
+      return null;
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source in production.');
+    }
   }
 
+  // Development-only compatibility fallback when PostgreSQL is unavailable.
   return getUserById(cleanId);
 }
 
@@ -468,7 +464,7 @@ export async function createUserAsync(params: {
     throw new Error('Database persistence unavailable: Cannot create user in production without PostgreSQL.');
   }
 
-  // Update memory cache after DB persistence
+  // Update memory cache only after DB persistence succeeds.
   usersByEmailStore.set(normEmail, record);
   usersByIdStore.set(id, record);
   return record;
@@ -494,6 +490,10 @@ export async function updateUserAsync(
     usersByIdStore.set(cleanId, merged);
     usersByEmailStore.set(merged.email, merged);
     return merged;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Database persistence unavailable: Cannot update user in production without PostgreSQL.');
   }
 
   return updateUser(cleanId, updates);
@@ -780,4 +780,3 @@ export function findUserBySetupToken(rawToken: string): UserRecord | null {
   }
   return null;
 }
-
