@@ -603,7 +603,7 @@ function checkAndIncrementConversationTurns(convId: string, maxTurns: number = 3
 
 // API Routes
 app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.removeHeader('Access-Control-Allow-Origin');
   res.setHeader('Content-Type', 'application/json');
   res.json({
     success: true,
