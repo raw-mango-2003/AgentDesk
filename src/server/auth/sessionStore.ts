@@ -151,7 +151,9 @@ export async function createSession(
   const normTenantId = (tenantId || '').toLowerCase().trim();
 
   const isReady = await postgresClient.initialize();
-  const persistentSessionsRequired = process.env.REQUIRE_PERSISTENT_SESSIONS === 'true';
+  const persistentSessionsRequired =
+    process.env.NODE_ENV === 'production' ||
+    process.env.REQUIRE_PERSISTENT_SESSIONS === 'true';
 
   if (isReady) {
     try {
