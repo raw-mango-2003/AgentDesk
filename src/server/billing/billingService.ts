@@ -2281,43 +2281,7 @@ export class BillingService {
     const norm = businessId.trim().toLowerCase();
     const billing = this.getTenantBilling(norm);
 
-    const FIXED_PLAN_PRICES: Record<string, {
-      name: string;
-      INR: { monthly: number; setup: number };
-      USD: { monthly: number; setup: number };
-      GBP: { monthly: number; setup: number };
-    }> = {
-      starter: {
-        name: 'Starter',
-        INR: { monthly: 14999, setup: 19999 },
-        USD: { monthly: 199, setup: 249 },
-        GBP: { monthly: 159, setup: 199 }
-      },
-      growth: {
-        name: 'Growth',
-        INR: { monthly: 29999, setup: 34999 },
-        USD: { monthly: 399, setup: 449 },
-        GBP: { monthly: 299, setup: 349 }
-      },
-      scale: {
-        name: 'Scale',
-        INR: { monthly: 59999, setup: 59999 },
-        USD: { monthly: 799, setup: 799 },
-        GBP: { monthly: 599, setup: 599 }
-      },
-      enterprise: {
-        name: 'Enterprise',
-        INR: { monthly: 0, setup: 0 },
-        USD: { monthly: 0, setup: 0 },
-        GBP: { monthly: 0, setup: 0 }
-      },
-      enterprise_custom: {
-        name: 'Enterprise',
-        INR: { monthly: 0, setup: 0 },
-        USD: { monthly: 0, setup: 0 },
-        GBP: { monthly: 0, setup: 0 }
-      }
-    };
+    
 
     const p = FIXED_PLAN_PRICES[newPlanId] || FIXED_PLAN_PRICES.growth;
     const currencyPrices = p[billing.currency] || p.INR;
