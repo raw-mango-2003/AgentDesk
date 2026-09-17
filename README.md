@@ -2,7 +2,7 @@
 
 > **"One AI system for every customer interaction."**
 
-**AI RevenueOS** is an enterprise-grade AI Revenue & Customer Operations Platform built for high-growth service businesses, clinics, legal firms, home services contractors, and corporate enterprises across the **United States** and **India**.
+**AI RevenueOS** is an enterprise-grade AI Revenue & Customer Operations Platform built for high-growth service businesses, clinics, legal firms, home services contractors, and corporate enterprises across the **United States**, **United Kingdom**, and **India**.
 
 AI RevenueOS replaces fragmented point solutions by unifying:
 - **AI Voice Receptionist** (natural sub-second voice telephony)
@@ -24,23 +24,24 @@ AI RevenueOS operates on an enterprise **Two-Part Economic Model**:
 
 ### 4-Tier Enterprise Matrix
 
-| Plan Tier | Positioning | United States (USD) | India (INR) | Key Target Market |
+The pricing below mirrors the canonical plan configuration used by the application.
+
+| Plan Tier | Positioning | United States (USD) | United Kingdom (GBP) | India (INR) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Starter** | *Essential AI Receptionist & Recovery* | **$499 / mo** + $1,500 setup | **₹29,999 / mo** + ₹75,000 setup | Solo practitioners, boutique clinics, emerging contractors |
-| **Growth** *(Most Popular)* | *Full AI Revenue & Follow-Up System* | **$999 / mo** + $2,500 setup | **₹59,999 / mo** + ₹1,49,000 setup | Growing multi-location businesses needing automated follow-up |
-| **Enterprise** *(Flagship)* | *Complete Omnichannel Operations Suite* | **$1,999 / mo** + $4,500 setup | **₹1,19,999 / mo** + ₹2,49,000 setup | High-volume service brands, medical networks, luxury firms |
-| **Enterprise Custom** | *Tailored Deployments & Custom Workflows* | **Custom Pricing** | **Custom Pricing** | Multi-brand franchises, healthcare systems, custom CRM stacks |
+| **Starter** | *Essential AI Receptionist & Recovery* | **$199 / mo** + $249 setup | **£159 / mo** + £199 setup | **₹14,999 / mo** + ₹19,999 setup |
+| **Growth** *(Most Popular)* | *Advanced qualification, lead scoring, appointments, CRM & WhatsApp* | **$399 / mo** + $449 setup | **£299 / mo** + £349 setup | **₹29,999 / mo** + ₹34,999 setup |
+| **Scale** | *Multiple websites, multiple AI agents & advanced automations* | **$799 / mo** + $799 setup | **£599 / mo** + £599 setup | **₹59,999 / mo** + ₹59,999 setup |
+| **Enterprise** | *Bespoke infrastructure, dedicated models, multi-location architecture & custom SLA* | **Custom Pricing** | **Custom Pricing** | **Custom Pricing** |
 
 ---
 
 ## ⚡ Usage Limits & Overage Model
 
-Every tier includes generous monthly operation quotas with clear separation between fixed platform services and variable usage:
-- **Voice Telephony Minutes**: e.g., 500 mins (Starter) → 1,500 mins (Growth) → 4,000 mins (Enterprise)
-- **SMS Text-Back Messages**: e.g., 1,000 msgs (Starter) → 3,500 msgs (Growth) → 10,000 msgs (Enterprise)
-- **WhatsApp Conversations**: Integrated for global and Indian enterprise customers
-- **AI Computations & Operations**: Dedicated real-time qualification requests
-- **CRM Contact Capacity**: From 2,500 contacts up to unlimited contacts
+Each paid tier includes defined monthly usage limits with overage support where enabled:
+- **Starter**: 250 voice minutes, 500 SMS messages, 250 WhatsApp conversations, 2,500 email messages, 2,000 AI conversations, 1,000 contacts
+- **Growth**: 1,000 voice minutes, 2,500 SMS messages, 1,000 WhatsApp conversations, 10,000 email messages, 7,500 AI conversations, 5,000 contacts
+- **Scale**: 3,000 voice minutes, 5,000 SMS messages, 3,000 WhatsApp conversations, 25,000 email messages, 20,000 AI conversations, 20,000 contacts
+- **Enterprise**: Custom AI volume and contact capacity, with dedicated infrastructure options
 
 ---
 
