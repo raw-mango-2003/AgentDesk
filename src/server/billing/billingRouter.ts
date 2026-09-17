@@ -212,7 +212,7 @@ billingRouter.put('/plan-prices', requirePlatformAdmin, (req: Request, res: Resp
     );
     return res.json({ success: true, planPrice: updated });
   } catch (err: any) {
-    return res.status(400).json({ success: false, error: err.message });
+    return res.status(400).json({ error: err.message });
   }
 });
 
@@ -293,25 +293,7 @@ billingRouter.get('/tax-settings', (_req: Request, res: Response) => {
   }
 });
 
-billingRouter.get('/tax-config', (_req: Request, res: Response) => {
-  try {
-    const config = billingService.getTaxConfiguration();
-    return res.json({ success: true, taxConfig: config });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
-  }
-});
-
 billingRouter.put('/tax-settings', requirePlatformAdmin, (req: Request, res: Response) => {
-  try {
-    const updated = billingService.updateTaxConfiguration(req.body, req.body.updatedBy || 'Platform Admin');
-    return res.json({ success: true, taxConfig: updated });
-  } catch (err: any) {
-    return res.status(400).json({ error: err.message });
-  }
-});
-
-billingRouter.put('/tax-config', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const updated = billingService.updateTaxConfiguration(req.body, req.body.updatedBy || 'Platform Admin');
     return res.json({ success: true, taxConfig: updated });
@@ -728,5 +710,3 @@ billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
     note: 'When deploying to production, register the /api/webhooks/razorpay endpoint in your Razorpay Developer Dashboard.'
   });
 });
-
-
