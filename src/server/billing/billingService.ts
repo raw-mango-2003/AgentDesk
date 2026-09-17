@@ -38,6 +38,10 @@ import {
 import { getUserByEmail, updateUser } from '../auth/userRegistry.js';
 import { createSession } from '../auth/sessionStore.js';
 import { postgresClient } from '../db/postgresClient.js';
+import {
+  PLAN_CONFIGS,
+  getPlanPricing
+} from '../../data/pricing.js';
 
 export interface CouponDefinition {
   code: string;
@@ -50,43 +54,37 @@ export interface CouponDefinition {
   maxDiscount?: number;
 }
 
-export const FIXED_PLAN_PRICES: Record<string, {
+const FIXED_PLAN_PRICES: Record<string, {
   name: string;
   INR: { monthly: number; setup: number };
   USD: { monthly: number; setup: number };
   GBP: { monthly: number; setup: number };
-}> = {
-  starter: {
-    name: 'Starter',
-    INR: { monthly: 14999, setup: 19999 },
-    USD: { monthly: 199, setup: 249 },
-    GBP: { monthly: 159, setup: 199 }
-  },
-  growth: {
-    name: 'Growth',
-    INR: { monthly: 29999, setup: 34999 },
-    USD: { monthly: 399, setup: 449 },
-    GBP: { monthly: 299, setup: 349 }
-  },
-  scale: {
-    name: 'Scale',
-    INR: { monthly: 59999, setup: 59999 },
-    USD: { monthly: 799, setup: 799 },
-    GBP: { monthly: 599, setup: 599 }
-  },
-  enterprise: {
-    name: 'Enterprise',
-    INR: { monthly: 0, setup: 0 },
-    USD: { monthly: 0, setup: 0 },
-    GBP: { monthly: 0, setup: 0 }
-  },
-  enterprise_custom: {
-    name: 'Enterprise',
-    INR: { monthly: 0, setup: 0 },
-    USD: { monthly: 0, setup: 0 },
-    GBP: { monthly: 0, setup: 0 }
-  }
-};
+}> = Object.fromEntries(
+  Object.entries(PLAN_CONFIGS).map(([planId, plan]) => {
+    const inr = getPlanPricing(plan, 'INR');
+    const usd = getPlanPricing(plan, 'USD');
+    const gbp = getPlanPricing(plan, 'GBP');
+
+    return [
+      planId,
+      {
+        name: plan.name,
+        INR: {
+          monthly: inr.monthlyPrice,
+          setup: inr.setupPrice
+        },
+        USD: {
+          monthly: usd.monthlyPrice,
+          setup: usd.setupPrice
+        },
+        GBP: {
+          monthly: gbp.monthlyPrice,
+          setup: gbp.setupPrice
+        }
+      }
+    ];
+  })
+);
 
 export const SERVER_PROMO_COUPONS: Record<string, CouponDefinition> = {
   GROWTH50: {
