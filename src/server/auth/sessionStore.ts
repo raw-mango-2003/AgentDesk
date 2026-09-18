@@ -169,7 +169,10 @@ export async function createSession(
       console.warn('[SessionStore] PostgreSQL session write failed, continuing with signed in-memory session:', err.message);
     }
   } else {
-    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory session cache for this runtime.');
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Persistent PostgreSQL storage is required for production sessions. Configure DATABASE_URL and verify database connectivity.');
+    }
+    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory session cache for this development runtime.');
   }
 
   const session: ServerSession = {
