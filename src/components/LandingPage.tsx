@@ -194,7 +194,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       q: 'What is the monthly Platform & Managed AI Operations fee?',
-      a: 'The monthly platform fee covers software licensing, autonomous multi-agent orchestration, CRM hosting, custom dashboards, 24/7 telephony infrastructure monitoring, ongoing prompt fine-tuning, security updates, and standard monthly usage allowances for voice minutes, messaging, and AI computations.'
+      a: 'The monthly platform fee covers software licensing, autonomous multi-agent orchestration, CRM hosting, custom dashboards, platform monitoring, ongoing prompt fine-tuning, and security updates, and standard monthly usage allowances for voice minutes, messaging, and AI computations.'
     },
     {
       q: 'How does multi-currency and regional localization work?',
@@ -490,8 +490,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span className="text-[10px] text-slate-500 font-normal">by AgentDesk Technologies • © {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-6 text-[11px] text-slate-400">
-            <span>SOC-2 Type II Certified</span>
-            <span>GDPR & TCPA Compliant</span>
+            <span>Security controls documented</span>
+            <span>Privacy & messaging compliance controls</span>
             {onNavigatePlatformLogin && (
               <button
                 onClick={onNavigatePlatformLogin}
