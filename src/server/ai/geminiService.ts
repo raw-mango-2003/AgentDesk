@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { KnowledgeItem } from '../../lib/conversationEngine.js';
+import type { KnowledgeItem } from '../../lib/conversationEngine.js';
 
 let aiClient: GoogleGenAI | null = null;
 
