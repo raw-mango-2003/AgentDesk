@@ -276,19 +276,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span className="text-[11px] font-black uppercase tracking-wider text-blue-400">How it works</span>
             <h2 className="text-2xl sm:text-3xl font-black text-white mt-2">From first enquiry to measurable follow-up</h2>
           </div>
-          <div className="grid md:grid-cols-4 gap-4">
-            {[
-              ['01', 'Connect', 'Configure the customer channels and business knowledge your workspace will use.'],
-              ['02', 'Respond', 'The AI receptionist handles supported customer questions and captures enquiry details.'],
-              ['03', 'Qualify', 'Leads can be organized with qualification data, tags, and pipeline stages.'],
-              ['04', 'Follow Up', 'Teams can manage follow-up activity and review customer and revenue signals in the workspace.']
-            ].map(([number, title, desc]) => (
-              <div key={number} className="p-5 rounded-3xl bg-slate-950/70 border border-slate-800">
-                <span className="text-[10px] font-black text-blue-400">{number}</span>
-                <h3 className="text-sm font-bold text-white mt-2">{title}</h3>
-                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">{desc}</p>
-              </div>
-            ))}
+          <div className="relative rounded-3xl bg-slate-950/80 border border-slate-800 p-5 sm:p-7">
+            <div className="hidden lg:block absolute top-1/2 left-10 right-10 h-px bg-slate-800" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative">
+              {[
+                ['01', 'Customer enquiry', 'A customer asks a question on your website or through a connected channel.', MessageSquare],
+                ['02', 'AI responds', 'AgentDesk answers from your configured business knowledge and keeps the conversation moving.', Bot],
+                ['03', 'Lead captured', 'Useful enquiry details are organized so your team can see who needs attention.', UserCheck],
+                ['04', 'Follow-up', 'Follow-up activity can be scheduled and managed instead of relying on memory.', Repeat],
+                ['05', 'Book or hand off', 'Move the customer toward an appointment, or bring in a team member when human help is needed.', Calendar]
+              ].map(([number, title, desc, Icon]) => (
+                <div key={number} className="relative p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black text-blue-400">{number}</span>
+                    <Icon className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <h3 className="text-sm font-bold text-white">{title}</h3>
+                  <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">{desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[10px] font-semibold text-slate-500">
+              <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">Customer</span>
+              <ArrowRight className="w-3 h-3" />
+              <span className="px-2.5 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300">AI employee</span>
+              <ArrowRight className="w-3 h-3" />
+              <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">Team</span>
+            </div>
           </div>
         </div>
       </section>
