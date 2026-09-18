@@ -163,7 +163,7 @@ app.use('/api/auth', authRouter);
 
 // Mount Production Integrations, Notifications, Security & Health API Router
 app.use('/api', integrationsRouter);
-// Integrations are exposed only through the canonical /api mount.\n// Legacy root aliases are intentionally removed.
+// Integrations are exposed only through the canonical /api mount. Legacy root aliases are intentionally removed.
 
 // Secure Local Storage Files Endpoint with Strict Tenant Isolation
 app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
@@ -199,7 +199,13 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
 
 // Client Error Telemetry Endpoint
 app.post('/api/logs/client-error', (req: Request, res: Response) => {
-  console.warn('[Client Error Logged]:', req.body?.message || 'Unknown client error', req.body?.time);
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const message = typeof body.message === 'string' ? body.message.trim().slice(0, 1000) : 'Unknown client error';
+  const time = typeof body.time === 'string' ? body.time.slice(0, 64) : undefined;
+  const route = typeof body.route === 'string' ? body.route.slice(0, 300) : undefined;
+  const errorType = typeof body.errorType === 'string' ? body.errorType.slice(0, 120) : undefined;
+
+  console.warn('[Client Error Logged]:', { message, time, route, errorType });
   return res.json({ success: true });
 });
 
@@ -347,14 +353,22 @@ export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge
     return { business, knowledge, agent: resolvedAgent };
   }
 
+  const allowSeedFallbacks = process.env.NODE_ENV !== 'production';
+
   // 1. Check if identifier resolves to an AI Agent first
-  let resolvedAgent = serverAgentsStore.get(normId) || SEED_AGENTS.find(a => (a.id || '').toLowerCase() === normId || (a.publicId || '').toLowerCase() === normId);
+  let resolvedAgent = serverAgentsStore.get(normId);
+  if (!resolvedAgent && allowSeedFallbacks) {
+    resolvedAgent = SEED_AGENTS.find(a => (a.id || '').toLowerCase() === normId || (a.publicId || '').toLowerCase() === normId);
+  }
   
   // 2. Identify the Tenant ID
-  let targetTenantId = resolvedAgent ? resolvedAgent.tenantId.toLowerCase() : normId;
+  const targetTenantId = resolvedAgent ? resolvedAgent.tenantId.toLowerCase() : normId;
   
-  // 3. Locate business from serverBusinessesStore or SEED_BUSINESSES
-  let business = serverBusinessesStore.get(targetTenantId) || SEED_BUSINESSES.find(b => (b.id || '').trim().toLowerCase() === targetTenantId);
+  // 3. Locate business from the authoritative server store
+  let business = serverBusinessesStore.get(targetTenantId);
+  if (!business && allowSeedFallbacks) {
+    business = SEED_BUSINESSES.find(b => (b.id || '').trim().toLowerCase() === targetTenantId);
+  }
   
   if (!business) {
     // Unknown tenant identifiers must not synthesize an active/published tenant.
@@ -435,7 +449,9 @@ export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge
   }
 
   if (knowledge.length === 0) {
-    knowledge = SEED_KNOWLEDGE_ITEMS.filter(k => (k.tenantId || k.businessId || '').trim().toLowerCase() === tenantLookupKey);
+    if (allowSeedFallbacks) {
+      knowledge = SEED_KNOWLEDGE_ITEMS.filter(k => (k.tenantId || k.businessId || '').trim().toLowerCase() === tenantLookupKey);
+    }
   }
 
   return { business, knowledge, agent: resolvedAgent };
