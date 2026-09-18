@@ -552,12 +552,6 @@ export function getUserByEmail(email: string): UserRecord | null {
   const user = usersByEmailStore.get(clean);
   if (user) return user;
 
-  // Convenience normalization: if someone types 'admin@agentdesk.ai' or 'admin@agentdesk' or 'admin' or 'admin@agentdesk.com'
-  if (clean === 'admin@agentdesk.ai' || clean === 'admin@agentdesk' || clean === 'admin' || clean === 'admin@agentdesk.com') {
-    const admin = Array.from(usersByEmailStore.values()).find(u => u.role === 'PLATFORM_ADMIN');
-    if (admin) return admin;
-  }
-
   return null;
 }
 
