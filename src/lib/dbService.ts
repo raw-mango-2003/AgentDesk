@@ -1081,39 +1081,88 @@ export async function getAnalyticsSummary(businessId?: string): Promise<Analytic
   initializeDatabaseIfNeeded();
   const targetBizId = businessId || SUMMIT_ID;
   const validTenant = validateTenantContext(targetBizId, 'analytics', 'GET_ANALYTICS');
-  const leads = await getLeads(validTenant);
-  const calls = await getCalls(validTenant);
-  const missed = await getMissedCalls(validTenant);
-  const biz = await getBusinessById(validTenant);
+  const [conversations, leads, calls, missed, biz] = await Promise.all([
+    getConversations(validTenant),
+    getLeads(validTenant),
+    getCalls(validTenant),
+    getMissedCalls(validTenant),
+    getBusinessById(validTenant)
+  ]);
 
-  const totalConv = calls.length + leads.length + 18;
-  const aiResolved = Math.round(totalConv * 0.88);
-  const humanHandoff = Math.max(1, totalConv - aiResolved);
+  const totalConversations = conversations.length;
+  const resolvedConversations = conversations.filter(c => c.status === 'RESOLVED').length;
+  const humanHandoffCount = conversations.filter(c =>
+    c.status === 'HUMAN_REQUIRED' || c.status === 'HUMAN_ACTIVE'
+  ).length;
+  const leadsCapturedCount = conversations.filter(c => c.leadCaptured).length;
+  const voiceMinutes = calls.reduce(
+    (total, call) => total + Math.ceil((call.durationSeconds || 0) / 60),
+    0
+  );
+
+  const responseTimes = conversations
+    .map(conversation => {
+      const messages = conversation.messages || [];
+      const firstUserIndex = messages.findIndex(message => message.sender === 'user');
+      if (firstUserIndex < 0) return null;
+      const firstAgent = messages.slice(firstUserIndex + 1).find(
+        message => message.sender === 'agent'
+      );
+      if (!firstAgent) return null;
+      const firstUser = messages[firstUserIndex];
+      const elapsed = new Date(firstAgent.timestamp).getTime() - new Date(firstUser.timestamp).getTime();
+      return Number.isFinite(elapsed) && elapsed >= 0 ? elapsed / 1000 : null;
+    })
+    .filter((seconds): seconds is number => seconds !== null);
+
+  const avgResponseTimeSeconds = responseTimes.length
+    ? Math.round(responseTimes.reduce((sum, seconds) => sum + seconds, 0) / responseTimes.length)
+    : 0;
+
+  const leadConversionRate = totalConversations
+    ? Number(((leadsCapturedCount / totalConversations) * 100).toFixed(1))
+    : 0;
+
+  const resolvedWithoutHumanRate = totalConversations
+    ? Number(((resolvedConversations / totalConversations) * 100).toFixed(1))
+    : 0;
+
+  const questionCounts = new Map<string, number>();
+  for (const conversation of conversations) {
+    for (const message of conversation.messages || []) {
+      if (message.sender !== 'user') continue;
+      const question = message.text?.trim();
+      if (!question || question.length < 3) continue;
+      questionCounts.set(question, (questionCounts.get(question) || 0) + 1);
+    }
+  }
+
+  const topQuestions = Array.from(questionCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([question, count]) => ({ question, count }));
+
+  const aiResolutionRate = resolvedWithoutHumanRate;
 
   return {
-    totalConversations: totalConv,
+    totalConversations,
     totalLeads: leads.length,
-    totalVoiceMinutes: calls.reduce((acc, c) => acc + Math.round(c.durationSeconds / 60), 0) || 28,
-    avgResponseTimeSeconds: 4,
-    leadConversionRate: 34.8,
+    totalVoiceMinutes: voiceMinutes,
+    avgResponseTimeSeconds,
+    leadConversionRate,
     hotLeadsCount: leads.filter(l => l.scoreCategory === 'HOT').length,
-    resolvedWithoutHumanRate: 91.4,
+    resolvedWithoutHumanRate,
     callsHandled: calls.length,
     missedCallsRecovered: missed.filter(m => m.textBackStatus === 'recovered').length,
-    aiResolvedCount: aiResolved,
-    humanHandoffCount: humanHandoff,
-    leadsCapturedCount: leads.length,
-    aiResolutionRate: 92,
+    aiResolvedCount: resolvedConversations,
+    humanHandoffCount,
+    leadsCapturedCount,
+    aiResolutionRate,
     voiceUsage: {
-      usedMinutes: calls.reduce((acc, c) => acc + Math.round(c.durationSeconds / 60), 0) || 28,
-      limitMinutes: biz?.maxMonthlyVoiceMinutes || 500
+      usedMinutes: voiceMinutes,
+      limitMinutes: biz?.maxMonthlyVoiceMinutes || 0
     },
-    topQuestions: [
-      { question: 'What are your package pricing and timeline estimates?', count: 14 },
-      { question: 'Can I book a priority consultation or discovery session?', count: 11 },
-      { question: 'Do you offer direct integration with custom CRMs?', count: 9 },
-      { question: 'What is your response time for high-priority support?', count: 7 }
-    ]
+    topQuestions
   };
 }
 
