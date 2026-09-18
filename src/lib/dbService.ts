@@ -124,13 +124,74 @@ export {
 
 const PREFIX = 'ai_revenueos_';
 
+// Demo fixtures are useful for local development and the public demo, but must never
+// become tenant data in a production customer workspace.
+const PRODUCTION_DATA_KEYS = new Set([
+  'businesses',
+  'agents',
+  'knowledge',
+  'leads',
+  'contacts',
+  'deals',
+  'calls',
+  'missed_calls',
+  'appointments',
+  'estimates',
+  'follow_ups',
+  're_engagement',
+  'reviews',
+  'campaigns',
+  'integrations',
+  'notifications',
+  'audit_logs'
+]);
+
+const PRODUCTION_SEED_TENANT_IDS = new Set([
+  PUBLIC_DEMO_TENANT_ID,
+  SUMMIT_ID,
+  SHARMA_ID,
+  LONDON_ID,
+  ACME_TENANT_ID,
+  BETA_TENANT_ID
+]);
+
+function isProductionRuntime(): boolean {
+  return typeof import.meta !== 'undefined' && import.meta.env?.PROD === true;
+}
+
+function isSeedTenantRecord(value: any): boolean {
+  if (!value || typeof value !== 'object') return false;
+  if (value.isDemo === true) return true;
+
+  const tenantId = value.tenant_id || value.tenantId || value.businessId;
+  return typeof tenantId === 'string' && PRODUCTION_SEED_TENANT_IDS.has(tenantId);
+}
+
+function sanitizeProductionData<T>(key: string, value: T): T {
+  if (!isProductionRuntime() || !PRODUCTION_DATA_KEYS.has(key)) return value;
+
+  if (Array.isArray(value)) {
+    return value.filter(item => !isSeedTenantRecord(item)) as T;
+  }
+
+  return value;
+}
+
 function getItem<T>(key: string, defaultVal: T): T {
   try {
     const saved = localStorage.getItem(PREFIX + key);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      return sanitizeProductionData(key, JSON.parse(saved));
+    }
   } catch (e) {
     console.error('Error reading from localStorage', e);
   }
+
+  // Production never falls back to demo/customer fixtures.
+  if (isProductionRuntime() && PRODUCTION_DATA_KEYS.has(key)) {
+    return Array.isArray(defaultVal) ? ([] as unknown as T) : defaultVal;
+  }
+
   return defaultVal;
 }
 
@@ -169,6 +230,9 @@ export function subscribeToDataChanges(callback: (entity: string) => void): () =
 // ----------------------------------------------------
 
 export function initializeDatabaseIfNeeded() {
+  // Never initialize customer-facing production storage with demo fixtures.
+  if (isProductionRuntime()) return;
+
   if (!localStorage.getItem(PREFIX + 'initialized_v1')) {
     resetAllToSeedData();
     localStorage.setItem(PREFIX + 'initialized_v1', 'true');
