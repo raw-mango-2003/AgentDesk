@@ -1,4 +1,5 @@
 import { IWhatsAppService } from './interfaces.js';
+import { deliveryLogService } from './deliveryLogService.js';
 
 export class WhatsAppService implements IWhatsAppService {
   private provider: string;
@@ -32,13 +33,17 @@ export class WhatsAppService implements IWhatsAppService {
     message: string,
     tenantId?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    const logId = `wa_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    await deliveryLogService.record({ id: logId, tenantId, channel: 'whatsapp', recipient: toPhone, eventType: 'WHATSAPP_MESSAGE', status: 'QUEUED', provider: this.provider, retryCount: 0 });
     if (!this.hasConsent(toPhone)) {
+      await deliveryLogService.update(logId, { status: 'FAILED', error: 'Recipient has opted out of WhatsApp business communications.' });
       return { success: false, error: 'Recipient has opted out of WhatsApp business communications.' };
     }
 
     if (!this.isConfigured()) {
       const mockId = `wa_mock_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       console.log(`[WhatsAppService:DevMode] To: ${toPhone} | Tenant: ${tenantId || 'global'} | Message: "${message}"`);
+      await deliveryLogService.update(logId, { status: 'SENT', providerId: mockId });
       return { success: true, messageId: mockId };
     }
 
@@ -64,12 +69,15 @@ export class WhatsAppService implements IWhatsAppService {
       if (!response.ok) {
         const err = data.error?.message || 'Failed to dispatch WhatsApp message via Meta Cloud API.';
         console.error('[WhatsAppService:Error]', err);
+        await deliveryLogService.update(logId, { status: 'FAILED', error: err });
         return { success: false, error: err };
       }
 
+      await deliveryLogService.update(logId, { status: 'SENT', providerId: data.messages?.[0]?.id });
       return { success: true, messageId: data.messages?.[0]?.id };
     } catch (err: any) {
       console.error('[WhatsAppService:NetworkError]', err.message);
+      await deliveryLogService.update(logId, { status: 'FAILED', error: err.message });
       return { success: false, error: err.message };
     }
   }
