@@ -46,7 +46,7 @@ import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
-import { generalApiRateLimiter } from './src/server/integrations/rateLimiter.js';
+import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient } from './src/server/db/postgresClient.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
@@ -190,7 +190,8 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
     }
 
     res.setHeader('Content-Type', file.contentType);
-    res.setHeader('Content-Disposition', `inline; filename="${file.filename}"`);
+    const safeFilename = file.filename.replace(/[\\\r\n"]/g, '_').slice(0, 255);
+    res.setHeader('Content-Disposition', `inline; filename="${safeFilename}"`);
     return res.send(file.dataBuffer);
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
@@ -198,7 +199,7 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
 });
 
 // Client Error Telemetry Endpoint
-app.post('/api/logs/client-error', (req: Request, res: Response) => {
+app.post('/api/logs/client-error', clientErrorRateLimiter, (req: Request, res: Response) => {
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const message = typeof body.message === 'string' ? body.message.trim().slice(0, 1000) : 'Unknown client error';
   const time = typeof body.time === 'string' ? body.time.slice(0, 64) : undefined;
