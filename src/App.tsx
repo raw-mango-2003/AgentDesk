@@ -225,6 +225,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // The public landing page must not depend on tenant APIs or authenticated
+    // workspace state. Load workspace data only after entering the dashboard.
+    if (currentView !== 'dashboard') {
+      setWorkspaceLoading(false);
+      setWorkspaceLoadError(null);
+      return;
+    }
+
     // For Business Admin: strictly enforce active workspace matches authenticated tenantId
     if (currentUser?.role === 'BUSINESS_ADMIN' && currentUser.businessId) {
       if (activeBusinessId !== currentUser.businessId) {
