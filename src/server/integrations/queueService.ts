@@ -18,7 +18,7 @@ export class QueueService implements IQueueService {
 
   private async hydrateFromPostgres(): Promise<void> {
     try {
-      if (!(await postgresClient.initialize())) return;
+      if (!(await postgresClient.initialize())) { this.initialized = true; return; }
       const result = await postgresClient.query(
         `SELECT * FROM agentdesk_queue_jobs
          WHERE status IN ('PENDING','PROCESSING')
@@ -38,6 +38,7 @@ export class QueueService implements IQueueService {
       this.initialized = true;
     } catch (err: any) {
       console.warn('[QueueService] PostgreSQL hydration failed:', err.message);
+      this.initialized = true;
     }
   }
 
