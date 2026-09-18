@@ -91,7 +91,7 @@ export class EmailService implements IEmailService {
       // No fake delivery: accurately record NOT_CONFIGURED
       const errorMsg = 'Gmail OAuth 2.0 is not configured. Connect Gmail in Platform Admin -> Integrations.';
       record.status = 'NOT_CONFIGURED';
-      await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: 'NOT_CONFIGURED', provider: record.provider, retryCount: 0, payload: { subject: options.subject } });
+      await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: 'NOT_CONFIGURED', provider: record.provider, retryCount: 0, payload: { subject: options.subject, html: options.html, text: options.text, replyTo: options.replyTo } });
       record.failedAt = new Date().toISOString();
       record.error = errorMsg;
       console.warn(`[EmailService:NotConfigured] Cannot dispatch email to ${options.to}: ${errorMsg}`);
