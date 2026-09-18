@@ -23,7 +23,7 @@ export class SMSService implements ISMSService {
 
   public async sendSMS(to: string, message: string, tenantId?: string): Promise<{ success: boolean; sid?: string; error?: string }> {
     const logId = `sms_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    await deliveryLogService.record({ id: logId, tenantId, channel: 'sms', recipient: to, eventType: 'SMS', status: 'QUEUED', provider: 'twilio', retryCount: 0 });
+    await deliveryLogService.record({ id: logId, tenantId, channel: 'sms', recipient: to, eventType: 'SMS', status: 'QUEUED', provider: 'twilio', retryCount: 0, payload: { message } });
     if (!this.verifyPhone(to)) {
       await deliveryLogService.update(logId, { status: 'FAILED', error: 'Invalid international phone format. E.164 required.' });
       return { success: false, error: 'Invalid international phone format. E.164 required (e.g. +1234567890).' };
