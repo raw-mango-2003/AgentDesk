@@ -71,6 +71,30 @@ integrationsRouter.get(
   async (_req: Request, res: Response) => {
     try {
       const deliveryLogs = await deliveryLogService.list({ limit: 200 });
+      // Existing verified webhook events are surfaced in the same delivery stream.
+      try {
+        if (await (await import('./db/postgresClient.js')).postgresClient.initialize()) {
+          const webhookResult = await (await import('./db/postgresClient.js')).postgresClient.query(
+            `SELECT event_id, provider, event_type, status, created_at FROM agentdesk_webhook_events ORDER BY created_at DESC LIMIT 100`
+          );
+          for (const row of webhookResult.rows) {
+            deliveryLogs.push({
+              id: `webhook_${row.event_id}`,
+              channel: 'webhook',
+              eventType: row.event_type,
+              status: row.status === 'PROCESSED' ? 'SENT' : 'FAILED',
+              provider: row.provider,
+              providerId: row.event_id,
+              retryCount: 0,
+              createdAt: row.created_at,
+              updatedAt: row.created_at
+            } as any);
+          }
+          deliveryLogs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        }
+      } catch (webhookError: any) {
+        console.warn('[Monitoring] Webhook event lookup unavailable:', webhookError.message);
+      }
       const emailLogs = deliveryLogs.filter(l => l.channel === 'email');
       const queueJobs = queueService.getJobs(undefined, 100);
       const auditLogs = auditLogService.query({ limit: 100 });
