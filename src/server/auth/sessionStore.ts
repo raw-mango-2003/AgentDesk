@@ -200,13 +200,16 @@ export async function createSession(
           tenant_id = EXCLUDED.tenant_id
       `, [tokenHash, userId, normEmail, role, normTenantId, now, expiresAt]);
     } catch (err: any) {
-      console.warn('[SessionStore] PostgreSQL session write failed, continuing with signed in-memory session:', err.message);
+      console.warn('[SessionStore] PostgreSQL session write failed:', err.message);
+      if (process.env.NODE_ENV === 'production' || process.env.REQUIRE_PERSISTENT_SESSIONS === 'true') {
+        throw new Error('Persistent PostgreSQL storage is required for production sessions. Verify DATABASE_URL and database connectivity.');
+      }
     }
   } else {
-    if (process.env.REQUIRE_PERSISTENT_SESSIONS === 'true' && postgresClient.isConfigured()) {
+    if (process.env.NODE_ENV === 'production' || process.env.REQUIRE_PERSISTENT_SESSIONS === 'true') {
       throw new Error('Persistent PostgreSQL storage is required for production sessions. Configure DATABASE_URL and verify database connectivity.');
     }
-    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory and resilient cache for this runtime.');
+    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory session cache for development only.');
   }
 
   const session: ServerSession = {
@@ -232,6 +235,14 @@ export async function getSession(token: string | undefined): Promise<ServerSessi
   const tokenHash = hashSessionToken(cleanToken);
   const now = Date.now();
   const cached = activeSessions.get(tokenHash);
+
+  // Production authentication must be backed by PostgreSQL. The in-memory
+  // cache is an acceleration layer only and must not authenticate users while
+  // the authoritative store is unavailable.
+  if (process.env.NODE_ENV === 'production') {
+    const isReady = await postgresClient.initialize();
+    if (!isReady) return null;
+  }
 
   if (cached) {
     if (now > cached.expiresAt) {
