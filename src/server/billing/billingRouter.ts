@@ -7,6 +7,22 @@ import { serverBusinessesStore } from '../tenantRegistry.js';
 
 export const billingRouter = Router();
 
+// Keep payment failures actionable for customers without exposing internal provider details.
+function safePaymentError(error: any, fallback: string): string {
+  const message = typeof error?.message === 'string' ? error.message.trim() : '';
+  const lower = message.toLowerCase();
+  if (!message) return fallback;
+  if (/declin|insufficient|failed|failure|invalid|expired|cancel|timeout|network|gateway|verification|signature|duplicate|already paid/.test(lower)) {
+    return message.length <= 180 ? message : fallback;
+  }
+  return fallback;
+}
+
+function logBillingError(context: string, error: any) {
+  const message = typeof error?.message === 'string' ? error.message : String(error || 'Unknown error');
+  console.error(`[Billing API] ${context}: ${message}`);
+}
+
 // 1. Public Billing & Provider Configuration
 billingRouter.get('/config', (req: Request, res: Response) => {
   const currency = (req.query.currency as CurrencyCode) || 'USD';
@@ -338,7 +354,8 @@ billingRouter.post('/create-checkout-session', paymentRateLimiter, async (req: R
 
     return res.json(session);
   } catch (err: any) {
-    return res.status(400).json({ success: false, error: err.message });
+    logBillingError('Checkout session failed', err);
+    return res.status(503).json({ success: false, error: safePaymentError(err, 'Payment service temporarily unavailable. Please try again.') });
   }
 });
 
@@ -424,7 +441,8 @@ billingRouter.post('/verify-payment', paymentRateLimiter, async (req: Request, r
 
     return res.json(result);
   } catch (err: any) {
-    return res.status(400).json({ success: false, error: err.message });
+    logBillingError('Payment verification failed', err);
+    return res.status(400).json({ success: false, error: safePaymentError(err, 'Payment verification is still pending. Please try again or contact support.') });
   }
 });
 
@@ -658,8 +676,8 @@ billingRouter.post('/webhooks/razorpay', async (req: Request, res: Response) => 
     }
     return res.status(200).json(result);
   } catch (err: any) {
-    console.error('[Razorpay Webhook Error]', err);
-    return res.status(400).json({ success: false, error: err.message });
+    logBillingError('Razorpay webhook processing failed', err);
+    return res.status(400).json({ success: false, error: 'Webhook could not be processed.' });
   }
 });
 
