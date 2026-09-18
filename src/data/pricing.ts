@@ -23,8 +23,8 @@ export interface PlanConfig {
   name: string;
   tagline: string;
   positioning: string;
-  price: number; // USD base (numeric)
-  setupFee: number; // USD setup base (numeric)
+  readonly price: number; // Backward-compatible INR monthly price derived from pricing.INR
+  readonly setupFee: number; // Backward-compatible INR setup price derived from pricing.INR
   currency: CurrencyCode;
   billing: 'monthly';
   aiConversations: number | string;
@@ -51,8 +51,8 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     name: 'Starter',
     tagline: '1 website, 1 AI Sales Agent & 2,000 AI conversations/month with CRM foundation.',
     positioning: 'For businesses starting with AI-powered customer engagement.',
-    price: 14999,
-    setupFee: 19999,
+    get price() { return this.pricing.INR?.monthlyPrice ?? 0; },
+    get setupFee() { return this.pricing.INR?.setupPrice ?? 0; },
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 2000,
@@ -100,8 +100,8 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     positioning: 'For growing businesses that need automated lead conversion.',
     badge: 'MOST POPULAR',
     isPopular: true,
-    price: 29999,
-    setupFee: 34999,
+    get price() { return this.pricing.INR?.monthlyPrice ?? 0; },
+    get setupFee() { return this.pricing.INR?.setupPrice ?? 0; },
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 7500,
@@ -148,8 +148,8 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     name: 'Scale',
     tagline: 'Multiple websites, multiple AI agents & 20,000 AI conversations/month with monthly optimization.',
     positioning: 'For scaling companies requiring multi-agent AI and advanced automations.',
-    price: 59999,
-    setupFee: 59999,
+    get price() { return this.pricing.INR?.monthlyPrice ?? 0; },
+    get setupFee() { return this.pricing.INR?.setupPrice ?? 0; },
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 20000,
@@ -194,8 +194,8 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     tagline: 'Bespoke infrastructure, dedicated private models, multi-franchise hierarchies & custom SLAs.',
     positioning: 'For multi-location organizations, franchises & high-volume custom architectures.',
     isCustomPrice: true,
-    price: 0,
-    setupFee: 0,
+    get price() { return this.pricing.INR?.monthlyPrice ?? 0; },
+    get setupFee() { return this.pricing.INR?.setupPrice ?? 0; },
     currency: 'INR',
     billing: 'monthly',
     aiConversations: 'Custom',
