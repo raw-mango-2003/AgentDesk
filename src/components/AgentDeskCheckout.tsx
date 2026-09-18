@@ -170,6 +170,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryingPayment, setRetryingPayment] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
@@ -458,15 +459,15 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         })
       });
 
-      const sessionData = await sessionRes.json();
+      const sessionData = await sessionRes.json().catch(() => ({}));
       if (!sessionRes.ok || !sessionData.orderId) {
-        throw new Error(sessionData.error || 'Unable to initiate Razorpay checkout session.');
+        throw new Error(sessionData.error || 'Payment service temporarily unavailable. Please try again.');
       }
 
       // 4. Ensure Razorpay SDK script is ready
       const rzpReady = await ensureRazorpayLoaded();
       if (!rzpReady || typeof (window as any).Razorpay !== 'function') {
-        throw new Error('Razorpay payment gateway failed to load. Please check your internet connection.');
+        throw new Error('Payment service temporarily unavailable. Please check your connection and try again.');
       }
 
       // 5. Open standard Razorpay Checkout Modal
@@ -540,9 +541,9 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               })
             });
 
-            const verifyData = await verifyRes.json();
+            const verifyData = await verifyRes.json().catch(() => ({}));
             if (!verifyRes.ok || !verifyData.success || verifyData.status !== 'ACTIVATED') {
-              throw new Error(verifyData.error || 'Payment signature verification failed. Workspace could not be activated.');
+              throw new Error(verifyData.error || 'Payment verification is still pending. Please try again or contact support.');
             }
 
             // Sync newly created business & agent to local store
@@ -598,7 +599,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
             }
           } catch (verifyErr: any) {
             setPaymentFailed(true);
-            setError(verifyErr.message || 'Payment was not completed. Server verification failed.');
+            setError(verifyErr.message || 'Payment verification is still pending. Please try again or contact support.');
             setLoading(false);
           }
         }
@@ -607,13 +608,13 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       const rzpInstance = new (window as any).Razorpay(rzpOptions);
       rzpInstance.on('payment.failed', (resp: any) => {
         setPaymentFailed(true);
-        setError(resp.error?.description || 'Payment was not completed.');
+        setError('Payment was declined or could not be completed. Please try another payment method or try again.');
         setLoading(false);
       });
       rzpInstance.open();
     } catch (err: any) {
       setPaymentFailed(true);
-      setError(err.message || 'Payment initiation error.');
+      setError(err.message || 'Payment service temporarily unavailable. Please try again.');
       setLoading(false);
     }
   };
@@ -818,15 +819,20 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 <div className="flex flex-wrap items-center gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       setPaymentFailed(false);
                       setError(null);
-                      handlePaySecurely(e);
+                      setRetryingPayment(true);
+                      try {
+                        await handlePaySecurely(e);
+                      } finally {
+                        setRetryingPayment(false);
+                      }
                     }}
                     className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Try Payment Again</span>
+                    <span>{retryingPayment ? 'Retrying...' : 'Try Payment Again'}</span>
                   </button>
                   {onNavigateHome && (
                     <button
