@@ -109,6 +109,13 @@ export class StorageService implements IStorageService {
   }
 
   public getLocalFile(fileKey: string): StoredFileMetadata | undefined {
+    if (!this.isValidLocalFileKey(fileKey)) return undefined;
     return this.localFiles.get(fileKey);
+  }
+
+  private isValidLocalFileKey(fileKey: string): boolean {
+    if (typeof fileKey !== 'string' || fileKey.length < 3 || fileKey.length > 512) return false;
+    if (fileKey.includes('..') || fileKey.includes('\\') || fileKey.includes('\0')) return false;
+    return /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9._-]+$/.test(fileKey);
   }
 }
