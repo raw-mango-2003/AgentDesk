@@ -21,17 +21,30 @@ export interface ApiResponse<T = any> {
   status: number;
 }
 
+function getCsrfToken(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 export async function safeFetchJson<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
   try {
+    const csrfToken = getCsrfToken();
+    const method = (options?.method || 'GET').toUpperCase();
+    const requestHeaders: Record<string, string> = {
+      'Accept': 'application/json',
+      ...(options?.headers as Record<string, string> || {})
+    };
+    if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      requestHeaders['x-csrf-token'] = csrfToken;
+    }
     const res = await fetch(url, {
       ...options,
-      headers: {
-        'Accept': 'application/json',
-        ...(options?.headers || {})
-      }
+      credentials: options?.credentials || 'include',
+      headers: requestHeaders
     });
 
     const contentType = res.headers.get('content-type') || '';
