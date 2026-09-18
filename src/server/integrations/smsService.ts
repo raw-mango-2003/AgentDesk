@@ -1,4 +1,5 @@
 import { ISMSService } from './interfaces.js';
+import { deliveryLogService } from './deliveryLogService.js';
 
 export class SMSService implements ISMSService {
   private accountSid: string;
@@ -21,11 +22,15 @@ export class SMSService implements ISMSService {
   }
 
   public async sendSMS(to: string, message: string, tenantId?: string): Promise<{ success: boolean; sid?: string; error?: string }> {
+    const logId = `sms_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    await deliveryLogService.record({ id: logId, tenantId, channel: 'sms', recipient: to, eventType: 'SMS', status: 'QUEUED', provider: 'twilio', retryCount: 0 });
     if (!this.verifyPhone(to)) {
+      await deliveryLogService.update(logId, { status: 'FAILED', error: 'Invalid international phone format. E.164 required.' });
       return { success: false, error: 'Invalid international phone format. E.164 required (e.g. +1234567890).' };
     }
 
     if (!this.isConfigured()) {
+      await deliveryLogService.update(logId, { status: 'NOT_CONFIGURED', error: 'Twilio SMS service is NOT_CONFIGURED. SMS delivery is disabled.' });
       return {
         success: false,
         error: 'Twilio SMS service is NOT_CONFIGURED. SMS delivery is disabled.'
@@ -54,12 +59,15 @@ export class SMSService implements ISMSService {
       if (!response.ok) {
         const errorMsg = data.message || `Twilio SMS error code ${data.code || response.status}`;
         console.error('[SMSService:Error]', errorMsg);
+        await deliveryLogService.update(logId, { status: 'FAILED', error: errorMsg });
         return { success: false, error: errorMsg };
       }
 
+      await deliveryLogService.update(logId, { status: 'SENT', providerId: data.sid });
       return { success: true, sid: data.sid };
     } catch (err: any) {
       console.error('[SMSService:NetworkError]', err.message);
+      await deliveryLogService.update(logId, { status: 'FAILED', error: err.message || 'Failed to dispatch SMS' });
       return { success: false, error: err.message || 'Failed to dispatch SMS' };
     }
   }
