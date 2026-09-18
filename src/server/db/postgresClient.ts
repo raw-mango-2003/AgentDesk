@@ -85,6 +85,25 @@ class PostgresClient {
           this.isConnected = true;
           this.lastError = null;
 
+          // Database safety: schema initialization is strictly additive.
+          // No startup path drops, truncates, or recreates tenant/user/payment data.
+          // Schema changes use IF NOT EXISTS / additive ALTER TABLE statements so existing
+          // production records remain intact. Keep destructive data changes out of startup.
+          await client.query(`
+            CREATE TABLE IF NOT EXISTS agentdesk_schema_migrations (
+              version VARCHAR(64) PRIMARY KEY,
+              description TEXT NOT NULL,
+              applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+          `);
+
+          // Record the current additive schema baseline. ON CONFLICT makes restarts idempotent.
+          await client.query(`
+            INSERT INTO agentdesk_schema_migrations (version, description)
+            VALUES ('2026-09-18-baseline', 'Additive AgentDesk schema baseline')
+            ON CONFLICT (version) DO NOTHING;
+          `);
+
           // Initialize database schema tables if not exist
           await client.query(`
             CREATE TABLE IF NOT EXISTS agentdesk_integrations (
