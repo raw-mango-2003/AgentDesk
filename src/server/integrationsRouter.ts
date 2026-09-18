@@ -15,7 +15,8 @@ import {
   queueService,
   notificationService,
   automationEngine,
-  integrationStore
+  integrationStore,
+  deliveryLogService
 } from './integrations/index.js';
 import {
   requireAuth,
@@ -59,6 +60,89 @@ export function getAppUrl(req?: Request): string {
   }
   return 'http://localhost:3000';
 }
+
+// ----------------------------------------------------------------------------
+// PLATFORM ADMIN: DELIVERY & QUEUE LOGS
+// ----------------------------------------------------------------------------
+
+integrationsRouter.get(
+  ['/api/platform/monitoring', '/platform/monitoring'],
+  requirePlatformAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      const deliveryLogs = await deliveryLogService.list({ limit: 200 });
+      const emailLogs = deliveryLogs.filter(l => l.channel === 'email');
+      const queueJobs = queueService.getJobs(undefined, 100);
+      const auditLogs = auditLogService.getLogs(undefined, 100);
+      const recentErrors = errorMonitoringService.getRecentErrors(50);
+
+      return res.json({
+        success: true,
+        metrics: {
+          totalEmailsSent: emailLogs.filter(l => l.status === 'SENT').length,
+          totalQueueJobs: queueJobs.length,
+          deadLetterCount: queueJobs.filter(j => j.status === 'DEAD_LETTER').length,
+          totalAuditLogs: auditLogs.length,
+          totalDeliveries: deliveryLogs.length
+        },
+        deliveryLogs,
+        emailLogs: emailLogs.map(l => ({
+          id: l.id, to: l.recipient, eventType: l.eventType, status: l.status,
+          provider: l.provider, messageId: l.providerId, timestamp: l.createdAt, error: l.error,
+          retryCount: l.retryCount
+        })),
+        auditLogs,
+        queueJobs,
+        recentErrors
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to load monitoring data.' });
+    }
+  }
+);
+
+integrationsRouter.post(
+  ['/api/platform/monitoring/:deliveryId/retry', '/platform/monitoring/:deliveryId/retry'],
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    const logs = await deliveryLogService.list({ limit: 500 });
+    const log = logs.find(l => l.id === req.params.deliveryId);
+    if (!log) return res.status(404).json({ success: false, error: 'Delivery record not found.' });
+    if (!['FAILED', 'NOT_CONFIGURED'].includes(log.status)) {
+      return res.status(409).json({ success: false, error: 'Only failed or unconfigured deliveries can be retried.' });
+    }
+
+    let result: any;
+    if (log.channel === 'email') {
+      const payload = log.payload || {};
+      result = await emailService.sendEmail({
+        to: log.recipient || '',
+        subject: payload.subject || log.eventType,
+        html: payload.html || '',
+        text: payload.text,
+        replyTo: payload.replyTo,
+        tenantId: log.tenantId,
+        eventType: log.eventType,
+        metadata: { retryOf: log.id }
+      });
+    } else if (log.channel === 'sms') {
+      result = await smsService.sendSMS(log.recipient || '', String(log.payload?.message || ''), log.tenantId);
+    } else if (log.channel === 'whatsapp') {
+      result = await whatsAppService.sendWhatsAppMessage(log.recipient || '', String(log.payload?.message || ''), log.tenantId);
+    } else {
+      return res.status(400).json({ success: false, error: 'Webhook retries require the originating webhook action and are not supported by this generic retry endpoint.' });
+    }
+
+    await deliveryLogService.update(log.id, {
+      status: result?.success ? 'SENT' : (result?.status || 'FAILED'),
+      retryCount: log.retryCount + 1,
+      providerId: result?.messageId || result?.sid || log.providerId,
+      error: result?.error
+    });
+
+    return res.json({ success: !!result?.success, delivery: log, result });
+  }
+);
 
 // ----------------------------------------------------------------------------
 // 1. PLATFORM ADMIN: INTEGRATIONS MANAGEMENT
