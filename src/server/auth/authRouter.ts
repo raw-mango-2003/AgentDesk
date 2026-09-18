@@ -1825,7 +1825,6 @@ authRouter.post('/setup-account', passwordResetRateLimiter, async (req: Request,
     // Create active session cookie so owner is logged in seamlessly
     const session = await createSession(updatedUser.id, updatedUser.email, updatedUser.role, updatedUser.tenantId);
     setSessionCookie(res, session.token);
-    setSessionCookie(res, session.token);
 
     // Emit BUSINESS_CREATED event
     automationEngine.emit('BUSINESS_CREATED', {
