@@ -24,6 +24,7 @@ export const PlatformMonitoringLogs: React.FC = () => {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterQuery, setFilterQuery] = useState('');
+  const [retryingId, setRetryingId] = useState<string | null>(null);
 
   const fetchMonitoringData = async () => {
     setLoading(true);
@@ -46,6 +47,19 @@ export const PlatformMonitoringLogs: React.FC = () => {
   useEffect(() => {
     fetchMonitoringData();
   }, []);
+
+  const retryDelivery = async (id: string) => {
+    setRetryingId(id);
+    try {
+      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
+      await fetch(`/api/platform/monitoring/${encodeURIComponent(id)}/retry`, {
+        method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+      });
+      await fetchMonitoringData();
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -96,7 +110,7 @@ export const PlatformMonitoringLogs: React.FC = () => {
               }`}
             >
               <Mail className="w-3.5 h-3.5 text-blue-500" />
-              Email Delivery Logs
+              Delivery Logs
             </button>
             <button
               onClick={() => setActiveSubTab('queue')}
@@ -154,62 +168,52 @@ export const PlatformMonitoringLogs: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab 1: Email Delivery Logs */}
+        {/* Tab 1: Delivery Logs */}
         {activeSubTab === 'emails' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 border-b border-slate-200 dark:border-slate-800">
                 <tr>
+                  <th className="py-2.5 px-4 font-semibold">Channel</th>
                   <th className="py-2.5 px-4 font-semibold">Recipient</th>
-                  <th className="py-2.5 px-4 font-semibold">Template / Subject</th>
+                  <th className="py-2.5 px-4 font-semibold">Event</th>
                   <th className="py-2.5 px-4 font-semibold">Status</th>
-                  <th className="py-2.5 px-4 font-semibold">Provider</th>
-                  <th className="py-2.5 px-4 font-semibold">Message ID</th>
+                  <th className="py-2.5 px-4 font-semibold">Provider / ID</th>
+                  <th className="py-2.5 px-4 font-semibold">Retries</th>
                   <th className="py-2.5 px-4 font-semibold">Timestamp</th>
+                  <th className="py-2.5 px-4 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {data?.emailLogs && data.emailLogs.length > 0 ? (
-                  data.emailLogs
-                    .filter(log => !filterQuery || log.to.toLowerCase().includes(filterQuery.toLowerCase()) || (log.subject && log.subject.toLowerCase().includes(filterQuery.toLowerCase())))
+                {data?.deliveryLogs && data.deliveryLogs.length > 0 ? (
+                  data.deliveryLogs
+                    .filter(log => !filterQuery || String(log.recipient || '').toLowerCase().includes(filterQuery.toLowerCase()) || log.eventType.toLowerCase().includes(filterQuery.toLowerCase()) || log.status.toLowerCase().includes(filterQuery.toLowerCase()))
                     .map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                        <td className="py-2.5 px-4 font-medium text-slate-900 dark:text-slate-200 font-mono">
-                          {log.to}
-                        </td>
-                        <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">
-                          <span className="font-semibold text-slate-800 dark:text-slate-300">
-                            {log.template || 'Direct Email'}
-                          </span>
-                          <div className="text-[11px] text-slate-500 truncate max-w-xs">{log.subject}</div>
-                        </td>
+                        <td className="py-2.5 px-4 font-semibold uppercase text-slate-600 dark:text-slate-300">{log.channel}</td>
+                        <td className="py-2.5 px-4 font-mono text-slate-700 dark:text-slate-300">{log.recipient || '—'}</td>
+                        <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">{log.eventType}</td>
                         <td className="py-2.5 px-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            log.status === 'SENT' 
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400' 
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-400'
-                          }`}>
-                            {log.status === 'SENT' ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${log.status === 'SENT' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400'}`}>
                             {log.status}
                           </span>
+                          {log.error && <div className="text-[10px] text-rose-500 mt-1 max-w-xs truncate" title={log.error}>{log.error}</div>}
                         </td>
-                        <td className="py-2.5 px-4 font-mono text-[11px] text-slate-500 uppercase">
-                          {log.provider}
-                        </td>
-                        <td className="py-2.5 px-4 font-mono text-[11px] text-slate-500 truncate max-w-[120px]">
-                          {log.messageId || '—'}
-                        </td>
-                        <td className="py-2.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
-                          {new Date(log.timestamp).toLocaleTimeString()}
+                        <td className="py-2.5 px-4 font-mono text-[10px] text-slate-500">{log.provider || '—'} / {log.providerId || '—'}</td>
+                        <td className="py-2.5 px-4 font-mono">{log.retryCount}</td>
+                        <td className="py-2.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">{new Date(log.createdAt).toLocaleString()}</td>
+                        <td className="py-2.5 px-4">
+                          {['FAILED', 'NOT_CONFIGURED'].includes(log.status) && (
+                            <button onClick={() => retryDelivery(log.id)} disabled={retryingId === log.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-600 text-white text-[10px] font-semibold disabled:opacity-50">
+                              <RotateCcw className={`w-3 h-3 ${retryingId === log.id ? 'animate-spin' : ''}`} />
+                              Retry
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))
                 ) : (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
-                      No transactional emails dispatched yet.
-                    </td>
-                  </tr>
+                  <tr><td colSpan={8} className="py-8 text-center text-slate-400 text-xs">No delivery records yet.</td></tr>
                 )}
               </tbody>
             </table>
