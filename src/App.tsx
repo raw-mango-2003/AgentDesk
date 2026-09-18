@@ -203,31 +203,20 @@ export default function App() {
     const handlePopState = () => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
-      if (path === '/pricing' || hash === '#pricing') {
-        setCurrentView('pricing');
-      } else if (path === '/login' || hash === '#login') {
-        setCurrentView('login');
-      } else if (path === '/platform/login' || hash === '#platform-login' || hash === '#platform/login') {
-        setCurrentView('platform_login');
-      } else if (path === '/get-started' || path === '/signup' || hash === '#get-started' || hash === '#signup') {
-        setCurrentView('onboarding');
-      } else if (path === '/billing' || hash === '#billing') {
+      const resolvedView = resolveAppRoute(path, hash);
+
+      if (resolvedView === 'dashboard') {
         setCurrentView('dashboard');
-        setActiveTab('billing');
-      } else if (path === '/embed' || hash === '#embed') {
-        setCurrentView('dashboard');
-        setActiveTab('embed');
-      } else if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
-        setCurrentView('dashboard');
-        setActiveTab('admin');
-        setAdminSubTab('my_agent');
-      } else if (path.startsWith('/admin') || hash.startsWith('#admin')) {
-        setCurrentView('dashboard');
-        setActiveTab('admin');
-      } else if (path.startsWith('/dashboard') || hash.startsWith('#dashboard')) {
-        setCurrentView('dashboard');
-      } else if (path === '/' || path === '') {
-        setCurrentView('landing');
+        if (path === '/billing' || hash === '#billing') setActiveTab('billing');
+        else if (path === '/embed' || hash === '#embed') setActiveTab('embed');
+        else if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
+          setActiveTab('admin');
+          setAdminSubTab('my_agent');
+        } else if (path.startsWith('/admin') || hash.startsWith('#admin')) {
+          setActiveTab('admin');
+        }
+      } else {
+        setCurrentView(resolvedView);
       }
     };
 
