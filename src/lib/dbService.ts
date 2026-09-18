@@ -153,10 +153,14 @@ export function subscribeToDataChanges(callback: (entity: string) => void): () =
   const handler = (e: any) => {
     callback(e.detail?.entity || 'all');
   };
+  const storageHandler = () => callback('storage');
+
   window.addEventListener('revenueos_data_changed', handler);
-  window.addEventListener('storage', () => callback('storage'));
+  window.addEventListener('storage', storageHandler);
+
   return () => {
     window.removeEventListener('revenueos_data_changed', handler);
+    window.removeEventListener('storage', storageHandler);
   };
 }
 
