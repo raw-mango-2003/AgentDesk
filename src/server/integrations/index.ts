@@ -13,6 +13,7 @@ import { AuditLogService } from './auditLogService.js';
 import { QueueService } from './queueService.js';
 import { NotificationService } from './notificationService.js';
 import { AutomationEngine } from './automationEngine.js';
+import { deliveryLogService } from './deliveryLogService.js';
 
 // Central singletons
 export const gmailService = new GmailService();
@@ -37,6 +38,8 @@ export const notificationService = new NotificationService(
   analyticsService,
   auditLogService
 );
+
+export { deliveryLogService };
 
 export const automationEngine = new AutomationEngine(
   notificationService,
