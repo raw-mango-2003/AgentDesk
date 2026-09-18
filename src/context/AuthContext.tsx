@@ -101,6 +101,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.user) {
         setCurrentUser(res.user);
       }
+      const sessionToken = (res as any).token || (res as any).sessionToken;
+      if (sessionToken && typeof window !== 'undefined') {
+        localStorage.setItem('agentdesk_session_token', sessionToken);
+        sessionStorage.setItem('agentdesk_session_token', sessionToken);
+      }
       if (res.tenant) {
         setCurrentTenant(res.tenant);
         setActiveBusinessIdState(res.tenant.id);
@@ -148,6 +153,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.user) {
         setCurrentUser(res.user);
       }
+      const sessionToken = (res as any).token || (res as any).sessionToken;
+      if (sessionToken && typeof window !== 'undefined') {
+        localStorage.setItem('agentdesk_session_token', sessionToken);
+        sessionStorage.setItem('agentdesk_session_token', sessionToken);
+      }
       setCurrentTenant(null);
       setActiveBusinessIdState('platform');
 
@@ -178,6 +188,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (res.user) {
         setCurrentUser(res.user);
+      }
+      const sessionToken = (res as any).token || (res as any).sessionToken;
+      if (sessionToken && typeof window !== 'undefined') {
+        localStorage.setItem('agentdesk_session_token', sessionToken);
+        sessionStorage.setItem('agentdesk_session_token', sessionToken);
       }
 
       return {
@@ -297,6 +312,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
     localStorage.removeItem('agentdesk_auth_user');
     localStorage.removeItem('agentdesk_active_tenant_id');
+    localStorage.removeItem('agentdesk_session_token');
+    sessionStorage.removeItem('agentdesk_session_token');
     setCurrentUser(null);
     setCurrentTenant(null);
     setActiveBusinessIdState('');

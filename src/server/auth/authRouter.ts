@@ -140,23 +140,21 @@ export function extractCookie(cookieHeader: string | undefined, name: string): s
  */
 export function setSessionCookie(res: Response, token: string) {
   const isProd = process.env.NODE_ENV === 'production';
-  const sessionCookie = [
+  const cookieFlags = [
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    'SameSite=Lax',
-    `Max-Age=${7 * 24 * 60 * 60}`,
-    ...(isProd ? ['Secure'] : [])
+    ...(isProd ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
+    `Max-Age=${7 * 24 * 60 * 60}`
   ].join('; ');
   const csrfToken = crypto.randomBytes(32).toString('hex');
-  const csrfCookie = [
+  const csrfFlags = [
     `agentdesk_csrf=${csrfToken}`,
     'Path=/',
-    'SameSite=Lax',
-    `Max-Age=${7 * 24 * 60 * 60}`,
-    ...(isProd ? ['Secure'] : [])
+    ...(isProd ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
+    `Max-Age=${7 * 24 * 60 * 60}`
   ].join('; ');
-  res.setHeader('Set-Cookie', [sessionCookie, csrfCookie]);
+  res.setHeader('Set-Cookie', [cookieFlags, csrfFlags]);
 }
 /**
  * Extract auth token from Authorization header or HttpOnly cookie
@@ -512,6 +510,8 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
 
       return res.json({
         success: true,
+        token: session.token,
+        sessionToken: session.token,
         user: sanitizeUser(user),
         mustChangePassword: !!user.mustChangePassword,
         redirect: '/platform/dashboard',
@@ -604,6 +604,8 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
     // Requirement 4 & 15: If mustChangePassword, return mustChangePassword flag
     return res.json({
       success: true,
+      token: session.token,
+      sessionToken: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirectUrl: user.mustChangePassword ? '/change-password' : '/business/dashboard',
@@ -671,6 +673,8 @@ authRouter.post('/verify-2fa-login', authRateLimiter, async (req: Request, res: 
 
     return res.json({
       success: true,
+      token: session.token,
+      sessionToken: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirectUrl: user.role === 'PLATFORM_ADMIN' ? '/platform/dashboard' : (user.mustChangePassword ? '/change-password' : '/business/dashboard'),
@@ -839,6 +843,8 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
 
     return res.json({
       success: true,
+      token: session.token,
+      sessionToken: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirect: redirectTarget,
@@ -1847,6 +1853,8 @@ authRouter.post('/setup-account', passwordResetRateLimiter, async (req: Request,
 
     return res.json({
       success: true,
+      token: session.token,
+      sessionToken: session.token,
       message: 'Account successfully set up! Your business workspace is initialized.',
       user: {
         id: updatedUser.id,

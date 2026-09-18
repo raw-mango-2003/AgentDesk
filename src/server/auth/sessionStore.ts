@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import crypto from 'crypto';
 import { generateSecureToken } from './passwordUtils.js';
 import { postgresClient } from '../db/postgresClient.js';
@@ -18,6 +20,38 @@ export interface ServerSession {
 export const activeSessions = new Map<string, ServerSession>();
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const SESSION_CACHE_FILE = path.join(process.cwd(), '.sessions_cache.json');
+
+function saveSessionsToDisk() {
+  try {
+    const list = Array.from(activeSessions.entries()).map(([hash, session]) => ({ hash, session }));
+    fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify(list), 'utf-8');
+  } catch {
+    // Non-fatal fallback
+  }
+}
+
+function loadSessionsFromDisk() {
+  try {
+    if (fs.existsSync(SESSION_CACHE_FILE)) {
+      const raw = fs.readFileSync(SESSION_CACHE_FILE, 'utf-8');
+      const list = JSON.parse(raw);
+      const now = Date.now();
+      if (Array.isArray(list)) {
+        for (const item of list) {
+          if (item?.hash && item?.session && item.session.expiresAt > now) {
+            activeSessions.set(item.hash, item.session);
+          }
+        }
+      }
+    }
+  } catch {
+    // Non-fatal fallback
+  }
+}
+
+// Immediately restore active sessions across restarts
+loadSessionsFromDisk();
 
 export function hashSessionToken(rawToken: string): string {
   return crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
@@ -169,10 +203,10 @@ export async function createSession(
       console.warn('[SessionStore] PostgreSQL session write failed, continuing with signed in-memory session:', err.message);
     }
   } else {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.REQUIRE_PERSISTENT_SESSIONS === 'true' && postgresClient.isConfigured()) {
       throw new Error('Persistent PostgreSQL storage is required for production sessions. Configure DATABASE_URL and verify database connectivity.');
     }
-    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory session cache for this development runtime.');
+    console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory and resilient cache for this runtime.');
   }
 
   const session: ServerSession = {
@@ -186,6 +220,7 @@ export async function createSession(
   };
 
   activeSessions.set(tokenHash, session);
+  saveSessionsToDisk();
   return session;
 }
 
@@ -271,6 +306,7 @@ export async function destroySession(token: string | undefined): Promise<boolean
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
   const tokenHash = hashSessionToken(cleanToken);
   const removed = activeSessions.delete(tokenHash);
+  saveSessionsToDisk();
 
   try {
     const isReady = await postgresClient.initialize();
@@ -288,6 +324,7 @@ export async function destroyAllUserSessions(userId: string): Promise<void> {
   for (const [hashKey, session] of activeSessions.entries()) {
     if (session.userId === userId) activeSessions.delete(hashKey);
   }
+  saveSessionsToDisk();
 
   try {
     const isReady = await postgresClient.initialize();

@@ -89,7 +89,14 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'rules' | 'test_runner' | 'logs'>('rules');
 
   const getAuthHeaders = (): Record<string, string> => {
-    return { 'Accept': 'application/json' };
+    const token = typeof window !== 'undefined'
+      ? (localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token') || '')
+      : '';
+    const headers: Record<string, string> = { 'Accept': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   };
 
   const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> => {
@@ -307,12 +314,22 @@ export const PlatformAutomationsDashboard: React.FC = () => {
             <div className="font-bold">Automation data could not be loaded</div>
             <div className="text-xs text-rose-300/90 mt-1">{loadError}</div>
           </div>
-          <button
-            onClick={fetchAutomations}
-            className="shrink-0 px-3 py-2 bg-rose-900 hover:bg-rose-800 border border-rose-700 rounded-xl text-xs font-bold"
-          >
-            Retry
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {loadError.toLowerCase().includes('unauthorized') && (
+              <a
+                href="/platform/login"
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition"
+              >
+                Sign In as Admin
+              </a>
+            )}
+            <button
+              onClick={fetchAutomations}
+              className="px-3 py-2 bg-rose-900 hover:bg-rose-800 border border-rose-700 rounded-xl text-xs font-bold transition"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       )}
 
