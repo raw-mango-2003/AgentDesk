@@ -181,16 +181,6 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
             </button>
           </form>
 
-          {/* Test credentials info note for reviewer verification */}
-          <div className="mt-5 p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
-            <div className="font-semibold text-slate-300 flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>Registered Business Accounts:</span>
-            </div>
-            <div>• Summit Home Services: <code className="text-blue-300 bg-slate-900 px-1 py-0.5 rounded">summit@example.com</code> / <code className="text-slate-300 bg-slate-900 px-1 py-0.5 rounded">Summit2026!</code></div>
-            <div>• Sharma Dental Care: <code className="text-blue-300 bg-slate-900 px-1 py-0.5 rounded">sharma@example.com</code> / <code className="text-slate-300 bg-slate-900 px-1 py-0.5 rounded">Sharma2026!</code></div>
-          </div>
-
           <div className="mt-6 pt-5 border-t border-slate-800 text-center">
             <p className="text-xs text-slate-400">
               Don't have a business account?{' '}

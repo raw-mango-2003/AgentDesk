@@ -41,10 +41,9 @@ export class WhatsAppService implements IWhatsAppService {
     }
 
     if (!this.isConfigured()) {
-      const mockId = `wa_mock_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      console.log(`[WhatsAppService:DevMode] To: ${toPhone} | Tenant: ${tenantId || 'global'} | Message: "${message}"`);
-      await deliveryLogService.update(logId, { status: 'SENT', providerId: mockId });
-      return { success: true, messageId: mockId };
+      const errorMsg = 'WhatsApp Meta Cloud API is not configured. Missing WHATSAPP_API_KEY or WHATSAPP_PHONE_NUMBER_ID.';
+      await deliveryLogService.update(logId, { status: 'NOT_CONFIGURED', error: errorMsg });
+      return { success: false, error: errorMsg };
     }
 
     try {
@@ -93,9 +92,7 @@ export class WhatsAppService implements IWhatsAppService {
     }
 
     if (!this.isConfigured()) {
-      const mockId = `wa_tpl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      console.log(`[WhatsAppService:DevMode:Template] To: ${toPhone} | Template: ${templateName} | Params: ${JSON.stringify(parameters)}`);
-      return { success: true, messageId: mockId };
+      return { success: false, error: 'WhatsApp Meta Cloud API is not configured. Missing WHATSAPP_API_KEY or WHATSAPP_PHONE_NUMBER_ID.' };
     }
 
     return this.sendWhatsAppMessage(toPhone, `[Template: ${templateName}] ${parameters.join(' - ')}`, tenantId);

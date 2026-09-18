@@ -32,12 +32,32 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | 
   }
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AppErrorBoundary>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </AppErrorBoundary>
-  </StrictMode>,
-);
+try {
+  const rootEl = document.getElementById('root');
+  if (rootEl) {
+    createRoot(rootEl).render(
+      <StrictMode>
+        <AppErrorBoundary>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </AppErrorBoundary>
+      </StrictMode>,
+    );
+  }
+} catch (err: any) {
+  console.error('[AgentDesk] Root initialization error:', err);
+  const rootEl = document.getElementById('root');
+  if (rootEl) {
+    rootEl.innerHTML = `
+      <div style="min-height:100vh;background:#020617;color:#f8fafc;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif">
+        <div style="max-width:680px;width:100%;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:28px">
+          <h1 style="font-size:22px;font-weight:700;margin:0 0 12px">AgentDesk Startup Interrupted</h1>
+          <p style="color:#cbd5e1;margin:0 0 16px">A browser initialization error occurred.</p>
+          <pre style="whiteSpace:pre-wrap;background:#020617;padding:14px;border-radius:10px;color:#fca5a5;font-size:13px">${err?.message || String(err)}</pre>
+          <button onclick="window.location.reload()" style="margin-top:16px;padding:10px 18px;border-radius:8px;border:0;cursor:pointer;background:#2563eb;color:#fff;font-weight:600">Reload Application</button>
+        </div>
+      </div>
+    `;
+  }
+}

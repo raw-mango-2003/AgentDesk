@@ -290,38 +290,8 @@ export class BillingService {
   }
 
   private seedDefaultAuditLogs() {
-    this.paymentAuditLogsStore = [
-      {
-        id: 'audit_init_1',
-        timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
-        action: 'tenant_activated',
-        tenantId: 'sharma-dental-care',
-        businessName: 'Sharma Dental Care',
-        customerEmail: 'rahul@sharmadental.in',
-        provider: 'razorpay',
-        providerOrderId: 'order_live_rzp_init01',
-        providerPaymentId: 'pay_live_rzp_994821',
-        amount: 64998,
-        currency: 'INR',
-        status: 'PAID',
-        method: 'UPI',
-        details: { setupFee: 34999, subscriptionFee: 29999, tax: 0, plan: 'growth' }
-      },
-      {
-        id: 'audit_init_2',
-        timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-        action: 'order_created',
-        tenantId: 'summit-home-services',
-        businessName: 'Summit Home Services',
-        customerEmail: 'admin@summithome.com',
-        provider: 'razorpay',
-        providerOrderId: 'order_live_rzp_init02',
-        amount: 119998,
-        currency: 'INR',
-        status: 'PENDING',
-        details: { plan: 'scale', displayCurrency: 'USD' }
-      }
-    ];
+    // Audit logs must record real payment lifecycle events; initialize as clean empty log store
+    this.paymentAuditLogsStore = [];
   }
 
   private seedDefaultCurrencies() {
@@ -539,24 +509,20 @@ export class BillingService {
       const monthly = currencyPrices.monthly;
       const setup = currencyPrices.setup;
 
-      const provider: PaymentProviderName = 'razorpay';
-      const nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + 18);
-
       this.tenantBillingStore.set(t.id, {
         businessId: t.id,
         planId: t.plan,
         planName: p.name,
-        provider,
-        providerCustomerId: `cust_${provider}_${t.id}`,
-        providerSubscriptionId: `sub_${provider}_${t.id}_882`,
+        provider: 'razorpay' as PaymentProviderName,
+        providerCustomerId: '',
+        providerSubscriptionId: '',
         currency: t.currency,
         monthlyFee: monthly,
         implementationFee: setup,
         implementationFeePaid: true,
         status: 'active',
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        autoRenew: true,
+        nextBillingDate: '',
+        autoRenew: false,
         paymentFailed: false,
         createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
         updatedAt: new Date().toISOString()

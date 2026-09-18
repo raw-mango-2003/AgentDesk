@@ -75,12 +75,12 @@ export class StorageService implements IStorageService {
     this.localFiles.set(fileKey, metadata);
 
     if (!this.isConfigured()) {
-      // Local development URL
-      const mockUrl = `/api/storage/files/${encodeURIComponent(fileKey)}`;
+      // Local storage URL served by internal static route
+      const localUrl = `/api/storage/files/${encodeURIComponent(fileKey)}`;
       return {
         success: true,
         fileKey,
-        url: mockUrl
+        url: localUrl
       };
     }
 

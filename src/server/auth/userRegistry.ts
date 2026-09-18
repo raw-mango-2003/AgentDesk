@@ -49,9 +49,9 @@ export function initUserRegistry() {
   if (isUsersInitialized) return;
   isUsersInitialized = true;
 
-  // Demo users are opt-in and their passwords must come from environment variables.
-  // No demo password is embedded in production source code.
-  if (process.env.ENABLE_DEMO_USERS === 'true') {
+  // Demo users are opt-in and restricted exclusively to non-production environments.
+  // Never seed or expose demo accounts in production.
+  if (process.env.ENABLE_DEMO_USERS === 'true' && process.env.NODE_ENV !== 'production') {
     const demoUsers = [
       {
         id: 'usr_summit_admin',

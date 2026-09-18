@@ -83,19 +83,91 @@ const appDirectory = getAppDirectory();
 const app = express();
 const PORT = 3000;
 
-// Production CORS Configuration: restricted to APP_URL, localhost, and authenticated origins
-const allowedOrigins = [
-  process.env.APP_URL,
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-].filter(Boolean) as string[];
+// Security Headers Middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // Allow embedding within AI Studio and Google preview environments
+  res.setHeader(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://*.ai.studio https://ai.studio https://*.google.com https://*.run.app;"
+  );
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
+// Production & Preview CORS Configuration
+const isProductionEnv = process.env.NODE_ENV === 'production';
+
+function isAllowedOrigin(origin: string, req: Request): boolean {
+  if (!origin) return true;
+
+  // Development: allow localhost and loopback
+  if (!isProductionEnv) {
+    if (
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:') ||
+      origin.startsWith('https://localhost:')
+    ) {
+      return true;
+    }
+  }
+
+  // Explicit APP_URL match
+  if (process.env.APP_URL) {
+    try {
+      if (origin === new URL(process.env.APP_URL).origin) return true;
+    } catch {}
+  }
+
+  // Canonical Production Domains & Preview Containers
+  if (
+    origin === 'https://agentdesk.ai.studio' ||
+    origin === 'https://ai.studio' ||
+    origin.endsWith('.ai.studio') ||
+    origin.endsWith('.run.app')
+  ) {
+    return true;
+  }
+
+  // Same-origin verification: check against Host / X-Forwarded-Host
+  const host = (req.headers['x-forwarded-host'] as string) || req.headers.host;
+  if (host) {
+    const cleanHost = host.split(',')[0].trim().toLowerCase();
+    try {
+      const originHost = new URL(origin).host.toLowerCase();
+      if (originHost === cleanHost) return true;
+    } catch {}
+  }
+
+  return false;
+}
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Note: `req` can be accessed via closure if needed, but here callback(null, isAllowed)
     if (!origin) return callback(null, true);
-    if (process.env.NODE_ENV !== 'production' || allowedOrigins.includes(origin)) {
+    
+    // Quick origin check
+    if (
+      !isProductionEnv &&
+      (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))
+    ) {
       return callback(null, true);
     }
+
+    if (
+      origin === 'https://agentdesk.ai.studio' ||
+      origin === 'https://ai.studio' ||
+      origin.endsWith('.ai.studio') ||
+      origin.endsWith('.run.app')
+    ) {
+      return callback(null, true);
+    }
+
     if (process.env.APP_URL) {
       try {
         if (origin === new URL(process.env.APP_URL).origin) {
@@ -103,7 +175,9 @@ app.use(cors({
         }
       } catch {}
     }
-    return callback(new Error('CORS origin not allowed'), false);
+
+    // Do NOT throw an uncaught Error (which triggers 500 error in Express)
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -632,7 +706,8 @@ app.get('/api/test/conversation-suite', (req: Request, res: Response) => {
   }
 
   const { businessId } = req.query;
-  const targetId = (businessId as string) || DEMO_BUSINESS_ID;
+  const targetId = (businessId as string) || (process.env.NODE_ENV !== 'production' ? DEMO_BUSINESS_ID : null);
+  if (!targetId) return res.status(400).json({ error: 'businessId query parameter is required.' });
   const { business, knowledge } = resolveBusinessAndKnowledge(targetId);
   if (!business) return res.status(404).json({ error: 'Business not found.' });
   const results = runConversationTestSuite(business, knowledge);
@@ -661,7 +736,10 @@ app.post('/api/knowledge/ingest-website', async (req: Request, res: Response) =>
   }
 
   const cleanUrl = url.trim().startsWith('http') ? url.trim() : `https://${url.trim()}`;
-  const targetBizId = businessId || DEMO_BUSINESS_ID;
+  const targetBizId = businessId || (process.env.NODE_ENV !== 'production' ? DEMO_BUSINESS_ID : null);
+  if (!targetBizId) {
+    return res.status(400).json({ error: 'businessId is required.' });
+  }
 
   const extractedItems = [
     { title: 'About & Services Overview', category: 'General', type: 'website', businessId: targetBizId, sourceUrl: cleanUrl, content: `Services and business overview parsed from ${cleanUrl}. Offering core client solutions, consulting, and customer support.` },
@@ -683,7 +761,10 @@ app.post('/api/knowledge/ingest-website', async (req: Request, res: Response) =>
 app.post('/api/knowledge/detect-conflicts', async (req: Request, res: Response) => {
   const { businessId, knowledgeItems = [] } = req.body;
   const conflicts: any[] = [];
-  const targetBizId = businessId || DEMO_BUSINESS_ID;
+  const targetBizId = businessId || (process.env.NODE_ENV !== 'production' ? DEMO_BUSINESS_ID : null);
+  if (!targetBizId) {
+    return res.status(400).json({ error: 'businessId is required.' });
+  }
 
   const priceItems = knowledgeItems.filter((k: any) => 
     (k.content || '').toLowerCase().includes('fee') || 
@@ -1002,7 +1083,10 @@ app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, async (req
 // GET Admin Live Conversation Records with Intelligence Metadata
 app.get('/api/admin/conversations/:businessId', requirePlatformAdmin, async (req: Request, res: Response) => {
   const { businessId } = req.params;
-  const normBiz = (businessId || DEMO_BUSINESS_ID).toLowerCase();
+  const normBiz = (businessId || '').trim().toLowerCase();
+  if (!normBiz) {
+    return res.status(400).json({ success: false, error: 'businessId is required.' });
+  }
   
   const records = await conversationStore.getConversationsByBusinessAsync(normBiz);
 
@@ -1716,9 +1800,9 @@ async function startServer() {
 
   wss.on('connection', (ws: WebSocket) => {
     console.log('[WebSocket] Client connected to Voice AI Receptionist');
-    let currentBusinessId = DEMO_BUSINESS_ID;
-    let currentBusiness = DEMO_BUSINESS;
-    let currentKnowledge = SEED_KNOWLEDGE_ITEMS.filter(k => k.businessId === DEMO_BUSINESS_ID);
+    let currentBusinessId: string | null = null;
+    let currentBusiness: any = null;
+    let currentKnowledge: any[] = [];
     let sessionStartTime = Date.now();
     let currentConvRecord: ConversationRecord | null = null;
 
@@ -1729,7 +1813,12 @@ async function startServer() {
         try { payload = JSON.parse(messageStr); } catch (e) { return; }
 
         if (payload.type === 'init') {
-          currentBusinessId = payload.businessId || DEMO_BUSINESS_ID;
+          currentBusinessId = payload.businessId || (process.env.NODE_ENV !== 'production' ? DEMO_BUSINESS_ID : null);
+          if (!currentBusinessId) {
+            ws.send(JSON.stringify({ type: 'error', error: 'businessId is required to initialize voice session.' }));
+            ws.close(1008, 'Missing businessId');
+            return;
+          }
           const resolved = resolveBusinessAndKnowledge(currentBusinessId, payload.knowledgeBase);
           if (!resolved.business || !resolved.agent) {
             ws.send(JSON.stringify({ type: 'error', error: 'Business or agent not found.' }));
@@ -1863,10 +1952,15 @@ async function startServer() {
     });
   });
 
-  const productionDistPath = path.join(process.cwd(), 'dist', 'index.html');
-  const isProduction = process.env.NODE_ENV === 'production' && fs.existsSync(productionDistPath);
+  const candidateDirs = [
+    path.join(process.cwd(), 'dist'),
+    path.join(appDirectory, 'dist'),
+    appDirectory
+  ];
+  const distPath = candidateDirs.find(p => fs.existsSync(path.join(p, 'index.html'))) || null;
+  const isProduction = process.env.NODE_ENV === 'production' || (Boolean(distPath) && process.env.NODE_ENV !== 'development');
 
-  if (!isProduction) {
+  if (!isProduction || !distPath) {
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const vite = await createViteServer({
       server: { 
@@ -1877,14 +1971,52 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = fs.existsSync(path.join(process.cwd(), 'dist'))
-      ? path.join(process.cwd(), 'dist')
-      : path.join(appDirectory, 'dist');
+    // 1. Immutable, cached static assets (/assets) with strict no-fallthrough (prevents HTML fallback for missing JS/CSS)
+    const assetsDir = path.join(distPath, 'assets');
+    if (fs.existsSync(assetsDir)) {
+      app.use('/assets', express.static(assetsDir, {
+        immutable: true,
+        maxAge: '1y',
+        fallthrough: false,
+        setHeaders: (res) => {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+        }
+      }));
+    }
 
-    app.use(express.static(distPath));
+    // 2. Root static files from dist (favicon, manifest, etc.)
+    app.use(express.static(distPath, {
+      maxAge: '1h',
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.svg') || filePath.endsWith('.ico')) {
+          res.setHeader('Access-Control-Allow-Origin', '*');
+        }
+      }
+    }));
+
+    // 3. Strict 404 guard: Missing static files, assets, or APIs must never fall through to index.html
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.path.startsWith('/assets') || req.path.startsWith('/dist') || req.path.startsWith('/api') || path.extname(req.path)) {
+        return res.status(404).json({
+          success: false,
+          error: {
+            code: 'NOT_FOUND',
+            message: `Resource not found: ${req.path}`
+          }
+        });
+      }
+      next();
+    });
+
+    // 4. SPA Fallback: Serve dist/index.html with no-cache so browsers always receive latest bundle references
     app.get('*', (_req: Request, res: Response) => {
       const indexPath = path.join(distPath, 'index.html');
       if (fs.existsSync(indexPath)) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         res.sendFile(indexPath);
       } else {
         res.status(404).send('Not Found');
@@ -1894,6 +2026,7 @@ async function startServer() {
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`AgentDesk Server & WebSocket running on http://0.0.0.0:${PORT}`);
+    console.log(`[AgentDesk Diagnostics] Environment: ${process.env.NODE_ENV || 'development'} | Frontend Mode: ${isProduction && distPath ? `Production Dist (${distPath})` : 'Vite Middleware'} | Database: ${postgresClient.isConfigured() ? 'Configured' : 'Unconfigured'} | Gemini: ${process.env.GEMINI_API_KEY ? 'Configured' : 'Unconfigured'} | Razorpay: ${(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) ? 'Configured' : 'Unconfigured'}`);
     validateEnvironmentOnStartup(gmailService.getConnectionStatus());
   });
 }

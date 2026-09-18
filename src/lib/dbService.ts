@@ -1755,12 +1755,8 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
     implementationFeePaid: serverBillingData?.billing?.implementationFeePaid ?? true,
     monthlyFee: serverBillingData?.billing?.monthlyFee || planPricing.monthlyPrice,
     billingCycle: 'monthly',
-    nextBillingDate: serverBillingData?.billing?.nextBillingDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    }),
-    autoRenew: serverBillingData?.billing?.autoRenew ?? true,
+    nextBillingDate: serverBillingData?.billing?.nextBillingDate || '',
+    autoRenew: serverBillingData?.billing?.autoRenew ?? false,
     paymentFailed: serverBillingData?.billing?.paymentFailed ?? false,
     paymentMethod: primaryPaymentMethod ? {
       id: primaryPaymentMethod.id,
@@ -1770,7 +1766,7 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
       isDefault: primaryPaymentMethod.isPrimary ?? true,
       provider: primaryPaymentMethod.provider
     } : {
-      brand: 'Card',
+      brand: 'None',
       last4: '—',
       expiry: '',
       isDefault: false

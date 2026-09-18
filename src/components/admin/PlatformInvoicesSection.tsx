@@ -48,55 +48,7 @@ export const PlatformInvoicesSection: React.FC = () => {
       if (res.success && Array.isArray(res.invoices)) {
         setInvoices(res.invoices);
       } else {
-        // Fallback default sample invoices if no invoices recorded yet
-        setInvoices([
-          {
-            id: 'INV-2025-001',
-            businessId: 'summit-home-services',
-            customerName: 'Summit Home Services LLC',
-            customerEmail: 'billing@summithomeservices.com',
-            amount: 299,
-            currency: 'USD',
-            status: 'PAID',
-            paidAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-            createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-            provider: 'paypal',
-            lineItems: [
-              { description: 'Growth Plan Monthly Subscription', amount: 299, quantity: 1 }
-            ]
-          },
-          {
-            id: 'INV-2025-002',
-            businessId: 'apex-dental',
-            customerName: 'Apex Dental Care',
-            customerEmail: 'admin@apexdental.co.uk',
-            amount: 799,
-            currency: 'GBP',
-            status: 'PAID',
-            paidAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-            createdAt: new Date(Date.now() - 86400000 * 6).toISOString(),
-            provider: 'paypal',
-            lineItems: [
-              { description: 'Enterprise Plan Setup Fee', amount: 499, quantity: 1 },
-              { description: 'Monthly AI Receptionist License', amount: 300, quantity: 1 }
-            ]
-          },
-          {
-            id: 'INV-2025-003',
-            businessId: 'metro-realty-group',
-            customerName: 'Metro Realty Group',
-            customerEmail: 'finance@metrorealty.com',
-            amount: 24999,
-            currency: 'INR',
-            status: 'PAID',
-            paidAt: new Date(Date.now() - 86400000 * 8).toISOString(),
-            createdAt: new Date(Date.now() - 86400000 * 9).toISOString(),
-            provider: 'razorpay',
-            lineItems: [
-              { description: 'Starter Plan - 1 Month', amount: 24999, quantity: 1 }
-            ]
-          }
-        ]);
+        setInvoices([]);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load invoices');
