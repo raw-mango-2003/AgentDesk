@@ -163,7 +163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       a: 'Implementation includes 12 comprehensive phases: business discovery, AI voice persona engineering, semantic knowledge-base ingestion, CRM pipeline setup, lead scoring weights, multi-touch follow-up workflow design, telephony/WhatsApp integration, rigorous boundary testing, live deployment, staff training, and dedicated launch monitoring.'
     },
     {
-      q: 'What is the monthly Platform & Managed AI Operations fee?',
+      q: 'What is the monthly AgentDesk platform & managed AI operations fee?',
       a: 'The monthly platform fee covers software licensing, autonomous multi-agent orchestration, CRM hosting, custom dashboards, platform monitoring, ongoing prompt fine-tuning, and security updates, and standard monthly usage allowances for voice minutes, messaging, and AI computations.'
     },
     {
@@ -190,7 +190,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-4 sm:mb-6">
-            One AI system for{' '}
+            Your AI employee for{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
               every customer conversation.
             </span>
@@ -239,7 +239,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <Globe className="w-4 h-4 text-purple-400 shrink-0" />
-              <span>Global Multi-Currency Native (USD • INR • GBP)</span>
+              <span>USD • INR • GBP</span>
             </div>
           </div>
         </div>
@@ -298,8 +298,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-[11px] font-black uppercase tracking-wider text-purple-400">Workspace preview</span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white mt-2">One place to see customer activity</h2>
-            <p className="text-sm text-slate-400 mt-2">A simple operating view for conversations, leads, pipeline activity, and follow-up.</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mt-2">Your AI employee, at a glance</h2>
+            <p className="text-sm text-slate-400 mt-2">See what your AI employee is handling and what your team needs to act on.</p>
           </div>
           <div className="rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
@@ -362,13 +362,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>Transparent, High-ROI Plans</span>
+            <span>Plans for your AI employee</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight break-words">
-            Engineered for Modern Revenue Teams
+            Choose the AI employee setup that fits your team
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-2">
-            From emerging practices to high-volume multi-location enterprises.
+            Start with the core customer workflow and add managed capabilities as your needs grow.
           </p>
 
           {/* Currency Toggle */}
@@ -471,7 +471,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           />
         </div>
 
-        {/* 5. 12-Step Implementation Box */}
+        {/* 5. Managed AI Employee Setup */}
         <div className="p-8 rounded-3xl bg-slate-900/60 border border-slate-800 mb-16">
           <div className="text-center max-w-2xl mx-auto mb-8">
             <h3 className="text-xl font-bold text-white mb-2">{IMPLEMENTATION_EXPLANATION.title}</h3>
