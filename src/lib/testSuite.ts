@@ -42,6 +42,34 @@ export interface TestCaseResult {
   turns: TestResultTurn[];
 }
 
+export function runBusinessResolutionSafetyTests(resolveBusinessAndKnowledge: (identifier?: string) => { business: any; knowledge: any[]; agent: any }): TestCaseResult[] {
+  const unknownIds = [
+    'definitely-not-a-real-tenant',
+    'tenant_missing_9f4c2b',
+    'agent_missing_7a81e3'
+  ];
+  const turns: TestResultTurn[] = unknownIds.map(id => {
+    const resolved = resolveBusinessAndKnowledge(id);
+    const passed = !resolved.business && resolved.knowledge.length === 0 && !resolved.agent;
+    return {
+      userQuery: `Unknown identifier: ${id}`,
+      expectedKeywords: ['business = null', 'knowledge = []', 'agent = null'],
+      actualReply: passed ? 'Rejected as unknown identifier.' : 'Identifier unexpectedly resolved.',
+      resolvedEntity: null,
+      resolvedIntent: 'BUSINESS_RESOLUTION',
+      isClosing: false,
+      passed,
+      failureReason: passed ? undefined : 'Unknown identifier resolved to tenant data or a synthesized agent.'
+    };
+  });
+  return [{
+    testId: 'BUSINESS_RESOLUTION_FAIL_CLOSED',
+    testName: 'Unknown Tenant/Agent Resolution Fails Closed',
+    passed: turns.every(t => t.passed),
+    turns
+  }];
+}
+
 export function runConversationTestSuite(business: any, knowledgeBase: any[]): TestCaseResult[] {
   const testResults: TestCaseResult[] = [];
 
