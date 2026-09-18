@@ -34,7 +34,7 @@ export class WhatsAppService implements IWhatsAppService {
     tenantId?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     const logId = `wa_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    await deliveryLogService.record({ id: logId, tenantId, channel: 'whatsapp', recipient: toPhone, eventType: 'WHATSAPP_MESSAGE', status: 'QUEUED', provider: this.provider, retryCount: 0 });
+    await deliveryLogService.record({ id: logId, tenantId, channel: 'whatsapp', recipient: toPhone, eventType: 'WHATSAPP_MESSAGE', status: 'QUEUED', provider: this.provider, retryCount: 0, payload: { message } });
     if (!this.hasConsent(toPhone)) {
       await deliveryLogService.update(logId, { status: 'FAILED', error: 'Recipient has opted out of WhatsApp business communications.' });
       return { success: false, error: 'Recipient has opted out of WhatsApp business communications.' };
