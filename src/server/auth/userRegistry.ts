@@ -394,7 +394,6 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
       const res = await postgresClient.query(
         `SELECT * FROM agentdesk_users 
          WHERE LOWER(TRIM(email)) = $1 
-            OR (role = 'PLATFORM_ADMIN' AND ($1 = 'admin' OR $1 = 'admin@agentdesk' OR $1 = 'admin@agentdesk.ai' OR $1 = 'admin@agentdesk.com')) 
          LIMIT 1`,
         [clean]
       );
