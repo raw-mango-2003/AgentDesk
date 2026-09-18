@@ -556,6 +556,62 @@ async function checkAndIncrementConversationTurns(convId: string, maxTurns: numb
 }
 
 // API Routes
+// Tenant discovery endpoints
+// Public callers may resolve only the intentionally public AgentDesk demo tenant.
+// Authenticated platform admins may list all tenant workspaces.
+app.get('/api/tenants', async (req: Request, res: Response) => {
+  try {
+    const token = extractTokenFromRequest(req);
+    const session = await getSession(token);
+    const user = session ? getUserById(session.userId) : null;
+
+    if (user?.role === 'PLATFORM_ADMIN') {
+      return res.json({ success: true, tenants: getAllTenants() });
+    }
+
+    const demo = getTenant(PUBLIC_DEMO_TENANT_ID);
+    return res.json({ success: true, tenants: demo ? [demo] : [] });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'TENANT_LIST_ERROR', message: 'Unable to load tenant workspaces.' } });
+  }
+});
+
+app.get('/api/tenants/:tenantId', async (req: Request, res: Response) => {
+  try {
+    const tenantId = String(req.params.tenantId || '').trim().toLowerCase();
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_TENANT_ID', message: 'Tenant ID is required.' } });
+    }
+
+    // The public demo is intentionally resolvable without authentication.
+    if (tenantId === PUBLIC_DEMO_TENANT_ID.toLowerCase() || tenantId === PUBLIC_DEMO_AGENT_ID.toLowerCase()) {
+      const resolved = resolveBusinessAndKnowledge(tenantId);
+      if (!resolved.business) {
+        return res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant not found.' } });
+      }
+      return res.json({ success: true, tenant: resolved.business });
+    }
+
+    const token = extractTokenFromRequest(req);
+    const session = await getSession(token);
+    const user = session ? getUserById(session.userId) : null;
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid authentication session required.' });
+    }
+    if (user.role !== 'PLATFORM_ADMIN' && user.tenantId.toLowerCase() !== tenantId) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant access is strictly prohibited.' });
+    }
+
+    const tenant = getTenant(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant not found.' } });
+    }
+    return res.json({ success: true, tenant });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: { code: 'TENANT_LOOKUP_ERROR', message: 'Unable to load the requested tenant.' } });
+  }
+});
+
 app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
   res.removeHeader('Access-Control-Allow-Origin');
   res.setHeader('Content-Type', 'application/json');
