@@ -276,6 +276,89 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
+      {/* 2. Problem Section */}
+      <section className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
+          <div>
+            <span className="text-[11px] font-black uppercase tracking-wider text-rose-400">The problem</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mt-2 tracking-tight">Customer enquiries do not wait for business hours.</h2>
+            <p className="text-sm text-slate-400 mt-4 leading-relaxed">Leads can arrive through your website, phone, messages, or follow-up lists while your team is busy or unavailable. AgentDesk brings those customer interactions into one workflow so teams can respond, qualify, follow up, and track outcomes from a single workspace.</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              ['Missed enquiries', 'Questions arrive when staff are unavailable.'],
+              ['Slow follow-up', 'Interested prospects can require several touchpoints.'],
+              ['Fragmented tools', 'Customer conversations and pipeline data can live in separate systems.'],
+              ['Limited visibility', 'Teams need a clear view of conversations, leads, and revenue activity.']
+            ].map(([title, desc]) => (
+              <div key={title} className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800">
+                <h3 className="text-xs font-bold text-white">{title}</h3>
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. How It Works */}
+      <section className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="text-[11px] font-black uppercase tracking-wider text-blue-400">How it works</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mt-2">From first enquiry to measurable follow-up</h2>
+          </div>
+          <div className="grid md:grid-cols-4 gap-4">
+            {[
+              ['01', 'Connect', 'Configure the customer channels and business knowledge your workspace will use.'],
+              ['02', 'Respond', 'The AI receptionist handles supported customer questions and captures enquiry details.'],
+              ['03', 'Qualify', 'Leads can be organized with qualification data, tags, and pipeline stages.'],
+              ['04', 'Follow Up', 'Teams can manage follow-up activity and review customer and revenue signals in the workspace.']
+            ].map(([number, title, desc]) => (
+              <div key={number} className="p-5 rounded-3xl bg-slate-950/70 border border-slate-800">
+                <span className="text-[10px] font-black text-blue-400">{number}</span>
+                <h3 className="text-sm font-bold text-white mt-2">{title}</h3>
+                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4. Dashboard Preview */}
+      <section className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center max-w-2xl mx-auto mb-10">
+            <span className="text-[11px] font-black uppercase tracking-wider text-purple-400">Workspace preview</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-white mt-2">One place to see customer activity</h2>
+            <p className="text-sm text-slate-400 mt-2">A simple operating view for conversations, leads, pipeline activity, and follow-up.</p>
+          </div>
+          <div className="rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2"><Bot className="w-4 h-4 text-blue-400" /><span className="text-xs font-bold text-white">AgentDesk Workspace</span></div>
+              <span className="text-[10px] text-slate-500">Live workspace view</span>
+            </div>
+            <div className="p-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                ['Conversations', '128', 'Customer interactions'],
+                ['New Leads', '34', 'Captured enquiries'],
+                ['Qualified', '19', 'Leads needing action'],
+                ['Follow-Ups', '27', 'Scheduled activities']
+              ].map(([label, value, detail]) => (
+                <div key={label} className="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                  <p className="text-[10px] uppercase tracking-wider text-slate-500">{label}</p>
+                  <p className="text-2xl font-black text-white mt-1">{value}</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{detail}</p>
+                </div>
+              ))}
+            </div>
+            <div className="px-5 pb-5 grid lg:grid-cols-3 gap-3">
+              <div className="lg:col-span-2 p-4 rounded-2xl bg-slate-950 border border-slate-800"><p className="text-xs font-bold text-white mb-3">Recent customer activity</p><div className="space-y-2">{['Website enquiry received', 'Lead qualification completed', 'Follow-up activity scheduled'].map(item => <div key={item} className="flex items-center gap-2 text-[11px] text-slate-400"><CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />{item}</div>)}</div></div>
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800"><p className="text-xs font-bold text-white mb-3">Pipeline</p><div className="space-y-2">{['New', 'Qualified', 'Proposal', 'Won'].map((stage, i) => <div key={stage} className="flex justify-between text-[11px]"><span className="text-slate-400">{stage}</span><span className="text-white font-bold">{[12, 8, 5, 3][i]}</span></div>)}</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 2. Omnichannel Pillars Bento Grid */}
       <section className="py-16 px-4 sm:px-8 bg-slate-900/40 border-y border-slate-800/80">
         <div className="max-w-7xl mx-auto">
@@ -442,7 +525,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* 6. FAQ Section */}
+      {/* 6. Final CTA */}
+      <section className="py-16 px-4 sm:px-8">
+        <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-br from-blue-950/80 via-slate-900 to-indigo-950/70 border border-blue-500/20 p-8 sm:p-12 text-center">
+          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">Ready to centralize your customer interactions?</h2>
+          <p className="text-sm text-slate-400 max-w-2xl mx-auto mt-3 leading-relaxed">Start with AgentDesk, explore the AI receptionist, or talk to the team about a managed deployment.</p>
+          <div className="flex flex-col sm:flex-row justify-center gap-3 mt-7">
+            <button onClick={onNavigateGetStarted || onOpenAuth} className="px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"><span>Get Started</span><ArrowRight className="w-4 h-4" /></button>
+            <button onClick={onOpenDemo} className="px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"><Bot className="w-4 h-4 text-emerald-400" /><span>Test AI Receptionist</span></button>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. FAQ Section */}
       <section className="py-16 px-4 sm:px-8 max-w-4xl mx-auto border-t border-slate-800">
         <div className="text-center mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -481,7 +576,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* 7. Footer */}
+      {/* 8. Footer */}
       <footer className="border-t border-slate-800 py-10 px-4 sm:px-8 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 font-bold text-slate-300">
