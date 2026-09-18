@@ -697,7 +697,7 @@ app.post('/api/knowledge', requireTenantAccess, (req: Request, res: Response) =>
   }
   serverKnowledgeStore.set(normTenantId, list);
 
-  console.log(`[Knowledge Engine] Saved item "${newItem.title}" (${newItem.id}) for tenant "${normTenantId}". Total items: ${list.length}`);
+  console.log(`[Knowledge Engine] Saved item (${newItem.id}) for tenant. Total items: ${list.length}`);
 
   return res.status(201).json({
     success: true,
@@ -740,7 +740,7 @@ app.put('/api/knowledge/:id', requireTenantAccess, (req: Request, res: Response)
   list[idx] = updatedItem;
   serverKnowledgeStore.set(normTenantId, list);
 
-  console.log(`[Knowledge Engine] Updated item "${updatedItem.title}" (${id}) for tenant "${normTenantId}".`);
+  console.log(`[Knowledge Engine] Updated knowledge item (${id}) for tenant.`);
 
   return res.json({
     success: true,
@@ -767,7 +767,7 @@ app.delete(['/api/knowledge/:tenantId/:id', '/api/knowledge/:id'], requireTenant
   }
 
   serverKnowledgeStore.set(normTenantId, filtered);
-  console.log(`[Knowledge Engine] Deleted item "${id}" for tenant "${normTenantId}". Remaining: ${filtered.length}`);
+  console.log(`[Knowledge Engine] Deleted knowledge item (${id}) for tenant. Remaining: ${filtered.length}`);
 
   return res.json({
     success: true,
@@ -795,7 +795,7 @@ app.post('/api/admin/businesses', requirePlatformAdmin, (req: Request, res: Resp
   const existing = serverBusinessesStore.get(normId) || {};
   const merged = { ...existing, ...businessData, id: normId };
   serverBusinessesStore.set(normId, merged);
-  console.log(`[Admin Tenant Registry] Synced business "${merged.name || normId}" (${normId})`);
+  console.log(`[Admin Tenant Registry] Synced business (${normId})`);
   return res.json({
     success: true,
     business: merged
@@ -868,7 +868,7 @@ app.post('/api/admin/onboard-business', requirePlatformAdmin, async (req: Reques
   };
 
   serverBusinessesStore.set(newId, newBusiness);
-  console.log(`[Admin Tenant Registry] Onboarded new tenant "${name}" (${newId})`);
+  console.log(`[Admin Tenant Registry] Onboarded new tenant (${newId})`);
 
   return res.json({
     success: true,
@@ -895,7 +895,7 @@ app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, async (req
   serverBusinessesStore.delete(normBiz);
   serverKnowledgeStore.delete(normBiz);
 
-  console.log(`[Admin Tenant Management] Business "${normBiz}" and ${deletedCount} conversation records deleted by ${actorEmail || 'platform-admin'}`);
+  console.log(`[Admin Tenant Management] Business (${normBiz}) and ${deletedCount} conversation records deleted by authenticated admin`);
 
   return res.json({
     success: true,
@@ -1021,7 +1021,7 @@ app.post('/api/agents', requireTenantAccess, (req: Request, res: Response) => {
     serverAgentsStore.set(savedAgent.publicId.trim().toLowerCase(), savedAgent);
   }
 
-  console.log(`[Agent Registry] Synced agent "${savedAgent.name}" (${normId}) for tenant "${normTenant}"`);
+  console.log(`[Agent Registry] Synced agent (${normId}) for tenant`);
 
   return res.json({
     success: true,
@@ -1235,7 +1235,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
       console.warn('[ConversationStore:AsyncPersistError]', err.message);
     });
 
-    console.log(`[Widget Chat Engine] Biz: "${currentBusiness.id}" (${currentBusiness.name}) | Query: "${normInput.raw}" -> Reply: "${validatedReply}"`);
+    console.log(`[Widget Chat Engine] Processed request for tenant (${currentBusiness.id})`);
 
     return res.json({
       success: true,
@@ -1284,7 +1284,7 @@ app.post('/api/widget/lead', (req: Request, res: Response) => {
     createdAt: new Date().toISOString()
   };
 
-  console.log(`[Widget Lead Capture] New lead captured for tenant "${business.name}" (${business.id}): ${leadRecord.name} <${leadRecord.email}>`);
+  console.log(`[Widget Lead Capture] New lead captured for tenant (${business.id})`);
 
   return res.json({
     success: true,
@@ -1485,7 +1485,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       console.warn('[ConversationStore:AsyncPersistError]', err.message);
     });
 
-    console.log(`[Conversation Intelligence] Biz: "${currentBusiness.id}" (${currentBusiness.name}) | Intent: "${classifiedIntent.primaryType}" | Query: "${normInput.raw}" -> Reply: "${validatedReply}"`);
+    console.log(`[Conversation Intelligence] Processed request for tenant (${currentBusiness.id}) with intent "${classifiedIntent.primaryType}"`);
 
     return res.json({
       success: true,
@@ -1614,7 +1614,7 @@ async function startServer() {
           const assistantName = currentBusiness.agentSettings?.agentName || `${currentBusiness.name} AI Assistant`;
           const dynamicGreeting = currentBusiness.voiceGreeting || `Hello! I am ${assistantName} for ${currentBusiness.name}. How can I assist you today?`;
 
-          console.log(`[WebSocket] Session initialized for "${currentBusiness.name}" (${currentBusiness.id}) | Voice: ${currentBusiness.voice} | Conv ID: "${currentConvRecord.conversationId}"`);
+          console.log(`[WebSocket] Voice session initialized for tenant (${currentBusiness.id})`);
 
           ws.send(JSON.stringify({
             type: 'ready',
@@ -1703,7 +1703,7 @@ async function startServer() {
 
     ws.on('close', () => {
       const durationSeconds = Math.round((Date.now() - sessionStartTime) / 1000);
-      console.log(`[WebSocket] Voice session closed for business "${currentBusiness.name}". Duration: ${durationSeconds}s`);
+      console.log(`[WebSocket] Voice session closed for tenant (${currentBusiness.id}). Duration: ${durationSeconds}s`);
     });
   });
 
