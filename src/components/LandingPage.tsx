@@ -122,71 +122,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const pillars = [
     {
-      icon: <Bot className="w-5 h-5 text-blue-400" />,
-      title: 'AI Website Chat Receptionist',
-      desc: 'Answers questions from business knowledge base, captures leads, and books appointments 24/7 without hallucination.'
+      icon: <MessageSquare className="w-5 h-5 text-blue-400" />,
+      title: 'Respond',
+      desc: 'Answer supported customer questions using your business knowledge and keep conversations moving when your team is unavailable.'
     },
     {
-      icon: <PhoneCall className="w-5 h-5 text-emerald-400" />,
-      title: 'AI Voice Receptionist',
-      desc: 'Handles inbound phone calls with natural human-quality conversational voice synthesis, call recording, and intent routing.'
+      icon: <UserCheck className="w-5 h-5 text-emerald-400" />,
+      title: 'Capture & Qualify',
+      desc: 'Collect enquiry details, organize leads, and give your team the context they need to decide what happens next.'
     },
     {
-      icon: <PhoneMissed className="w-5 h-5 text-amber-400" />,
-      title: 'Missed Call Text Back',
-      desc: 'Instantly sends an automated SMS or WhatsApp when a call is missed, recovering 75%+ of leads before they call a competitor.'
+      icon: <Repeat className="w-5 h-5 text-purple-400" />,
+      title: 'Follow Up',
+      desc: 'Keep customer follow-up organized across supported channels so interested prospects do not get forgotten.'
     },
     {
-      icon: <Sparkles className="w-5 h-5 text-purple-400" />,
-      title: 'AI Lead Qualification & Scoring',
-      desc: 'Evaluates budget, timeline, decision authority, and urgent need on a 1-100 scale with automated tagging (HOT, WARM, COLD).'
+      icon: <Calendar className="w-5 h-5 text-cyan-400" />,
+      title: 'Book',
+      desc: 'Help customers move from conversation to appointment with scheduling workflows and calendar integrations where configured.'
     },
     {
-      icon: <Layers className="w-5 h-5 text-cyan-400" />,
-      title: '360° CRM & Deals Pipeline',
-      desc: 'Complete contact timeline, multi-stage drag-and-drop Kanban pipeline, deal values, and real-time conversion metrics.'
+      icon: <PhoneCall className="w-5 h-5 text-amber-400" />,
+      title: 'Voice',
+      desc: 'Handle supported inbound phone conversations with an AI receptionist and route interactions when human help is needed.'
     },
     {
-      icon: <Repeat className="w-5 h-5 text-emerald-400" />,
-      title: 'Automated Follow-Up Sequences',
-      desc: 'Multi-touch omni-channel sequences across Day 0, Day 1, Day 3, and Day 7 via SMS, Email, and WhatsApp.'
-    },
-    {
-      icon: <RotateCcw className="w-5 h-5 text-purple-400" />,
-      title: 'Customer Re-Engagement',
-      desc: 'Reactivates stale contacts and past customers with seasonal promotions, maintenance reminders, and VIP discounts.'
-    },
-    {
-      icon: <Star className="w-5 h-5 text-amber-400" />,
-      title: 'Review Management & Sentiment Hub',
-      desc: 'Automates Google and Yelp review generation, analyzes customer sentiment, and drafts AI-assisted responses.'
-    },
-    {
-      icon: <Calendar className="w-5 h-5 text-blue-400" />,
-      title: 'Appointment Booking & Reminders',
-      desc: 'Two-way calendar sync, timezone conversion, buffer management, and automated 24h/2h show-up reminders.'
-    },
-    {
-      icon: <FileText className="w-5 h-5 text-indigo-400" />,
-      title: 'Estimate & Quote Follow-Up',
-      desc: 'Tracks sent proposals, dispatches automated check-ins before expiry, and alerts staff when a quote is viewed.'
-    },
-    {
-      icon: <Send className="w-5 h-5 text-blue-400" />,
-      title: 'Compliant Cold Outreach',
-      desc: 'Personalized cold email & LinkedIn sequences with domain warmup, unsubscribe headers, and anti-spam rate throttling.'
-    },
-    {
-      icon: <Globe className="w-5 h-5 text-emerald-400" />,
-      title: 'Global Multi-Currency & Regional Engine',
-      desc: 'Native formatting for USD ($), INR (₹), and GBP (£), multi-timezone support, Twilio SMS & WhatsApp Business API.'
+      icon: <TrendingUp className="w-5 h-5 text-indigo-400" />,
+      title: 'Show What Matters',
+      desc: 'See conversations, leads, pipeline activity, and follow-up from one workspace instead of piecing together multiple tools.'
     }
   ];
 
   const faqs = [
     {
-      q: 'How is AI RevenueOS different from a generic chatbot or virtual receptionist?',
-      a: 'AI RevenueOS is not just a chatbot or answering service. It is a comprehensive, autonomous revenue operating system combining 24/7 AI Voice reception, website chat, instant missed-call recovery, automated lead qualification, integrated CRM, multi-touch follow-up sequences, and database reactivation in one unified platform.'
+      q: 'How is AgentDesk different from a generic chatbot or virtual receptionist?',
+      a: 'AgentDesk combines an AI receptionist with lead capture, qualification, follow-up, booking, and a workspace for your team. The goal is simple: handle routine customer conversations automatically and give your team the right context when human attention is needed.'
     },
     {
       q: 'What is included in the one-time implementation fee?',
@@ -216,19 +186,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-4 sm:mb-6 shadow-md">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>AgentDesk Technologies • AI RevenueOS Platform</span>
+            <span>AgentDesk • AI Employee for customer conversations</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-4 sm:mb-6">
             One AI system for{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
-              every customer interaction.
+              every customer conversation.
             </span>
           </h1>
 
           <p className="text-sm sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-10 font-normal">
-            Turn every customer interaction into revenue. AI RevenueOS is the complete AI-powered customer revenue and operations platform: 
-            <span className="text-white font-semibold"> AI Receptionist + CRM + Follow-Up + Re-Engagement + Revenue Automation</span>.
+            Let AgentDesk handle the first response, capture the enquiry, qualify the lead, and keep follow-up moving. Your team steps in when human attention is needed.
           </p>
 
           {/* Action CTAs */}
@@ -262,11 +231,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-slate-400">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>12-Step Full Implementation</span>
+              <span>Managed setup</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Lock className="w-4 h-4 text-blue-400 shrink-0" />
-              <span>Managed AI Operations & SLA</span>
+              <span>AI receptionist + workspace</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Globe className="w-4 h-4 text-purple-400 shrink-0" />
@@ -364,10 +333,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              12 Autonomous Engines in One Unified Platform
+              One AI employee. Four jobs.
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-2">
-              Replace fragmented software subscriptions with a single, intelligent revenue operating system.
+              AgentDesk turns customer conversations into organized follow-up, without asking your team to manage another complicated workflow.
             </p>
           </div>
 
@@ -528,8 +497,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* 6. Final CTA */}
       <section className="py-16 px-4 sm:px-8">
         <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-br from-blue-950/80 via-slate-900 to-indigo-950/70 border border-blue-500/20 p-8 sm:p-12 text-center">
-          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">Ready to centralize your customer interactions?</h2>
-          <p className="text-sm text-slate-400 max-w-2xl mx-auto mt-3 leading-relaxed">Start with AgentDesk, explore the AI receptionist, or talk to the team about a managed deployment.</p>
+          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">Ready to give your team an AI employee?</h2>
+          <p className="text-sm text-slate-400 max-w-2xl mx-auto mt-3 leading-relaxed">Start with AgentDesk, test the AI receptionist, and see how customer conversations can move from first response to follow-up.</p>
           <div className="flex flex-col sm:flex-row justify-center gap-3 mt-7">
             <button onClick={onNavigateGetStarted || onOpenAuth} className="px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"><span>Get Started</span><ArrowRight className="w-4 h-4" /></button>
             <button onClick={onOpenDemo} className="px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"><Bot className="w-4 h-4 text-emerald-400" /><span>Test AI Receptionist</span></button>
@@ -544,7 +513,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Frequently Asked Questions
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 mt-2">
-            Everything you need to know about AI RevenueOS architecture and deployment.
+            Simple answers about how AgentDesk works and what you can configure.
           </p>
         </div>
 
@@ -581,7 +550,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 font-bold text-slate-300">
             <Bot className="w-4 h-4 text-blue-400" />
-            <span>AI RevenueOS</span>
+            <span>AgentDesk</span>
             <span className="text-[10px] text-slate-500 font-normal">by AgentDesk Technologies • © {new Date().getFullYear()}</span>
           </div>
           <div className="flex items-center gap-6 text-[11px] text-slate-400">
