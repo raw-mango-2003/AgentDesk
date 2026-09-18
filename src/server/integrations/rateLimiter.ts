@@ -121,6 +121,13 @@ export const generalApiRateLimiter = createRateLimiter({
   keyPrefix: 'api'
 });
 
+export const clientErrorRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000, // 1 minute
+  maxRequests: 10,
+  message: 'Client error telemetry rate limit exceeded.',
+  keyPrefix: 'client_error'
+});
+
 export const embedApiRateLimiter = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute
   maxRequests: 60, // 60 queries per minute per IP for public chat embed
