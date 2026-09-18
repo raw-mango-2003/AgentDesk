@@ -158,9 +158,8 @@ app.use('/api', generalApiRateLimiter);
 app.use('/api/billing', billingRouter);
 
 // Mount Authentication API Router
+// Authentication has one canonical mount. Legacy duplicate mounts were removed to prevent route ambiguity.
 app.use('/api/auth', authRouter);
-app.use('/api', authRouter);
-app.use('/api/platform', authRouter);
 
 // Mount Production Integrations, Notifications, Security & Health API Router
 app.use('/api', integrationsRouter);
