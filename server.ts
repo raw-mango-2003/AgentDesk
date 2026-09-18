@@ -510,6 +510,7 @@ app.get('/api/test/conversation-suite', (req: Request, res: Response) => {
   const { businessId } = req.query;
   const targetId = (businessId as string) || DEMO_BUSINESS_ID;
   const { business, knowledge } = resolveBusinessAndKnowledge(targetId);
+  if (!business) return res.status(404).json({ error: 'Business not found.' });
   const results = runConversationTestSuite(business, knowledge);
   const totalPassed = results.filter(r => r.passed).length;
   return res.json({
@@ -951,6 +952,7 @@ app.get('/api/agents/:agentId', requireTenantAccess, (req: Request, res: Respons
   }
 
   const { business } = resolveBusinessAndKnowledge(agent.id);
+  if (!business) return res.status(404).json({ error: 'Business not found.' });
 
   return res.json({
     success: true,
@@ -1056,6 +1058,7 @@ app.get('/api/widget/config', (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const targetId = (req.query.agentId || req.query.businessId || req.query.tenantId || '').toString();
   const { business, agent, knowledge } = resolveBusinessAndKnowledge(targetId);
+  if (!business || !agent) return res.status(404).json({ error: 'Agent or business not found.' });
 
   // Return strictly sanitized public metadata (zero private tokens or cross-tenant data)
   return res.json({
@@ -1146,6 +1149,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     const targetIdentifier = agentId || tenantId || businessId;
     const { business: currentBusiness, knowledge: effectiveKnowledge, agent } = resolveBusinessAndKnowledge(targetIdentifier);
+    if (!currentBusiness || !agent) return res.status(404).json({ success: false, error: 'Agent or business not found.' });
 
     const record = getOrCreateConversation(safeConvId, currentBusiness.id);
 
@@ -1237,6 +1241,7 @@ app.post('/api/widget/lead', (req: Request, res: Response) => {
   const { agentId, businessId, tenantId, conversationId, name, email, phone, notes } = req.body;
   const targetIdentifier = agentId || tenantId || businessId;
   const { business } = resolveBusinessAndKnowledge(targetIdentifier);
+  if (!business) return res.status(404).json({ success: false, error: 'Business not found.' });
 
   const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const leadRecord = {
@@ -1266,6 +1271,7 @@ app.post('/api/widget/lead', (req: Request, res: Response) => {
 app.get('/api/agent/:agentId/widget-config', (req: Request, res: Response) => {
   const { agentId } = req.params;
   const { business, agent, knowledge } = resolveBusinessAndKnowledge(agentId);
+  if (!business || !agent) return res.status(404).json({ success: false, error: 'Agent or business not found.' });
 
   return res.json({
     success: true,
@@ -1322,6 +1328,7 @@ app.get(['/api/test/production-smoke-tests', '/api/test/smoke-tests'], async (_r
 app.get('/api/business/:businessId/widget-config', (req: Request, res: Response) => {
   const { businessId } = req.params;
   const { business, agent } = resolveBusinessAndKnowledge(businessId);
+  if (!business || !agent) return res.status(404).json({ success: false, error: 'Business not found.' });
   return res.json({ success: true, business, agent });
 });
 
@@ -1379,6 +1386,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       targetIdentifier,
       knowledgeBase
     );
+    if (!currentBusiness || !agent) return res.status(404).json({ success: false, error: 'Agent or business not found.' });
 
     const record = getOrCreateConversation(safeConvId, currentBusiness.id);
 
@@ -1485,6 +1493,7 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
     }
 
     const { business, knowledge } = resolveBusinessAndKnowledge(businessId, knowledgeBase);
+    if (!business) return res.status(404).json({ success: false, error: 'Business not found.' });
     const record = getOrCreateConversation(conversationId, business.id);
 
     const normInput = normalizeInput(transcript);
@@ -1575,6 +1584,11 @@ async function startServer() {
         if (payload.type === 'init') {
           currentBusinessId = payload.businessId || DEMO_BUSINESS_ID;
           const resolved = resolveBusinessAndKnowledge(currentBusinessId, payload.knowledgeBase);
+          if (!resolved.business || !resolved.agent) {
+            ws.send(JSON.stringify({ type: 'error', error: 'Business or agent not found.' }));
+            ws.close(1008, 'Unknown tenant');
+            return;
+          }
           currentBusiness = resolved.business;
           currentKnowledge = resolved.knowledge;
           sessionStartTime = Date.now();
