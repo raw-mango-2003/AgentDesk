@@ -2464,29 +2464,34 @@ export class BillingService {
       return { success: false, handled: false, error: result.message || 'Webhook rejected by provider' };
     }
 
-    // Idempotency: avoid double handling of identical webhook payload ID
+    // Idempotency: make PostgreSQL uniqueness authoritative when available.
+    // The in-memory set is only a fallback for development / DB outages.
     const eventId = body?.id || body?.event_id || `${providerName}_${result.event}_${result.paymentId || result.subscriptionId || Date.now()}`;
     if (this.processedWebhookEvents.has(eventId)) {
       return { success: true, handled: true, duplicate: true, message: 'Event already processed' };
     }
-    this.processedWebhookEvents.add(eventId);
 
-    // Persist webhook event in PostgreSQL if available
-    postgresClient.initialize().then(connected => {
-      if (connected) {
-        postgresClient.query(`
-          INSERT INTO agentdesk_webhook_events (event_id, provider, event_type, status, payload, created_at)
-          VALUES ($1, $2, $3, $4, $5, NOW())
-          ON CONFLICT (event_id) DO NOTHING
-        `, [
-          eventId,
-          providerName,
-          result.event || 'unknown',
-          'PROCESSED',
-          JSON.stringify(body || {})
-        ]).catch(() => {});
+    const dbConnected = await postgresClient.initialize();
+    if (dbConnected) {
+      const insertResult = await postgresClient.query(`
+        INSERT INTO agentdesk_webhook_events (event_id, provider, event_type, status, payload, created_at)
+        VALUES ($1, $2, $3, $4, $5, NOW())
+        ON CONFLICT (event_id) DO NOTHING
+      `, [
+        eventId,
+        providerName,
+        result.event || 'unknown',
+        'PROCESSED',
+        JSON.stringify(body || {})
+      ]);
+
+      if ((insertResult?.rowCount ?? 0) === 0) {
+        this.processedWebhookEvents.add(eventId);
+        return { success: true, handled: true, duplicate: true, message: 'Event already processed' };
       }
-    }).catch(() => {});
+    }
+
+    this.processedWebhookEvents.add(eventId);
 
     // Extract IDs across providers
     let orderId = body?.payload?.payment?.entity?.order_id || body?.payload?.order?.entity?.id;
