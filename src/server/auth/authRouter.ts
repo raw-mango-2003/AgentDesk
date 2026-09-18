@@ -1044,7 +1044,7 @@ authRouter.post('/logout', async (req: Request, res: Response) => {
 // ----------------------------------------------------
 // 6. FORCED PASSWORD CHANGE & USER PASSWORD UPDATE
 // ----------------------------------------------------
-authRouter.post('/change-password', requireAuth, (req: Request, res: Response) => {
+authRouter.post('/change-password', requireAuth, authRateLimiter, (req: Request, res: Response) => {
   try {
     const user = (req as any).user as UserRecord;
     const { currentPassword, newPassword, confirmPassword } = req.body;
@@ -1693,7 +1693,7 @@ authRouter.post(['/platform/businesses', '/platform/businesses/create'], require
 /**
  * Public Account Setup Token Verification
  */
-authRouter.get('/setup-account/verify', async (req: Request, res: Response) => {
+authRouter.get('/setup-account/verify', passwordResetRateLimiter, async (req: Request, res: Response) => {
   try {
     const { token } = req.query;
     if (!token || typeof token !== 'string') {
@@ -2270,7 +2270,7 @@ authRouter.get('/sessions', requireAuth, async (req: Request, res: Response) => 
   }
 });
 
-authRouter.post('/sessions/revoke-others', requireAuth, async (req: Request, res: Response) => {
+authRouter.post('/sessions/revoke-others', requireAuth, authRateLimiter, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as UserRecord;
     const currentSession = (req as any).session;
