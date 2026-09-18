@@ -60,6 +60,7 @@ import {
   checkTenantQuota, 
   getPlanUsageLimits, 
   getTenant, 
+  getAllTenants,
   provisionCustomerTenant,
   resetTenantQuota 
 } from './src/server/tenantRegistry.js';
