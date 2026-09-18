@@ -176,9 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: errorMsg };
       }
 
-      if (res.token) {
-        localStorage.setItem(TOKEN_KEY, res.token);
-      }
       if (res.user) {
         setCurrentUser(res.user);
       }
@@ -244,8 +241,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await safeFetchJson('/api/auth/change-password', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
       });
@@ -273,8 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await safeFetchJson('/api/auth/update-profile', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ name, email })
       });
