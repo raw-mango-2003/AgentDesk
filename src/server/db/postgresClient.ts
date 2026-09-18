@@ -227,6 +227,26 @@ class PostgresClient {
 
             CREATE INDEX IF NOT EXISTS idx_files_tenant ON agentdesk_files (tenant_id);
 
+            CREATE TABLE IF NOT EXISTS agentdesk_delivery_logs (
+              id VARCHAR(128) PRIMARY KEY,
+              tenant_id VARCHAR(128),
+              channel VARCHAR(32) NOT NULL,
+              recipient VARCHAR(255),
+              event_type VARCHAR(128) NOT NULL,
+              status VARCHAR(32) NOT NULL,
+              provider VARCHAR(64),
+              provider_id VARCHAR(255),
+              error TEXT,
+              retry_count INT NOT NULL DEFAULT 0,
+              payload JSONB,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_delivery_logs_created ON agentdesk_delivery_logs (created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_delivery_logs_tenant ON agentdesk_delivery_logs (tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_delivery_logs_status ON agentdesk_delivery_logs (status);
+
             CREATE TABLE IF NOT EXISTS agentdesk_rate_limits (
               key VARCHAR(255) PRIMARY KEY,
               count INT NOT NULL DEFAULT 1,
