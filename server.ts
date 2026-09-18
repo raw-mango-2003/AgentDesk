@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
@@ -113,6 +114,41 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: true }));
+
+const csrfProtectedMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const csrfExemptPaths = new Set([
+  '/api/auth/login',
+  '/api/auth/platform/login',
+  '/api/auth/platform-login',
+  '/api/auth/signup',
+  '/api/auth/verify-2fa-login',
+  '/api/auth/verify-email',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/auth/setup-account/verify',
+  '/api/auth/logout',
+  '/api/billing/webhook',
+  '/api/webhooks'
+]);
+
+function readCookie(req: Request, name: string): string | null {
+  const header = typeof req.headers.cookie === 'string' ? req.headers.cookie : '';
+  const match = header.match(new RegExp('(?:^|;\\s*)' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  if (!csrfProtectedMethods.has(req.method) || csrfExemptPaths.has(req.path)) return next();
+  const sessionCookie = readCookie(req, 'agentdesk_session');
+  if (!sessionCookie) return next();
+  const csrfCookie = readCookie(req, 'agentdesk_csrf');
+  const csrfHeader = typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : '';
+  if (!csrfCookie || !csrfHeader || csrfCookie.length !== csrfHeader.length ||
+      !crypto.timingSafeEqual(Buffer.from(csrfCookie), Buffer.from(csrfHeader))) {
+    return res.status(403).json({ success: false, error: { code: 'CSRF_VALIDATION_FAILED', message: 'Security validation failed. Please refresh and try again.' } });
+  }
+  next();
+});
 
 // Apply a bounded API-wide rate limit before individual routers.
 // Sensitive routes may apply stricter route-specific limiters (for example auth and password reset).
