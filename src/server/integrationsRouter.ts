@@ -73,7 +73,7 @@ integrationsRouter.get(
       const deliveryLogs = await deliveryLogService.list({ limit: 200 });
       const emailLogs = deliveryLogs.filter(l => l.channel === 'email');
       const queueJobs = queueService.getJobs(undefined, 100);
-      const auditLogs = auditLogService.getLogs(undefined, 100);
+      const auditLogs = auditLogService.query({ limit: 100 });
       const recentErrors = errorMonitoringService.getRecentErrors(50);
 
       return res.json({
