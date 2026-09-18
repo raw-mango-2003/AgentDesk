@@ -227,6 +227,24 @@ class PostgresClient {
 
             CREATE INDEX IF NOT EXISTS idx_files_tenant ON agentdesk_files (tenant_id);
 
+            CREATE TABLE IF NOT EXISTS agentdesk_queue_jobs (
+              id VARCHAR(128) PRIMARY KEY,
+              type VARCHAR(64) NOT NULL,
+              payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+              status VARCHAR(32) NOT NULL,
+              attempt_count INT NOT NULL DEFAULT 0,
+              max_attempts INT NOT NULL DEFAULT 3,
+              next_attempt_at TIMESTAMPTZ,
+              last_attempt_at TIMESTAMPTZ,
+              completed_at TIMESTAMPTZ,
+              failure_reason TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_queue_jobs_pending ON agentdesk_queue_jobs (status, next_attempt_at);
+            CREATE INDEX IF NOT EXISTS idx_queue_jobs_created ON agentdesk_queue_jobs (created_at DESC);
+
             CREATE TABLE IF NOT EXISTS agentdesk_delivery_logs (
               id VARCHAR(128) PRIMARY KEY,
               tenant_id VARCHAR(128),
