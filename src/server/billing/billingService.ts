@@ -562,78 +562,14 @@ export class BillingService {
         updatedAt: new Date().toISOString()
       });
 
-      // Default Payment Method
-      this.tenantPaymentMethodsStore.set(t.id, [
-        {
-          id: `pm_${t.id}_primary`,
-          businessId: t.id,
-          provider,
-          providerPaymentMethodId: `tok_${provider}_${t.id}_991`,
-          brand: 'Visa',
-          last4: '8892',
-          expiryMonth: 9,
-          expiryYear: 2028,
-          expiry: '09/28',
-          isPrimary: true,
-          createdAt: new Date().toISOString()
-        }
-      ]);
+      // No fake payment methods by default; customer must register real payment method
+      this.tenantPaymentMethodsStore.set(t.id, []);
 
-      // Seed Invoices
-      this.tenantInvoicesStore.set(t.id, [
-        {
-          id: `inv_${t.id}_02`,
-          businessId: t.id,
-          invoiceNumber: `INV-${new Date().getFullYear()}-0881`,
-          date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          description: `${p.name} - Monthly Platform & Autonomous AI Receptionist`,
-          amount: monthly,
-          currency: t.currency,
-          status: 'PAID',
-          provider,
-          pdfUrl: '#'
-        },
-        {
-          id: `inv_${t.id}_01`,
-          businessId: t.id,
-          invoiceNumber: `INV-${new Date().getFullYear()}-0801`,
-          date: new Date(Date.now() - 42 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          description: `${p.name} - 12-Step Implementation & Multi-Agent Architecture Fee`,
-          amount: setup,
-          currency: t.currency,
-          status: 'PAID',
-          provider,
-          pdfUrl: '#'
-        }
-      ]);
+      // No fake invoices; real invoices are generated upon payment events
+      this.tenantInvoicesStore.set(t.id, []);
 
-      // Seed Transactions
-      this.tenantTransactionsStore.set(t.id, [
-        {
-          id: `tx_${t.id}_02`,
-          businessId: t.id,
-          date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          amount: monthly,
-          currency: t.currency,
-          provider,
-          status: 'paid',
-          transactionId: `PAY-${provider.toUpperCase().slice(0, 3)}-994821`,
-          type: 'subscription',
-          description: `Monthly Subscription renewal for ${p.name}`
-        },
-        {
-          id: `tx_${t.id}_01`,
-          businessId: t.id,
-          date: new Date(Date.now() - 42 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          amount: setup,
-          currency: t.currency,
-          provider,
-          status: 'paid',
-          transactionId: `PAY-${provider.toUpperCase().slice(0, 3)}-881023`,
-          type: 'implementation_fee',
-          description: `Implementation setup fee for ${p.name}`
-        }
-      ]);
+      // No fake transactions; real transactions are recorded upon payments
+      this.tenantTransactionsStore.set(t.id, []);
     }
   }
 
@@ -2117,9 +2053,9 @@ export class BillingService {
         businessId: norm,
         provider: providerName,
         providerPaymentMethodId: `tok_${providerName}_${Date.now()}`,
-        brand: paymentMethodData.brand || 'Visa',
-        last4: paymentMethodData.last4 || '8892',
-        expiry: paymentMethodData.expiry || '09/28',
+        brand: paymentMethodData.brand || 'Card',
+        last4: paymentMethodData.last4 || '****',
+        expiry: paymentMethodData.expiry || '',
         isPrimary: true,
         createdAt: new Date().toISOString()
       });

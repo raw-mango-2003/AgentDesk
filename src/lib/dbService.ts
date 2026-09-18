@@ -159,8 +159,17 @@ const PRODUCTION_SEED_TENANT_IDS = new Set([
   BETA_TENANT_ID
 ]);
 
+const memoryStorage = new Map<string, string>();
+
 function isProductionRuntime(): boolean {
-  return typeof import.meta !== 'undefined' && (import.meta as any).env?.PROD === true;
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') {
+    return true;
+  }
+  try {
+    return typeof import.meta !== 'undefined' && Boolean((import.meta as any)?.env?.PROD);
+  } catch {
+    return false;
+  }
 }
 
 function isSeedTenantRecord(value: any): boolean {
@@ -181,14 +190,32 @@ function sanitizeProductionData<T>(key: string, value: T): T {
   return value;
 }
 
+function getStorageItem(key: string): string | null {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.getItem) {
+      return localStorage.getItem(key);
+    }
+  } catch {}
+  return memoryStorage.get(key) || null;
+}
+
+function setStorageItem(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.setItem) {
+      localStorage.setItem(key, value);
+    }
+  } catch {}
+  memoryStorage.set(key, value);
+}
+
 function getItem<T>(key: string, defaultVal: T): T {
   try {
-    const saved = localStorage.getItem(PREFIX + key);
+    const saved = getStorageItem(PREFIX + key);
     if (saved) {
       return sanitizeProductionData(key, JSON.parse(saved));
     }
   } catch (e) {
-    console.error('Error reading from localStorage', e);
+    console.error('Error reading from storage', e);
   }
 
   // Production never falls back to demo/customer fixtures.
@@ -201,20 +228,25 @@ function getItem<T>(key: string, defaultVal: T): T {
 
 function setItem<T>(key: string, val: T): void {
   try {
-    localStorage.setItem(PREFIX + key, JSON.stringify(val));
+    setStorageItem(PREFIX + key, JSON.stringify(val));
     notifyDataChanged(key);
   } catch (e) {
-    console.error('Error saving to localStorage', e);
+    console.error('Error saving to storage', e);
   }
 }
 
 export function notifyDataChanged(entityName: string) {
   try {
-    window.dispatchEvent(new CustomEvent('revenueos_data_changed', { detail: { entity: entityName } }));
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('revenueos_data_changed', { detail: { entity: entityName } }));
+    }
   } catch (e) {}
 }
 
 export function subscribeToDataChanges(callback: (entity: string) => void): () => void {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
   const handler = (e: any) => {
     callback(e.detail?.entity || 'all');
   };
@@ -237,9 +269,9 @@ export function initializeDatabaseIfNeeded() {
   // Never initialize customer-facing production storage with demo fixtures.
   if (isProductionRuntime()) return;
 
-  if (!localStorage.getItem(PREFIX + 'initialized_v1')) {
+  if (!getStorageItem(PREFIX + 'initialized_v1')) {
     resetAllToSeedData();
-    localStorage.setItem(PREFIX + 'initialized_v1', 'true');
+    setStorageItem(PREFIX + 'initialized_v1', 'true');
   }
 }
 
@@ -271,20 +303,13 @@ export function resetAllToSeedData() {
 
 let inFlightFetchBusinesses: Promise<Business[]> | null = null;
 
-function getStoredAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return (
-    localStorage.getItem('agentdesk_session_token') ||
-    sessionStorage.getItem('agentdesk_session_token') ||
-    localStorage.getItem('agentdesk_auth_token') ||
-    sessionStorage.getItem('agentdesk_auth_token') ||
-    null
-  );
-}
-
 export async function getAllBusinesses(): Promise<Business[]> {
   initializeDatabaseIfNeeded();
   const localList = getItem<Business[]>('businesses', SEED_BUSINESSES);
+
+  if (typeof window === 'undefined') {
+    return localList;
+  }
 
   if (inFlightFetchBusinesses) {
     return inFlightFetchBusinesses;
@@ -292,11 +317,9 @@ export async function getAllBusinesses(): Promise<Business[]> {
 
   inFlightFetchBusinesses = (async () => {
     try {
-      const token = getStoredAuthToken();
       const data = await safeFetchJson('/api/tenants', {
         headers: {
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Accept': 'application/json'
         }
       });
       if (data?.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
@@ -330,13 +353,11 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
   const targetId = normalizeTenantId(businessId);
   let found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
 
-  if (!found) {
+  if (!found && typeof window !== 'undefined') {
     try {
-      const token = getStoredAuthToken();
       const data = await safeFetchJson(`/api/tenants/${encodeURIComponent(businessId)}`, {
         headers: {
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Accept': 'application/json'
         }
       });
       if (data?.success && data.tenant) {
@@ -665,12 +686,13 @@ async function ensureContactForLead(lead: Lead) {
   const validTenant = validateTenantContext(lead.businessId, 'contacts', 'ENSURE_CONTACT');
   const contacts = await getContacts(validTenant);
   let contact = contacts.find(c => 
-    (lead.email && c.email.toLowerCase() === lead.email.toLowerCase()) || 
-    (lead.phone && c.phone === lead.phone)
+    (lead.email && c.email && c.email.toLowerCase() === lead.email.toLowerCase()) || 
+    (lead.phone && c.phone && c.phone === lead.phone)
   );
   
   if (!contact) {
     const biz = await getBusinessById(validTenant);
+    const sourceStr = typeof lead.source === 'string' ? lead.source : 'inbound';
     contact = {
       id: `c-${Date.now()}`,
       tenant_id: validTenant,
@@ -694,8 +716,8 @@ async function ensureContactForLead(lead: Lead) {
           tenantId: validTenant,
           timestamp: new Date().toISOString(),
           type: 'lead_created',
-          title: `Lead Captured (${lead.source.replace(/_/g, ' ')})`,
-          description: `Score: ${lead.score}/100. ${lead.aiScoreExplanation || ''}`
+          title: `Lead Captured (${sourceStr.replace(/_/g, ' ')})`,
+          description: `Score: ${lead.score || 0}/100. ${lead.aiScoreExplanation || ''}`
         }
       ],
       createdAt: new Date().toISOString(),
@@ -1681,35 +1703,12 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
     getAppointments(validTenant)
   ]);
 
-  const voiceMinutesUsed = calls.reduce((acc, c) => acc + Math.ceil((c.durationSeconds || 60) / 60), 0) + 1245;
-  const smsUsed = leads.length * 4 + appointments.length * 3 + 1032;
-  const whatsappUsed = isIN ? 680 : 342;
-  const emailUsed = campaigns.reduce((acc, c) => acc + (c.metrics?.sent || 0), 0) + 4251;
-  const aiOperationsUsed = (calls.length * 5) + (leads.length * 8) + 18450;
-  const contactsCount = leads.length + 3240;
-
-  const defaultInvoices: InvoiceItem[] = [
-    {
-      id: 'inv-001',
-      invoiceNumber: 'INV-2026-0881',
-      date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: `${planConfig.name} - Monthly Platform & Managed Operations`,
-      amount: planPricing.monthlyPrice,
-      currency: currency,
-      status: 'PAID',
-      pdfUrl: '#'
-    },
-    {
-      id: 'inv-000',
-      invoiceNumber: 'INV-2026-0801',
-      date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: `${planConfig.name} - One-time Implementation & Deployment Setup`,
-      amount: planPricing.setupPrice,
-      currency: currency,
-      status: 'PAID',
-      pdfUrl: '#'
-    }
-  ];
+  const voiceMinutesUsed = calls.reduce((acc, c) => acc + Math.ceil((c.durationSeconds || 60) / 60), 0);
+  const smsUsed = leads.length * 2 + appointments.length * 2;
+  const whatsappUsed = 0;
+  const emailUsed = campaigns.reduce((acc, c) => acc + (c.metrics?.sent || 0), 0);
+  const aiOperationsUsed = (calls.length * 5) + (leads.length * 8);
+  const contactsCount = leads.length;
 
   let serverBillingData: any = null;
   if (typeof window !== 'undefined') {
@@ -1727,13 +1726,7 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
     }
   }
 
-  const primaryPaymentMethod = serverBillingData?.paymentMethods?.find((pm: any) => pm.isPrimary) || serverBillingData?.paymentMethods?.[0] || {
-    brand: 'Visa',
-    last4: '8892',
-    expiry: '09/28',
-    isPrimary: true,
-    provider: 'razorpay'
-  };
+  const primaryPaymentMethod = serverBillingData?.paymentMethods?.find((pm: any) => pm.isPrimary) || serverBillingData?.paymentMethods?.[0] || null;
 
   const dynamicInvoices: InvoiceItem[] = serverBillingData?.invoices?.length > 0 
     ? serverBillingData.invoices.map((inv: any) => ({
@@ -1746,7 +1739,7 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
         status: inv.status,
         pdfUrl: inv.pdfUrl || '#'
       }))
-    : defaultInvoices;
+    : [];
 
   const currentStatus = serverBillingData?.billing?.status || 'Active';
   const effectiveCurrency = (serverBillingData?.billing?.currency || currency) as CurrencyCode;
@@ -1769,27 +1762,20 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
     }),
     autoRenew: serverBillingData?.billing?.autoRenew ?? true,
     paymentFailed: serverBillingData?.billing?.paymentFailed ?? false,
-    paymentMethod: {
+    paymentMethod: primaryPaymentMethod ? {
       id: primaryPaymentMethod.id,
-      brand: primaryPaymentMethod.brand,
-      last4: primaryPaymentMethod.last4,
-      expiry: primaryPaymentMethod.expiry || '09/28',
+      brand: primaryPaymentMethod.brand || 'Card',
+      last4: primaryPaymentMethod.last4 || '****',
+      expiry: primaryPaymentMethod.expiry || '',
       isDefault: primaryPaymentMethod.isPrimary ?? true,
       provider: primaryPaymentMethod.provider
+    } : {
+      brand: 'Card',
+      last4: '—',
+      expiry: '',
+      isDefault: false
     },
-    paymentMethods: serverBillingData?.paymentMethods || [
-      {
-        id: 'pm-01',
-        businessId: validTenant,
-        provider: 'razorpay',
-        providerPaymentMethodId: 'tok_01',
-        brand: 'Visa',
-        last4: '8892',
-        expiry: '09/28',
-        isPrimary: true,
-        createdAt: new Date().toISOString()
-      }
-    ],
+    paymentMethods: serverBillingData?.paymentMethods || [],
     transactions: serverBillingData?.transactions || [],
     usage: {
       voice: {

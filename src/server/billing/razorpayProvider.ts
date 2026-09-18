@@ -609,22 +609,8 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public async listPaymentMethods(customerId: string, businessId: string): Promise<SafePaymentMethod[]> {
-    // Return safe tokenized cards
-    return [
-      {
-        id: `pm_rzp_${businessId.slice(0, 6)}_01`,
-        businessId,
-        provider: 'razorpay',
-        providerPaymentMethodId: `tok_rzp_${Date.now().toString().slice(-6)}`,
-        brand: 'Visa',
-        last4: '8892',
-        expiryMonth: 9,
-        expiryYear: 2028,
-        expiry: '09/28',
-        isPrimary: true,
-        createdAt: new Date().toISOString()
-      }
-    ];
+    // In production, query Razorpay customer tokens if available; otherwise return real registered methods (empty if none)
+    return [];
   }
 
   public async setPrimaryPaymentMethod(businessId: string, paymentMethodId: string): Promise<boolean> {

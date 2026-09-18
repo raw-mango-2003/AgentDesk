@@ -390,7 +390,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               <Shield className="w-4 h-4 text-emerald-400" />
               <span>Immutable Audit & Compliance Log ({auditLogs.length})</span>
             </h3>
-            <span className="text-xs text-slate-500">Auto-recorded for SOC-2 & HIPAA compliance</span>
+            <span className="text-xs text-slate-500">Tenant-isolated audit trail and security activity logging</span>
           </div>
 
           <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">

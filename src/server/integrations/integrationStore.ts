@@ -169,7 +169,7 @@ class IntegrationStore {
     try {
       const isReady = await postgresClient.initialize();
       if (!isReady) {
-        if (postgresClient.isConfigured() || process.env.NODE_ENV === 'production') {
+        if (process.env.REQUIRE_PERSISTENT_INTEGRATIONS === 'true') {
           throw new Error('Database connection failed: Cannot persist integration without PostgreSQL.');
         }
         return;
@@ -367,12 +367,12 @@ class IntegrationStore {
             user_id = EXCLUDED.user_id,
             tenant_id = EXCLUDED.tenant_id
         `, [state, userId || null, tenantId || null, provider, redirectUrl || null, now, expiresAt]);
-      } else if (postgresClient.isConfigured() || process.env.NODE_ENV === 'production') {
+      } else if (process.env.REQUIRE_PERSISTENT_INTEGRATIONS === 'true') {
         throw new Error('Database unavailable: Cannot persist OAuth state.');
       }
     } catch (err: any) {
       console.warn('[OAuthState:PostgresInsertWarning]', err.message);
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.REQUIRE_PERSISTENT_INTEGRATIONS === 'true') {
         throw err;
       }
     }

@@ -66,7 +66,7 @@ export function getAppUrl(req?: Request): string {
 // ----------------------------------------------------------------------------
 
 integrationsRouter.get(
-  ['/platform/monitoring', '/platform/monitoring'],
+  '/platform/monitoring',
   requirePlatformAdmin,
   async (_req: Request, res: Response) => {
     try {
@@ -126,7 +126,7 @@ integrationsRouter.get(
 );
 
 integrationsRouter.post(
-  ['/platform/monitoring/:deliveryId/retry', '/platform/monitoring/:deliveryId/retry'],
+  '/platform/monitoring/:deliveryId/retry',
   requirePlatformAdmin,
   async (req: Request, res: Response) => {
     const logs = await deliveryLogService.list({ limit: 500 });
@@ -314,7 +314,7 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
 
 // 0. Gmail API Safe Diagnostic Health Endpoint (never exposes secrets, requires Platform Admin)
 integrationsRouter.get(
-  ['/integrations/google/health', '/integrations/google/health'],
+  '/integrations/google/health',
   requirePlatformAdmin,
   async (_req: Request, res: Response) => {
     try {
@@ -352,7 +352,7 @@ integrationsRouter.get(
 
 // 1. Get Gmail Connection Health & OAuth Details
 integrationsRouter.get(
-  ['/integrations/google/status', '/integrations/google/status', '/platform/integrations/gmail/status'],
+  ['/integrations/google/status', '/platform/integrations/gmail/status'],
   requirePlatformAdmin,
   (req: Request, res: Response) => {
     try {
@@ -374,7 +374,7 @@ integrationsRouter.get(
 
 // 2. OAuth Start Endpoint: Generates CSRF state & redirects to Google Authorization
 integrationsRouter.get(
-  ['/integrations/google/start', '/integrations/google/start', '/platform/integrations/google/start', '/platform/integrations/gmail/start'],
+  ['/integrations/google/start', '/platform/integrations/gmail/start'],
   requirePlatformAdmin,
   async (req: Request, res: Response) => {
     try {
@@ -401,7 +401,7 @@ integrationsRouter.get(
 
 // 3. OAuth Callback Endpoint: Exchanges authorization code for tokens and encrypts refresh token
 integrationsRouter.get(
-  ['/integrations/google/callback', '/integrations/google/callback', '/platform/integrations/google/callback'],
+  ['/integrations/google/callback', '/platform/integrations/google/callback'],
   async (req: Request, res: Response) => {
     try {
       const { code, state, error, error_description } = req.query;
@@ -460,7 +460,7 @@ integrationsRouter.get(
 
 // 4. Disconnect Gmail: Revokes token, wipes refresh token, marks NOT_CONNECTED, and audits action
 integrationsRouter.post(
-  ['/integrations/google/disconnect', '/integrations/google/disconnect', '/platform/integrations/gmail/disconnect'],
+  ['/integrations/google/disconnect', '/platform/integrations/gmail/disconnect'],
   requirePlatformAdmin,
   async (req: Request, res: Response) => {
     try {
@@ -468,7 +468,7 @@ integrationsRouter.post(
 
       auditLogService.log({
         actorId: (req as any).user?.id || 'admin',
-        actorEmail: (req as any).user?.email || 'admin@agentdesk',
+        actorEmail: (req as any).user?.email || 'platform-admin',
         actorRole: 'PLATFORM_ADMIN',
         action: 'INTEGRATION_DISCONNECTED',
         entityType: 'INTEGRATION',
@@ -490,7 +490,7 @@ integrationsRouter.post(
 
 // 5. Update Google OAuth Client ID & Secret
 integrationsRouter.post(
-  ['/integrations/google/credentials', '/integrations/google/credentials', '/platform/integrations/gmail/credentials'],
+  ['/integrations/google/credentials', '/platform/integrations/gmail/credentials'],
   requirePlatformAdmin,
   (req: Request, res: Response) => {
     try {
@@ -517,7 +517,7 @@ integrationsRouter.post(
 
 // 6. Test Gmail Sending Engine: Displays SUCCESS, FAILED, or NOT_CONNECTED
 integrationsRouter.post(
-  ['/integrations/google/test-email', '/integrations/google/test-email', '/platform/integrations/test-email', '/platform/integrations/gmail/test-email'],
+  ['/integrations/google/test-email', '/platform/integrations/test-email'],
   requirePlatformAdmin,
   async (req: Request, res: Response) => {
     res.setHeader('Content-Type', 'application/json');
@@ -567,7 +567,7 @@ integrationsRouter.post(
       if (result.success && result.status === 'SENT') {
         auditLogService.log({
           actorId: (req as any).user?.id || 'admin',
-          actorEmail: (req as any).user?.email || 'admin@agentdesk',
+          actorEmail: (req as any).user?.email || 'platform-admin',
           actorRole: 'PLATFORM_ADMIN',
           action: 'TEST_EMAIL_SENT',
           entityType: 'INTEGRATION',

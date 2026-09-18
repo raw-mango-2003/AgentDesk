@@ -131,7 +131,7 @@ export class ConversationStore {
     try {
       const isReady = await postgresClient.initialize();
       if (!isReady) {
-        if (postgresClient.isConfigured() || process.env.NODE_ENV === 'production') {
+        if (process.env.REQUIRE_PERSISTENT_CONVERSATIONS === 'true') {
           throw new Error('PostgreSQL is offline: Cannot persist conversation record.');
         }
         return;
@@ -162,7 +162,7 @@ export class ConversationStore {
       ]);
     } catch (err: any) {
       console.warn('[ConversationStore:PersistWarning]', err.message);
-      if (process.env.NODE_ENV === 'production') {
+      if (process.env.REQUIRE_PERSISTENT_CONVERSATIONS === 'true') {
         throw err;
       }
     }

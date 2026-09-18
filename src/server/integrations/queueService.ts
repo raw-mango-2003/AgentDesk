@@ -91,6 +91,38 @@ export class QueueService implements IQueueService {
   }
 
   public async retryJob(id: string): Promise<boolean> {
+    try {
+      if (await postgresClient.initialize()) {
+        const result = await postgresClient.query(
+          `UPDATE agentdesk_queue_jobs
+           SET status = 'PENDING',
+               next_attempt_at = NOW(),
+               failure_reason = NULL,
+               updated_at = NOW()
+           WHERE id = $1
+           RETURNING *`,
+          [id]
+        );
+        if (result.rows && result.rows.length > 0) {
+          const row = result.rows[0];
+          const job: QueueJob = {
+            id: row.id,
+            type: row.type,
+            payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : (row.payload || {}),
+            status: 'PENDING',
+            attemptCount: Number(row.attempt_count || 0),
+            maxAttempts: Number(row.max_attempts || 3),
+            nextAttemptAt: new Date().toISOString(),
+            createdAt: new Date(row.created_at).toISOString()
+          };
+          this.jobs.set(job.id, job);
+          return true;
+        }
+      }
+    } catch (err: any) {
+      console.warn('[QueueService] DB retry failed, using memory fallback:', err.message);
+    }
+
     const job = this.jobs.get(id);
     if (!job) return false;
     job.status = 'PENDING';
@@ -104,22 +136,74 @@ export class QueueService implements IQueueService {
     if (this.isProcessing) return;
     if (!this.initialized) return;
 
-    const now = new Date().toISOString();
-    const candidate = Array.from(this.jobs.values()).find(
-      j => j.status === 'PENDING' && (!j.nextAttemptAt || j.nextAttemptAt <= now)
-    );
-    if (!candidate) return;
-
     this.isProcessing = true;
-    candidate.status = 'PROCESSING';
-    candidate.attemptCount += 1;
-    candidate.lastAttemptAt = now;
-    await this.persist(candidate);
+    let candidate: QueueJob | null = null;
+    const nowIso = new Date().toISOString();
+
+    try {
+      if (await postgresClient.initialize()) {
+        // Multi-instance atomic worker claim: SELECT ... FOR UPDATE SKIP LOCKED
+        // Also safely recovers crashed processing jobs stalled for > 5 minutes
+        const claimResult = await postgresClient.query(
+          `UPDATE agentdesk_queue_jobs
+           SET status = 'PROCESSING',
+               attempt_count = attempt_count + 1,
+               last_attempt_at = NOW(),
+               updated_at = NOW()
+           WHERE id = (
+             SELECT id FROM agentdesk_queue_jobs
+             WHERE (status = 'PENDING' AND (next_attempt_at IS NULL OR next_attempt_at <= NOW()))
+                OR (status = 'PROCESSING' AND last_attempt_at < NOW() - INTERVAL '5 minutes')
+             ORDER BY created_at ASC
+             LIMIT 1
+             FOR UPDATE SKIP LOCKED
+           )
+           RETURNING *;`
+        );
+
+        if (claimResult.rows && claimResult.rows.length > 0) {
+          const row = claimResult.rows[0];
+          candidate = {
+            id: row.id,
+            type: row.type,
+            payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : (row.payload || {}),
+            status: 'PROCESSING',
+            attemptCount: Number(row.attempt_count || 1),
+            maxAttempts: Number(row.max_attempts || 3),
+            nextAttemptAt: row.next_attempt_at ? new Date(row.next_attempt_at).toISOString() : undefined,
+            lastAttemptAt: row.last_attempt_at ? new Date(row.last_attempt_at).toISOString() : nowIso,
+            completedAt: row.completed_at ? new Date(row.completed_at).toISOString() : undefined,
+            failureReason: row.failure_reason || undefined,
+            createdAt: new Date(row.created_at).toISOString()
+          };
+          this.jobs.set(candidate.id, candidate);
+        }
+      }
+    } catch (pgErr: any) {
+      console.warn('[QueueService] DB atomic claim unavailable, checking local store:', pgErr.message);
+    }
+
+    // In-memory fallback if DB claim returned nothing or DB is offline
+    if (!candidate) {
+      const memCandidate = Array.from(this.jobs.values()).find(
+        j => j.status === 'PENDING' && (!j.nextAttemptAt || j.nextAttemptAt <= nowIso)
+      );
+      if (!memCandidate) {
+        this.isProcessing = false;
+        return;
+      }
+      candidate = memCandidate;
+      candidate.status = 'PROCESSING';
+      candidate.attemptCount += 1;
+      candidate.lastAttemptAt = nowIso;
+      await this.persist(candidate);
+    }
 
     const handler = this.handlers.get(candidate.type);
     if (!handler) {
       candidate.status = 'DEAD_LETTER';
       candidate.failureReason = `No handler registered for job type: ${candidate.type}`;
+      this.jobs.set(candidate.id, candidate);
       await this.persist(candidate);
       this.isProcessing = false;
       return;
@@ -129,6 +213,7 @@ export class QueueService implements IQueueService {
       await handler(candidate.payload);
       candidate.status = 'COMPLETED';
       candidate.completedAt = new Date().toISOString();
+      this.jobs.set(candidate.id, candidate);
       await this.persist(candidate);
     } catch (err: any) {
       console.error(`[QueueService:JobFailed] Job ${candidate.id} (${candidate.type}):`, err.message);
@@ -141,6 +226,7 @@ export class QueueService implements IQueueService {
         candidate.nextAttemptAt = new Date(Date.now() + backoffMs).toISOString();
         candidate.failureReason = err.message;
       }
+      this.jobs.set(candidate.id, candidate);
       await this.persist(candidate);
     } finally {
       this.isProcessing = false;

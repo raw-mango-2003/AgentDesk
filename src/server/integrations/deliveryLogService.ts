@@ -19,12 +19,37 @@ export interface DeliveryLogRecord {
   updatedAt: string;
 }
 
+function sanitizeDeliveryPayload(payload?: Record<string, any>): Record<string, any> | undefined {
+  if (!payload) return undefined;
+  const safe: Record<string, any> = {};
+  for (const [key, val] of Object.entries(payload)) {
+    if (/password|secret|apikey|token|auth|credentials/i.test(key)) continue;
+
+    if (['html', 'body', 'rawMessage'].includes(key)) {
+      if (typeof val === 'string') {
+        safe[`${key}Length`] = val.length;
+      }
+      continue;
+    }
+    if (key === 'text' || key === 'message') {
+      if (typeof val === 'string') {
+        safe[`${key}Length`] = val.length;
+        safe[`${key}Snippet`] = val.slice(0, 30) + (val.length > 30 ? '...' : '');
+      }
+      continue;
+    }
+    safe[key] = val;
+  }
+  return safe;
+}
+
 class DeliveryLogService {
   private memory = new Map<string, DeliveryLogRecord>();
 
   async record(input: Omit<DeliveryLogRecord, 'createdAt' | 'updatedAt'>): Promise<DeliveryLogRecord> {
     const now = new Date().toISOString();
-    const record = { ...input, createdAt: now, updatedAt: now };
+    const sanitizedPayload = sanitizeDeliveryPayload(input.payload);
+    const record: DeliveryLogRecord = { ...input, payload: sanitizedPayload, createdAt: now, updatedAt: now };
     this.memory.set(record.id, record);
     try {
       if (await postgresClient.initialize()) {

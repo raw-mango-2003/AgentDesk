@@ -494,14 +494,14 @@ export const PLATFORM_MANAGED_OPERATIONS = {
     'Semantic Knowledge Base Auto-Sync & Reindexing',
     'Real-time Multi-Touch Follow-Up Automations',
     'Dedicated Cloud Database & Tenant Isolation',
-    'SOC-2 Type II Compliant Security Guardrails',
+    'Enterprise Tenant Isolation & Encrypted Storage Guardrails',
     'Weekly Conversion Rate Optimization Audits'
   ],
   company: 'AgentDesk Technologies',
   product: 'AI RevenueOS',
   tagline: 'ONE AI SYSTEM FOR EVERY CUSTOMER INTERACTION',
   slaUptime: '99.95% Enterprise SLA',
-  soc2Compliance: 'SOC-2 Type II Certified Data Privacy',
+  soc2Compliance: 'Dedicated Tenant Isolation & Encrypted Data Privacy',
   voiceLatency: '< 450ms Realtime Voice Pipeline',
   globalPresence: 'India, USA, UK and Global Multi-Region Edge'
 };

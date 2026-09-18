@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { postgresClient } from '../db/postgresClient.js';
 
 interface RateLimitRecord {
   count: number;
@@ -7,7 +8,7 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
-// Periodic memory cleanup every 5 minutes
+// Periodic local memory cleanup every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [key, record] of rateLimitStore.entries()) {
@@ -16,6 +17,62 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000);
+
+export async function checkSharedRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number
+): Promise<{ allowed: boolean; currentCount: number; resetSeconds: number }> {
+  try {
+    if (await postgresClient.initialize()) {
+      const now = Date.now();
+      const resetAt = now + windowMs;
+      const result = await postgresClient.query(
+        `INSERT INTO agentdesk_rate_limits (key, count, reset_at)
+         VALUES ($1, 1, $2)
+         ON CONFLICT (key) DO UPDATE SET
+           count = CASE
+             WHEN agentdesk_rate_limits.reset_at <= $3 THEN 1
+             ELSE agentdesk_rate_limits.count + 1
+           END,
+           reset_at = CASE
+             WHEN agentdesk_rate_limits.reset_at <= $3 THEN $2
+             ELSE agentdesk_rate_limits.reset_at
+           END
+         RETURNING count, reset_at`,
+        [key, resetAt, now]
+      );
+      if (result.rows && result.rows.length > 0) {
+        const count = Number(result.rows[0].count || 1);
+        const rowReset = Number(result.rows[0].reset_at || resetAt);
+        const resetSeconds = Math.max(1, Math.ceil((rowReset - now) / 1000));
+        return {
+          allowed: count <= limit,
+          currentCount: count,
+          resetSeconds
+        };
+      }
+    }
+  } catch (err: any) {
+    // Non-fatal warning; fall back to local in-memory store
+  }
+
+  // Local fallback (in-memory non-authoritative fallback for dev or transient PG disconnects)
+  const now = Date.now();
+  let record = rateLimitStore.get(key);
+  if (!record || now > record.resetAt) {
+    record = { count: 1, resetAt: now + windowMs };
+    rateLimitStore.set(key, record);
+  } else {
+    record.count += 1;
+  }
+  const resetSeconds = Math.max(1, Math.ceil((record.resetAt - now) / 1000));
+  return {
+    allowed: record.count <= limit,
+    currentCount: record.count,
+    resetSeconds
+  };
+}
 
 export function getClientIp(req: Request): string {
   // Cloudflare header takes highest priority
@@ -48,40 +105,32 @@ export function createRateLimiter(options: RateLimiterOptions) {
     keyPrefix = 'global'
   } = options;
 
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const ip = getClientIp(req);
     const key = `${keyPrefix}:${ip}`;
-    const now = Date.now();
 
-    let record = rateLimitStore.get(key);
+    try {
+      const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, maxRequests, windowMs);
+      const remaining = Math.max(0, maxRequests - currentCount);
 
-    if (!record || now > record.resetAt) {
-      record = {
-        count: 1,
-        resetAt: now + windowMs
-      };
-      rateLimitStore.set(key, record);
-    } else {
-      record.count += 1;
+      res.setHeader('X-RateLimit-Limit', maxRequests.toString());
+      res.setHeader('X-RateLimit-Remaining', remaining.toString());
+      res.setHeader('X-RateLimit-Reset', resetSeconds.toString());
+
+      if (!allowed) {
+        res.setHeader('Retry-After', resetSeconds.toString());
+        return res.status(429).json({
+          success: false,
+          error: message,
+          retryAfter: resetSeconds
+        });
+      }
+
+      next();
+    } catch (err: any) {
+      console.warn('[RateLimiter] Error during rate check, failing open to proceed:', err?.message);
+      next();
     }
-
-    const remaining = Math.max(0, maxRequests - record.count);
-    const resetSeconds = Math.ceil((record.resetAt - now) / 1000);
-
-    res.setHeader('X-RateLimit-Limit', maxRequests.toString());
-    res.setHeader('X-RateLimit-Remaining', remaining.toString());
-    res.setHeader('X-RateLimit-Reset', resetSeconds.toString());
-
-    if (record.count > maxRequests) {
-      res.setHeader('Retry-After', resetSeconds.toString());
-      return res.status(429).json({
-        success: false,
-        error: message,
-        retryAfter: resetSeconds
-      });
-    }
-
-    next();
   };
 }
 

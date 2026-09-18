@@ -53,9 +53,9 @@ export const PlatformSystemHealth: React.FC = () => {
   const fetchHealth = async () => {
     setLoadingHealth(true);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
       const res = await fetch('/api/platform/system-health', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include',
+        headers: { 'Accept': 'application/json' }
       });
       const data = await res.json();
       if (data.success) {
@@ -71,12 +71,11 @@ export const PlatformSystemHealth: React.FC = () => {
   const runProductionTests = async () => {
     setRunningTests(true);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
       const res = await fetch('/api/system/run-production-tests', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         }
       });
       const data = await res.json();

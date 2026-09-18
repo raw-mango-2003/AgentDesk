@@ -113,10 +113,6 @@ export const AccountSetupPage: React.FC<AccountSetupPageProps> = ({
 
       const data = await res.json();
       if (data.success) {
-        if (data.token) {
-          localStorage.setItem('agentdesk_session_token', data.token);
-          sessionStorage.setItem('agentdesk_session_token', data.token);
-        }
         setSetupComplete(true);
         setTimeout(() => {
           if (onSuccess) {

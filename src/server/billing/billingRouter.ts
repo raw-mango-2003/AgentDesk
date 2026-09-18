@@ -7,14 +7,40 @@ import { serverBusinessesStore } from '../tenantRegistry.js';
 
 export const billingRouter = Router();
 
-// Keep payment failures actionable for customers without exposing internal provider details.
+// Keep payment failures actionable for customers without exposing internal provider details, database errors, or secrets.
 function safePaymentError(error: any, fallback: string): string {
   const message = typeof error?.message === 'string' ? error.message.trim() : '';
   const lower = message.toLowerCase();
   if (!message) return fallback;
-  if (/declin|insufficient|failed|failure|invalid|expired|cancel|timeout|network|gateway|verification|signature|duplicate|already paid/.test(lower)) {
-    return message.length <= 180 ? message : fallback;
+
+  // Never leak internal implementation details, database errors, stack traces, or credentials
+  if (/postgres|sql|database|table|column|syntax|connection|secret|key|token|internal|stack|undefined|null|object|at\s+/i.test(lower)) {
+    return fallback;
   }
+
+  // Explicit, safe customer-facing categories
+  if (/decline|declined/.test(lower)) {
+    return 'Your payment was declined by the issuing bank. Please try a different payment method.';
+  }
+  if (/insufficient/.test(lower)) {
+    return 'Insufficient funds in the account. Please use another card or payment method.';
+  }
+  if (/expired/.test(lower)) {
+    return 'The payment card has expired. Please provide a valid card.';
+  }
+  if (/invalid\s*card|invalid\s*number|invalid\s*cvv|invalid\s*expiry/.test(lower)) {
+    return 'The card information entered is invalid. Please check the details and try again.';
+  }
+  if (/already\s*paid|duplicate/.test(lower)) {
+    return 'This payment has already been processed or is a duplicate transaction.';
+  }
+  if (/signature|verification/.test(lower)) {
+    return 'Payment verification failed. Please contact your payment provider or support.';
+  }
+  if (/timeout|network|gateway/.test(lower)) {
+    return 'Payment gateway connection timed out. Please check your connection and retry.';
+  }
+
   return fallback;
 }
 

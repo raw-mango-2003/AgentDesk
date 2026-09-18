@@ -148,6 +148,7 @@ export async function cleanupExpiredChallenges(): Promise<void> {
 }
 
 // Cleanup every 10 minutes
-setInterval(() => {
+const twoFactorCleanupTimer = setInterval(() => {
   cleanupExpiredChallenges().catch(() => {});
 }, 10 * 60 * 1000);
+if (twoFactorCleanupTimer.unref) twoFactorCleanupTimer.unref();

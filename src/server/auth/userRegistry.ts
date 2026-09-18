@@ -255,8 +255,8 @@ export async function persistUserToPostgres(user: UserRecord): Promise<void> {
   try {
     const isReady = await postgresClient.initialize();
     if (!isReady) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('Database persistence unavailable in production.');
+      if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
+        throw new Error('Database persistence unavailable: REQUIRE_PERSISTENT_USERS is enabled but PostgreSQL is not ready.');
       }
       return;
     }
@@ -315,7 +315,7 @@ export async function persistUserToPostgres(user: UserRecord): Promise<void> {
     ]);
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresPersistWarning]', err.message);
-    if (process.env.NODE_ENV === 'production') throw err;
+    if (process.env.REQUIRE_PERSISTENT_USERS === 'true') throw err;
   }
 }
 
@@ -408,12 +408,12 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source in production.');
+    if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
+      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source when REQUIRE_PERSISTENT_USERS is enabled.');
     }
   }
 
-  // Development-only compatibility fallback when PostgreSQL is unavailable.
+  // Compatibility fallback when PostgreSQL is unavailable.
   return getUserByEmail(clean);
 }
 
@@ -442,12 +442,12 @@ export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source in production.');
+    if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
+      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source when REQUIRE_PERSISTENT_USERS is enabled.');
     }
   }
 
-  // Development-only compatibility fallback when PostgreSQL is unavailable.
+  // Compatibility fallback when PostgreSQL is unavailable.
   return getUserById(cleanId);
 }
 
@@ -506,8 +506,8 @@ export async function createUserAsync(params: {
       }
       throw new Error(`Database persistence failed: ${err.message}`);
     }
-  } else if (process.env.NODE_ENV === 'production') {
-    throw new Error('Database persistence unavailable: Cannot create user in production without PostgreSQL.');
+  } else if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
+    throw new Error('Database persistence unavailable: Cannot create user without PostgreSQL when REQUIRE_PERSISTENT_USERS is enabled.');
   }
 
   // Update memory cache only after DB persistence succeeds.
@@ -538,8 +538,8 @@ export async function updateUserAsync(
     return merged;
   }
 
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Database persistence unavailable: Cannot update user in production without PostgreSQL.');
+  if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
+    throw new Error('Database persistence unavailable: Cannot update user without PostgreSQL when REQUIRE_PERSISTENT_USERS is enabled.');
   }
 
   return updateUser(cleanId, updates);

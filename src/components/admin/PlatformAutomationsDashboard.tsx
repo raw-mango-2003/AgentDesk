@@ -89,8 +89,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'rules' | 'test_runner' | 'logs'>('rules');
 
   const getAuthHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    return { 'Accept': 'application/json' };
   };
 
   const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> => {

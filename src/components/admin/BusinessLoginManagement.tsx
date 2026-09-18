@@ -95,17 +95,17 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
   const [actionLoading, setActionLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const token = localStorage.getItem('agentdesk_session_token') || '';
-
   const loadData = async () => {
     setLoading(true);
     try {
       const [credRes, auditRes] = await Promise.all([
         fetch('/api/auth/platform/credentials', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include',
+          headers: { 'Accept': 'application/json' }
         }),
         fetch('/api/auth/platform/audit-logs', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include',
+          headers: { 'Accept': 'application/json' }
         })
       ]);
 
@@ -160,9 +160,9 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
     try {
       const res = await fetch('/api/auth/platform/credentials/create', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           tenantId: createModalTenant.id,
@@ -208,9 +208,9 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
     try {
       const res = await fetch('/api/auth/platform/credentials/reset-password', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           userId: resetModalItem.owner.id,
@@ -253,9 +253,9 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
     try {
       const res = await fetch('/api/auth/platform/credentials/change-email', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           userId: changeEmailItem.owner.id,
@@ -290,9 +290,9 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
     try {
       const res = await fetch('/api/auth/platform/credentials/toggle-status', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           userId: item.owner.id,

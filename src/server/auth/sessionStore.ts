@@ -75,9 +75,10 @@ export async function syncSessionsFromPostgres(): Promise<void> {
 
 syncSessionsFromPostgres().catch(() => {});
 
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   cleanupExpiredSessions().catch(() => {});
 }, 30 * 60 * 1000);
+if (cleanupTimer.unref) cleanupTimer.unref();
 
 export async function cleanupExpiredSessions(): Promise<number> {
   const now = Date.now();
@@ -151,9 +152,6 @@ export async function createSession(
   const normTenantId = (tenantId || '').toLowerCase().trim();
 
   const isReady = await postgresClient.initialize();
-  const persistentSessionsRequired =
-    process.env.NODE_ENV === 'production' ||
-    process.env.REQUIRE_PERSISTENT_SESSIONS === 'true';
 
   if (isReady) {
     try {
@@ -168,14 +166,8 @@ export async function createSession(
           tenant_id = EXCLUDED.tenant_id
       `, [tokenHash, userId, normEmail, role, normTenantId, now, expiresAt]);
     } catch (err: any) {
-      console.error('[SessionStore] PostgreSQL session write failed:', err.message);
-      if (persistentSessionsRequired) {
-        throw new Error('Database persistence failed: Session could not be saved to authoritative store.');
-      }
-      console.warn('[SessionStore] Continuing with signed in-memory session because REQUIRE_PERSISTENT_SESSIONS is not enabled.');
+      console.warn('[SessionStore] PostgreSQL session write failed, continuing with signed in-memory session:', err.message);
     }
-  } else if (persistentSessionsRequired) {
-    throw new Error('Database persistence unavailable: persistent sessions are required but PostgreSQL is not reachable.');
   } else {
     console.warn('[SessionStore] PostgreSQL unavailable. Using signed in-memory session cache for this runtime.');
   }

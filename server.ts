@@ -1320,7 +1320,7 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       email: (email || '').toString().trim().slice(0, 100),
       phone: (phone || '').toString().trim().slice(0, 50),
       source: 'Embed Widget',
-      status: 'new',
+      status: 'new' as const,
       score: 85,
       notes: (notes || 'Lead submitted through embedded website AI widget').toString().trim().slice(0, 500),
       createdAt: new Date().toISOString()
