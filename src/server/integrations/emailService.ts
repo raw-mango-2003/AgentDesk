@@ -6,6 +6,7 @@ import {
 } from './interfaces.js';
 import { renderEmailTemplate } from './emailTemplates.js';
 import { GmailService } from './gmailService.js';
+import { deliveryLogService } from './deliveryLogService.js';
 
 export class EmailService implements IEmailService {
   private gmailService: GmailService;
@@ -90,6 +91,7 @@ export class EmailService implements IEmailService {
       // No fake delivery: accurately record NOT_CONFIGURED
       const errorMsg = 'Gmail OAuth 2.0 is not configured. Connect Gmail in Platform Admin -> Integrations.';
       record.status = 'NOT_CONFIGURED';
+      await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: 'NOT_CONFIGURED', provider: record.provider, retryCount: 0, payload: { subject: options.subject } });
       record.failedAt = new Date().toISOString();
       record.error = errorMsg;
       console.warn(`[EmailService:NotConfigured] Cannot dispatch email to ${options.to}: ${errorMsg}`);
@@ -107,6 +109,7 @@ export class EmailService implements IEmailService {
 
     if (sendResult.success && sendResult.status === 'SENT') {
       record.status = 'SENT';
+      await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: 'SENT', provider: record.provider, providerId: sendResult.messageId, retryCount: 0, payload: { subject: options.subject } });
       record.sentAt = sendResult.timestamp;
       record.providerMessageId = sendResult.messageId;
       record.error = undefined;
@@ -115,6 +118,7 @@ export class EmailService implements IEmailService {
 
     // Gmail send failure or disconnected token
     record.status = sendResult.status === 'NOT_CONFIGURED' ? 'NOT_CONFIGURED' : 'FAILED';
+    await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: record.status, provider: record.provider, retryCount: 0, error: sendResult.error, payload: { subject: options.subject } });
     record.failedAt = sendResult.timestamp;
     record.error = sendResult.error || 'Gmail delivery failed';
     return { 
@@ -161,12 +165,14 @@ export class EmailService implements IEmailService {
       if (!response.ok) {
         const errMsg = responseData.message || responseData.error || `Resend HTTP error ${response.status}`;
         record.status = 'FAILED';
+        await deliveryLogService.update(record.id, { status: 'FAILED', provider: record.provider, retryCount: record.attemptCount, error: errMsg });
         record.failedAt = new Date().toISOString();
         record.error = errMsg;
         return { success: false, status: 'FAILED', error: errMsg };
       }
 
       record.status = 'SENT';
+      await deliveryLogService.update(record.id, { status: 'SENT', provider: record.provider, providerId: responseData.id, retryCount: record.attemptCount });
       record.sentAt = new Date().toISOString();
       record.providerMessageId = responseData.id;
       return { success: true, status: 'SENT', messageId: responseData.id };
