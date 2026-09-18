@@ -882,7 +882,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   }
 
   return (
-    <div className={`flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden font-sans ${
+    <div className={`agentdesk-chat-widget flex flex-col bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden font-sans ${
       isEmbedded 
         ? 'w-full h-[600px]' 
         : 'fixed inset-x-2 bottom-2 top-14 sm:top-auto sm:inset-x-auto sm:bottom-6 sm:right-6 w-auto sm:w-[420px] max-w-[calc(100vw-1rem)] h-[calc(100dvh-4rem)] sm:h-[580px] z-50'
