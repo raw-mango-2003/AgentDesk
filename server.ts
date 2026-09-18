@@ -37,7 +37,7 @@ import {
   ConversationState,
   KnowledgeItem
 } from './src/lib/conversationEngine.js';
-import { runConversationTestSuite, runMultiTenantIsolationTestSuite } from './src/lib/testSuite.js';
+import { runConversationTestSuite, runMultiTenantIsolationTestSuite, runBusinessResolutionSafetyTests } from './src/lib/testSuite.js';
 import { runProductionSmokeTests } from './src/server/tests/smokeTests.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
 import { authRouter, requirePlatformAdmin, requireAuth, requireTenantAccess, extractTokenFromRequest } from './src/server/auth/authRouter.js';
@@ -1315,6 +1315,19 @@ app.get('/api/agent/:agentId/widget-config', (req: Request, res: Response) => {
     agent,
     business,
     knowledgeCount: knowledge.length
+  });
+});
+
+
+// GET Business Resolution Fail-Closed Regression Tests
+app.get('/api/test/business-resolution', (_req: Request, res: Response) => {
+  const results = runBusinessResolutionSafetyTests(resolveBusinessAndKnowledge);
+  const allPassed = results.every(r => r.passed);
+  return res.status(allPassed ? 200 : 500).json({
+    success: allPassed,
+    allPassed,
+    suites: results,
+    timestamp: new Date().toISOString()
   });
 });
 
