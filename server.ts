@@ -1863,7 +1863,7 @@ async function startServer() {
     });
   });
 
-  const isProduction = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) {
     const isHmrDisabled = process.env.DISABLE_HMR === 'true';
