@@ -111,3 +111,56 @@ html, body {
     min-height: auto;
   }
 }
+
+
+/* AgentDesk chat widget responsive layout. Keep the widget usable on narrow phones
+   without changing its desktop dimensions or interaction behavior. */
+.agentdesk-chat-widget {
+  min-width: 0;
+  max-width: 100vw;
+}
+
+.agentdesk-chat-widget input,
+.agentdesk-chat-widget textarea,
+.agentdesk-chat-widget button {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .agentdesk-chat-widget {
+    border-radius: 1rem;
+  }
+
+  .agentdesk-chat-widget .grid.grid-cols-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .agentdesk-chat-widget .h-32 {
+    min-height: 6rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .agentdesk-chat-widget {
+    font-size: 0.95rem;
+  }
+
+  .agentdesk-chat-widget > div:first-child {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .agentdesk-chat-widget > div:first-child h3 {
+    max-width: 11rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agentdesk-chat-widget > div:first-child p {
+    max-width: 11rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
