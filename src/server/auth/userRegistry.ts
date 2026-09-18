@@ -413,7 +413,11 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
     }
   }
 
-  // Compatibility fallback when PostgreSQL is unavailable.
+  // Development-only compatibility fallback. Production must fail closed
+  // instead of authenticating against a process-local cache.
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
   return getUserByEmail(clean);
 }
 
@@ -447,7 +451,11 @@ export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
     }
   }
 
-  // Compatibility fallback when PostgreSQL is unavailable.
+  // Development-only compatibility fallback. Production must fail closed
+  // instead of authenticating against a process-local cache.
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
   return getUserById(cleanId);
 }
 
@@ -506,8 +514,8 @@ export async function createUserAsync(params: {
       }
       throw new Error(`Database persistence failed: ${err.message}`);
     }
-  } else if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
-    throw new Error('Database persistence unavailable: Cannot create user without PostgreSQL when REQUIRE_PERSISTENT_USERS is enabled.');
+  } else if (process.env.NODE_ENV === 'production' || process.env.REQUIRE_PERSISTENT_USERS === 'true') {
+    throw new Error('Database persistence unavailable: Cannot create user without PostgreSQL in production.');
   }
 
   // Update memory cache only after DB persistence succeeds.
