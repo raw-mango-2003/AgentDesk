@@ -45,7 +45,7 @@ export interface PlanConfig {
 // MARKETS: INDIA (INR), USA (USD), UK (GBP)
 // ----------------------------------------------------
 
-export const DEFAULT_PLAN_CONFIGS: Record<string, PlanConfig> = {
+const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
   starter: {
     id: 'starter',
     name: 'Starter',
@@ -235,7 +235,7 @@ export const DEFAULT_PLAN_CONFIGS: Record<string, PlanConfig> = {
   }
 };
 
-export const PLAN_CONFIGS = DEFAULT_PLAN_CONFIGS;
+// Single canonical pricing registry. Legacy aliases are read-only compatibility exports.\nexport const PLAN_CONFIGS = CANONICAL_PLAN_CONFIGS;\nexport const DEFAULT_PLAN_CONFIGS = PLAN_CONFIGS;
 
 export function normalizePlanId(plan: string | undefined): PlanKey {
   if (!plan) return 'growth';
@@ -504,7 +504,7 @@ export const PLATFORM_MANAGED_OPERATIONS = {
   globalPresence: 'India, USA, UK and Global Multi-Region Edge'
 };
 
-export const PRICING_PLANS: PlanConfig[] = Object.values(DEFAULT_PLAN_CONFIGS);
+export const PRICING_PLANS: PlanConfig[] = Object.values(PLAN_CONFIGS);
 
 export const IMPLEMENTATION_EXPLANATION = {
   title: '12-Step Enterprise Implementation Methodology',
