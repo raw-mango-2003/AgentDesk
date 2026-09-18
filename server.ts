@@ -46,6 +46,7 @@ import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
+import { generalApiRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
 import { 
@@ -112,6 +113,10 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: true }));
+
+// Apply a bounded API-wide rate limit before individual routers.
+// Sensitive routes may apply stricter route-specific limiters (for example auth and password reset).
+app.use('/api', generalApiRateLimiter);
 
 // Mount Billing & Webhooks API Router
 app.use('/api/billing', billingRouter);
