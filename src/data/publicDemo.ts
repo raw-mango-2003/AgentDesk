@@ -8,7 +8,7 @@ export const PUBLIC_AGENTDESK_DEMO_BUSINESS: Business = {
   id: PUBLIC_DEMO_TENANT_ID,
   tenantId: PUBLIC_DEMO_TENANT_ID,
   tenantType: 'demo',
-  isDemo: false,
+  isDemo: true,
   primaryAgentId: PUBLIC_DEMO_AGENT_ID,
   name: 'AgentDesk Technologies',
   industry: 'B2B AI Sales Automation Platform',
