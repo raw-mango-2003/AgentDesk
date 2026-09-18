@@ -2489,6 +2489,14 @@ export class BillingService {
         this.processedWebhookEvents.add(eventId);
         return { success: true, handled: true, duplicate: true, message: 'Event already processed' };
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      // Payment webhooks must fail closed when durable idempotency storage is unavailable.
+      // The provider can retry safely once PostgreSQL is healthy again.
+      return {
+        success: false,
+        handled: false,
+        error: 'Webhook persistence is temporarily unavailable. Please retry.'
+      };
     }
 
     this.processedWebhookEvents.add(eventId);
