@@ -140,17 +140,24 @@ export function extractCookie(cookieHeader: string | undefined, name: string): s
  */
 export function setSessionCookie(res: Response, token: string) {
   const isProd = process.env.NODE_ENV === 'production';
-  const cookieParts = [
+  const sessionCookie = [
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
     `Max-Age=${7 * 24 * 60 * 60}`,
     ...(isProd ? ['Secure'] : [])
-  ];
-  res.setHeader('Set-Cookie', cookieParts.join('; '));
+  ].join('; ');
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  const csrfCookie = [
+    `agentdesk_csrf=${csrfToken}`,
+    'Path=/',
+    'SameSite=Lax',
+    `Max-Age=${7 * 24 * 60 * 60}`,
+    ...(isProd ? ['Secure'] : [])
+  ].join('; ');
+  res.setHeader('Set-Cookie', [sessionCookie, csrfCookie]);
 }
-
 /**
  * Extract auth token from Authorization header or HttpOnly cookie
  */
