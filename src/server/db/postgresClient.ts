@@ -37,6 +37,8 @@ class PostgresClient {
   private lastError: string | null = null;
   private isInitializing = false;
   private initPromise: Promise<boolean> | null = null;
+  private lastAttemptAt = 0;
+  private readonly retryCooldownMs = 10000;
 
   constructor() {
     this.initPool();
@@ -74,6 +76,12 @@ class PostgresClient {
       return this.initPromise;
     }
 
+    const now = Date.now();
+    if (now - this.lastAttemptAt < this.retryCooldownMs) {
+      return this.isConnected;
+    }
+    this.lastAttemptAt = now;
+
     this.initPromise = (async () => {
       if (!this.pool) {
         return false;
@@ -99,8 +107,10 @@ class PostgresClient {
       } catch (err: any) {
         this.isConnected = false;
         this.lastError = err.message;
-        console.log(`[PostgresClient] Notice: PostgreSQL standby (${err.message}). Using resilient local storage.`);
+        console.log(`[PostgresClient] Notice: PostgreSQL unavailable (${err.message}). The client will retry after the cooldown.`);
         return false;
+      } finally {
+        this.initPromise = null;
       }
     })();
 
