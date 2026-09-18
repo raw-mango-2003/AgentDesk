@@ -48,37 +48,41 @@ export function initTenantRegistry() {
   if (isInitialized) return;
   isInitialized = true;
 
-  // 1. Seed Businesses
-  for (const b of SEED_BUSINESSES) {
-    const id = (b.id || '').trim().toLowerCase();
-    if (id) {
-      serverBusinessesStore.set(id, { ...b, id, status: b.status || 'active' });
-    }
-  }
-
-  // 2. Seed Agents
-  for (const a of SEED_AGENTS) {
-    const id = (a.id || '').trim().toLowerCase();
-    if (id) {
-      serverAgentsStore.set(id, { ...a, id });
-      if (a.publicId) {
-        serverAgentsStore.set(a.publicId.trim().toLowerCase(), { ...a, id });
+  // Development/demo fixtures must never be loaded into the production tenant registry.
+  // Production hydrates real tenants, agents, and knowledge from PostgreSQL instead.
+  if (process.env.NODE_ENV !== 'production') {
+    // 1. Seed Businesses
+    for (const b of SEED_BUSINESSES) {
+      const id = (b.id || '').trim().toLowerCase();
+      if (id) {
+        serverBusinessesStore.set(id, { ...b, id, status: b.status || 'active' });
       }
     }
-  }
 
-  // 3. Seed Knowledge Base Items
-  for (const item of SEED_KNOWLEDGE_ITEMS) {
-    const tenantId = (item.tenantId || item.businessId || '').trim().toLowerCase();
-    if (tenantId) {
-      const existing = serverKnowledgeStore.get(tenantId) || [];
-      existing.push({
-        ...item,
-        tenantId,
-        businessId: tenantId,
-        active: item.status === 'active' || item.active === true
-      });
-      serverKnowledgeStore.set(tenantId, existing);
+    // 2. Seed Agents
+    for (const a of SEED_AGENTS) {
+      const id = (a.id || '').trim().toLowerCase();
+      if (id) {
+        serverAgentsStore.set(id, { ...a, id });
+        if (a.publicId) {
+          serverAgentsStore.set(a.publicId.trim().toLowerCase(), { ...a, id });
+        }
+      }
+    }
+
+    // 3. Seed Knowledge Base Items
+    for (const item of SEED_KNOWLEDGE_ITEMS) {
+      const tenantId = (item.tenantId || item.businessId || '').trim().toLowerCase();
+      if (tenantId) {
+        const existing = serverKnowledgeStore.get(tenantId) || [];
+        existing.push({
+          ...item,
+          tenantId,
+          businessId: tenantId,
+          active: item.status === 'active' || item.active === true
+        });
+        serverKnowledgeStore.set(tenantId, existing);
+      }
     }
   }
 
