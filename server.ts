@@ -322,43 +322,12 @@ export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge
   let business = serverBusinessesStore.get(targetTenantId) || SEED_BUSINESSES.find(b => (b.id || '').trim().toLowerCase() === targetTenantId);
   
   if (!business) {
-    const fallbackId = targetTenantId || 'workspace';
-    business = {
-      id: fallbackId,
-      tenantId: fallbackId,
-      name: formatBusinessName(fallbackId),
-      industry: 'General',
-      description: `Support AI for ${formatBusinessName(fallbackId)}`,
-      website: '',
-      supportEmail: `support@${fallbackId}.com`,
-      logo: '',
-      primaryColor: resolvedAgent?.primaryColor || '#2563eb',
-      secondaryColor: resolvedAgent?.secondaryColor || '#1e40af',
-      agentSettings: {
-        agentName: resolvedAgent?.name || `${formatBusinessName(fallbackId)} Assistant`,
-        welcomeMessage: resolvedAgent?.welcomeMessage || `Hi 👋 Welcome to ${formatBusinessName(fallbackId)}. How can I help you today?`,
-        businessDescription: resolvedAgent?.businessDescription || `Workspace for ${formatBusinessName(fallbackId)}`,
-        tone: resolvedAgent?.tone || 'Friendly',
-        primaryColor: resolvedAgent?.primaryColor || '#2563eb',
-        secondaryColor: resolvedAgent?.secondaryColor || '#1e40af',
-        suggestedQuestions: resolvedAgent?.suggestedQuestions || ['What services do you offer?', 'What is the pricing?', 'How can I enroll?'],
-        systemSecurityInstructions: resolvedAgent?.customInstructions || `Strict tenant isolation. You represent ${formatBusinessName(fallbackId)} ONLY.`,
-        humanHandoffEnabled: resolvedAgent?.humanHandoffEnabled ?? true,
-        leadCaptureEnabled: resolvedAgent?.leadCaptureEnabled ?? true
-      },
-      voice: resolvedAgent?.voice || 'Puck',
-      voiceGreeting: resolvedAgent?.voiceGreeting || `Hello! I am ${formatBusinessName(fallbackId)} AI receptionist. How can I assist you today?`,
-      plan: 'growth',
-      status: 'active',
-      agentStatus: 'PUBLISHED',
-      subscriptionState: 'ACTIVE',
-      currency: 'USD',
-      trialDaysRemaining: 14,
-      whiteLabelEnabled: true,
-      dataRetentionDays: 90,
-      maxMonthlyVoiceMinutes: 500,
-      maxMonthlyMessages: 5000,
-      createdAt: new Date().toISOString()
+    // Unknown tenant identifiers must not synthesize an active/published tenant.
+    // Only the explicit public-demo path above may use a seeded fallback.
+    return {
+      business: null,
+      knowledge: [],
+      agent: resolvedAgent || null
     };
   }
 
