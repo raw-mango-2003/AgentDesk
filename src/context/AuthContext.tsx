@@ -32,8 +32,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'agentdesk_session_token';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [currentTenant, setCurrentTenant] = useState<TenantInfo | null>(null);
@@ -44,13 +42,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveBusinessIdState(id);
   };
 
-  const fetchSessionUser = async (token: string) => {
+  const fetchSessionUser = async () => {
     try {
-      const res = await safeFetchJson('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const res = await safeFetchJson('/api/auth/me');
       if (res.success && res.user) {
         setCurrentUser(res.user);
         if (res.tenant) {
@@ -61,8 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         return;
       }
-      // Invalid session
-      localStorage.removeItem(TOKEN_KEY);
+      // Invalid session. Authentication is held by the HttpOnly session cookie.
       setCurrentUser(null);
       setCurrentTenant(null);
       setActiveBusinessIdState('');
@@ -76,13 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const initAuth = async () => {
       setLoading(true);
-      const token = localStorage.getItem(TOKEN_KEY);
-      if (token) {
-        await fetchSessionUser(token);
-      } else {
-        setCurrentUser(null);
-        setCurrentTenant(null);
-      }
+      await fetchSessionUser();
       setLoading(false);
     };
 
@@ -90,10 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const refreshAuth = async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (token) {
-      await fetchSessionUser(token);
-    }
+    await fetchSessionUser();
   };
 
   const loginBusiness = async (email: string, pass: string) => {
@@ -114,9 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      if (res.token) {
-        localStorage.setItem(TOKEN_KEY, res.token);
-      }
       if (res.user) {
         setCurrentUser(res.user);
       }
@@ -164,9 +145,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: errorMsg };
       }
 
-      if (res.token) {
-        localStorage.setItem(TOKEN_KEY, res.token);
-      }
       if (res.user) {
         setCurrentUser(res.user);
       }
@@ -226,17 +204,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     phone?: string;
     website?: string;
   }) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      return { success: false, error: 'Session expired. Please sign in again.' };
-    }
-
     try {
       const res = await safeFetchJson('/api/auth/onboarding/business-details', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(details)
       });
@@ -268,10 +240,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updatePassword = async (currentPassword: string, newPassword: string, confirmPassword?: string) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      return { success: false, error: 'Authentication required.' };
-    }
     try {
       const res = await safeFetchJson('/api/auth/change-password', {
         method: 'POST',
@@ -301,10 +269,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProfile = async (name?: string, email?: string) => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      return { success: false, error: 'Authentication required.' };
-    }
     try {
       const res = await safeFetchJson('/api/auth/update-profile', {
         method: 'POST',
