@@ -46,6 +46,7 @@ import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter } from './src/server/integrations/rateLimiter.js';
+import { postgresClient } from './src/server/db/postgresClient.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
 import { 
@@ -468,51 +469,54 @@ setInterval(() => {
   }
 }, 300000); // every 5 min
 
-function checkRateLimit(key: string, limit: number = 30, windowMs: number = 60000): boolean {
+async function checkPersistentRateLimit(
+  key: string,
+  limit: number = 30,
+  windowMs: number = 60000
+): Promise<boolean> {
+  try {
+    if (await postgresClient.initialize()) {
+      const now = Date.now();
+      const resetAt = now + windowMs;
+      const result = await postgresClient.query(
+        `INSERT INTO agentdesk_rate_limits (key, count, reset_at)
+         VALUES ($1, 1, $2)
+         ON CONFLICT (key) DO UPDATE SET
+           count = CASE
+             WHEN agentdesk_rate_limits.reset_at <= $3 THEN 1
+             ELSE agentdesk_rate_limits.count + 1
+           END,
+           reset_at = CASE
+             WHEN agentdesk_rate_limits.reset_at <= $3 THEN $2
+             ELSE agentdesk_rate_limits.reset_at
+           END
+         RETURNING count, reset_at`,
+        [key, resetAt, now]
+      );
+      return Number(result.rows[0]?.count || 0) <= limit;
+    }
+  } catch (error: any) {
+    console.warn('[RateLimit] Persistent store unavailable, using local fallback:', error.message);
+  }
+
   const now = Date.now();
   const record = ipRateLimitMap.get(key);
   if (!record || now > record.resetAt) {
     ipRateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
     return true;
   }
-  if (record.count >= limit) {
-    return false;
-  }
+  if (record.count >= limit) return false;
   record.count += 1;
   return true;
 }
 
-function checkAgentAiHourlyBudget(agentId: string, maxHourlyCalls: number = 200): boolean {
-  const now = Date.now();
-  const key = agentId.toLowerCase();
-  const record = agentUsageMap.get(key);
-  if (!record || now > record.resetAt) {
-    agentUsageMap.set(key, { count: 1, resetAt: now + 3600000 }); // 1 hr window
-    return true;
-  }
-  if (record.count >= maxHourlyCalls) {
-    return false; // budget exceeded -> fallback gracefully to local deterministic engine
-  }
-  record.count += 1;
-  return true;
+async function checkAgentAiHourlyBudget(agentId: string, maxHourlyCalls: number = 200): Promise<boolean> {
+  return checkPersistentRateLimit(`agent_ai_hourly:${agentId.toLowerCase()}`, maxHourlyCalls, 3600000);
 }
 
-function checkAndIncrementConversationTurns(convId: string, maxTurns: number = 35): boolean {
+async function checkAndIncrementConversationTurns(convId: string, maxTurns: number = 35): Promise<boolean> {
   if (!convId) return true;
-  const now = Date.now();
-  const record = conversationTurnMap.get(convId);
-  const turns = record?.count || 0;
-
-  if (turns >= maxTurns) {
-    if (record) record.lastSeenAt = now;
-    return false;
-  }
-
-  conversationTurnMap.set(convId, {
-    count: turns + 1,
-    lastSeenAt: now
-  });
-  return true;
+  return checkPersistentRateLimit(`conversation_turns:${convId}`, maxTurns, 2 * 60 * 60 * 1000);
 }
 
 // API Routes
@@ -1160,7 +1164,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
     // Loop & Session Abuse Protection (Max 35 user turns per conversation)
-    if (!checkAndIncrementConversationTurns(safeConvId, 35)) {
+    if (!(await checkAndIncrementConversationTurns(safeConvId, 35)) {
       return res.json({
         success: true,
         reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
@@ -1199,7 +1203,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
       let geminiReply: string | null = null;
       // Check zero-cost hourly agent budget before calling Gemini
-      const canUseAi = checkAgentAiHourlyBudget(agent.id, 250);
+      const canUseAi = await checkAgentAiHourlyBudget(agent.id, 250);
       if (targetedKnowledge.length > 0 && canUseAi) {
         geminiReply = await generateGroundedGeminiResponse(
           currentBusiness,
@@ -1390,7 +1394,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
     // Loop prevention check
-    if (!checkAndIncrementConversationTurns(safeConvId, 35)) {
+    if (!(await checkAndIncrementConversationTurns(safeConvId, 35)) {
       return res.json({
         success: true,
         reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
@@ -1450,7 +1454,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
       // Attempt Resilient Gemini Generation, strictly grounded on this business's knowledge & zero-cost budget
       let geminiReply: string | null = null;
-      const canUseAi = checkAgentAiHourlyBudget(agent.id, 250);
+      const canUseAi = await checkAgentAiHourlyBudget(agent.id, 250);
       if (targetedKnowledge.length > 0 && canUseAi) {
         geminiReply = await generateGroundedGeminiResponse(
           currentBusiness,
