@@ -319,6 +319,32 @@ export async function persistUserToPostgres(user: UserRecord): Promise<void> {
   }
 }
 
+function mapDbRowToUserRecord(row: any): UserRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    passwordHash: row.password_hash,
+    role: row.role as UserRole,
+    tenantId: row.tenant_id,
+    status: row.status as UserStatus,
+    mustChangePassword: Boolean(row.must_change_password),
+    emailVerified: Boolean(row.email_verified),
+    resetTokenHash: row.reset_token_hash || undefined,
+    resetTokenExpires: row.reset_token_expires ? Number(row.reset_token_expires) : undefined,
+    verificationTokenHash: row.verification_token_hash || undefined,
+    verificationTokenExpires: row.verification_token_expires ? Number(row.verification_token_expires) : undefined,
+    setupTokenHash: row.setup_token_hash || undefined,
+    setupTokenExpires: row.setup_token_expires ? Number(row.setup_token_expires) : undefined,
+    twoFactorEnabled: Boolean(row.two_factor_enabled),
+    twoFactorPhone: row.two_factor_phone || undefined,
+    failedLoginAttempts: row.failed_login_attempts ? Number(row.failed_login_attempts) : 0,
+    lockoutUntil: row.lockout_until ? Number(row.lockout_until) : undefined,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || new Date().toISOString()
+  };
+}
+
 /**
  * Synchronize all users from PostgreSQL into active memory store
  */

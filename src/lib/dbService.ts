@@ -52,8 +52,12 @@ import {
   DEFAULT_DASHBOARD_WIDGETS, 
   SEED_NOTIFICATIONS, 
   SEED_AUDIT_LOGS,
+  PUBLIC_DEMO_TENANT_ID,
   SUMMIT_ID,
-  SHARMA_ID
+  SHARMA_ID,
+  LONDON_ID,
+  ACME_TENANT_ID,
+  BETA_TENANT_ID
 } from '../data/seedData';
 
 export async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
@@ -156,7 +160,7 @@ const PRODUCTION_SEED_TENANT_IDS = new Set([
 ]);
 
 function isProductionRuntime(): boolean {
-  return typeof import.meta !== 'undefined' && import.meta.env?.PROD === true;
+  return typeof import.meta !== 'undefined' && (import.meta as any).env?.PROD === true;
 }
 
 function isSeedTenantRecord(value: any): boolean {

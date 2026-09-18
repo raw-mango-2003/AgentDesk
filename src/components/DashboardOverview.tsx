@@ -16,7 +16,9 @@ import {
   Phone,
   ShieldAlert,
   CheckCircle2,
-  HelpCircle
+  HelpCircle,
+  Repeat,
+  Calendar
 } from 'lucide-react';
 import { Business, Conversation, Lead, AnalyticsSummary, OnboardingStep, UsageAlertStatus, UnansweredQuestion } from '../types';
 import { 

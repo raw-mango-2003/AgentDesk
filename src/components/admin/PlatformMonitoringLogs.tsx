@@ -17,6 +17,7 @@ export const PlatformMonitoringLogs: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'emails' | 'queue' | 'errors' | 'audit'>('emails');
   const [data, setData] = useState<{
     metrics: any;
+    deliveryLogs?: any[];
     emailLogs: any[];
     auditLogs: any[];
     queueJobs: any[];

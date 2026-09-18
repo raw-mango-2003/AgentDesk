@@ -235,7 +235,9 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
   }
 };
 
-// Single canonical pricing registry. Legacy aliases are read-only compatibility exports.\nexport const PLAN_CONFIGS = CANONICAL_PLAN_CONFIGS;\nexport const DEFAULT_PLAN_CONFIGS = PLAN_CONFIGS;
+// Single canonical pricing registry. Legacy aliases are read-only compatibility exports.
+export const PLAN_CONFIGS = CANONICAL_PLAN_CONFIGS;
+export const DEFAULT_PLAN_CONFIGS = PLAN_CONFIGS;
 
 export function normalizePlanId(plan: string | undefined): PlanKey {
   if (!plan) return 'growth';

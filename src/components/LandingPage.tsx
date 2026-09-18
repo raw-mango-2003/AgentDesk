@@ -280,12 +280,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="hidden lg:block absolute top-1/2 left-10 right-10 h-px bg-slate-800" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative">
               {[
-                ['01', 'Customer enquiry', 'A customer asks a question on your website or through a connected channel.', MessageSquare],
-                ['02', 'AI responds', 'AgentDesk answers from your configured business knowledge and keeps the conversation moving.', Bot],
-                ['03', 'Lead captured', 'Useful enquiry details are organized so your team can see who needs attention.', UserCheck],
-                ['04', 'Follow-up', 'Follow-up activity can be scheduled and managed instead of relying on memory.', Repeat],
-                ['05', 'Book or hand off', 'Move the customer toward an appointment, or bring in a team member when human help is needed.', Calendar]
-              ].map(([number, title, desc, Icon]) => (
+                { number: '01', title: 'Customer enquiry', desc: 'A customer asks a question on your website or through a connected channel.', icon: MessageSquare },
+                { number: '02', title: 'AI responds', desc: 'AgentDesk answers from your configured business knowledge and keeps the conversation moving.', icon: Bot },
+                { number: '03', title: 'Lead captured', desc: 'Useful enquiry details are organized so your team can see who needs attention.', icon: UserCheck },
+                { number: '04', title: 'Follow-up', desc: 'Follow-up activity can be scheduled and managed instead of relying on memory.', icon: Repeat },
+                { number: '05', title: 'Book or hand off', desc: 'Move the customer toward an appointment, or bring in a team member when human help is needed.', icon: Calendar }
+              ].map(({ number, title, desc, icon: Icon }) => (
                 <div key={number} className="relative p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-[10px] font-black text-blue-400">{number}</span>

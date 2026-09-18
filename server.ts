@@ -514,6 +514,20 @@ async function checkPersistentRateLimit(
   return true;
 }
 
+function checkRateLimit(key: string, limit: number = 30, windowMs: number = 60000): boolean {
+  const now = Date.now();
+  const record = ipRateLimitMap.get(key);
+  if (!record || now > record.resetAt) {
+    ipRateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    checkPersistentRateLimit(key, limit, windowMs).catch(() => {});
+    return true;
+  }
+  if (record.count >= limit) return false;
+  record.count += 1;
+  checkPersistentRateLimit(key, limit, windowMs).catch(() => {});
+  return true;
+}
+
 async function checkAgentAiHourlyBudget(agentId: string, maxHourlyCalls: number = 200): Promise<boolean> {
   return checkPersistentRateLimit(`agent_ai_hourly:${agentId.toLowerCase()}`, maxHourlyCalls, 3600000);
 }
@@ -1171,7 +1185,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
     // Loop & Session Abuse Protection (Max 35 user turns per conversation)
-    if (!(await checkAndIncrementConversationTurns(safeConvId, 35)) {
+    if (!(await checkAndIncrementConversationTurns(safeConvId, 35))) {
       return res.json({
         success: true,
         reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
@@ -1418,7 +1432,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
     // Loop prevention check
-    if (!(await checkAndIncrementConversationTurns(safeConvId, 35)) {
+    if (!(await checkAndIncrementConversationTurns(safeConvId, 35))) {
       return res.json({
         success: true,
         reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
