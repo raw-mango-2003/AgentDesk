@@ -446,7 +446,13 @@ interface RateLimitRecord {
 
 const ipRateLimitMap = new Map<string, RateLimitRecord>();
 const agentUsageMap = new Map<string, RateLimitRecord>();
-const conversationTurnMap = new Map<string, number>();
+interface ConversationTurnRecord {
+  count: number;
+  lastSeenAt: number;
+}
+
+const conversationTurnMap = new Map<string, ConversationTurnRecord>();
+const CONVERSATION_TURN_TTL_MS = 2 * 60 * 60 * 1000;
 
 // Periodic garbage collection to prevent memory leaks
 setInterval(() => {
@@ -456,6 +462,9 @@ setInterval(() => {
   }
   for (const [key, val] of agentUsageMap.entries()) {
     if (now > val.resetAt) agentUsageMap.delete(key);
+  }
+  for (const [key, val] of conversationTurnMap.entries()) {
+    if (now - val.lastSeenAt > CONVERSATION_TURN_TTL_MS) conversationTurnMap.delete(key);
   }
 }, 300000); // every 5 min
 
@@ -490,11 +499,19 @@ function checkAgentAiHourlyBudget(agentId: string, maxHourlyCalls: number = 200)
 
 function checkAndIncrementConversationTurns(convId: string, maxTurns: number = 35): boolean {
   if (!convId) return true;
-  const turns = conversationTurnMap.get(convId) || 0;
+  const now = Date.now();
+  const record = conversationTurnMap.get(convId);
+  const turns = record?.count || 0;
+
   if (turns >= maxTurns) {
+    if (record) record.lastSeenAt = now;
     return false;
   }
-  conversationTurnMap.set(convId, turns + 1);
+
+  conversationTurnMap.set(convId, {
+    count: turns + 1,
+    lastSeenAt: now
+  });
   return true;
 }
 
