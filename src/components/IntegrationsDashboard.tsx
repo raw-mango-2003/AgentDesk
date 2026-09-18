@@ -89,7 +89,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               Enterprise Hub
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              SOC-2 / HIPAA Grade
+              Security controls configured
             </span>
           </div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -97,7 +97,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
             <span>Integrations, Localization & Audit</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Configure omnichannel API gateways (Twilio, WhatsApp, Google Calendar, Resend), customize AI agent personality and RAG parameters, and inspect compliance audit logs.
+            Review available integrations, configure credentials when needed, customize AI agent personality and inspect audit logs.
           </p>
         </div>
 
@@ -146,14 +146,14 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                ACTIVE
+                AVAILABLE
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Provides real-time conversation intelligence, lead scoring, intent classification, and instant knowledge retrieval.
+              Provides AI conversation intelligence and knowledge retrieval when a Gemini API key is configured.
             </p>
             <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Model: gemini-2.5-flash • Latency: 180ms
+              Requires: Gemini API key • Model: gemini-2.5-flash
             </div>
           </div>
 
@@ -170,14 +170,14 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                CONNECTED
+                CONFIGURE TO ACTIVATE
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Powers instant inbound voice streaming, missed call detection, and compliant A2P SMS notifications.
+              Supports inbound voice, missed-call recovery, and SMS when Twilio credentials are configured.
             </p>
             <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Number: {business.phone} • Status: Registered
+              Requires: Twilio account SID, auth token, and phone number
             </div>
           </div>
 
@@ -198,10 +198,10 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Official WhatsApp gateway for high-throughput customer support, interactive rich buttons, and quote delivery.
+              Supports WhatsApp customer messaging and interactive messages when Meta WhatsApp credentials are configured.
             </p>
             <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Tier: Tier 2 (10k msgs/day) • WABA Verified
+              Requires: WhatsApp phone number ID and access token
             </div>
           </div>
 
@@ -222,10 +222,10 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Real-time schedule conflict resolution. Automatically creates events and sends Google Meet video links when requested.
+              Supports appointment synchronization when Google Calendar credentials are configured.
             </p>
             <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Target: primary_calendar • Sync: Active
+              Requires: Google Calendar authorization • Target: primary calendar
             </div>
           </div>
 
@@ -246,10 +246,10 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              High-deliverability transactional email for formal estimates, invoices, review requests, and PDF contracts.
+              Supports transactional email when a Resend API key is configured.
             </p>
             <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              DKIM: Verified • SPF: Pass • DMARC: 100%
+              Requires: Resend API key • Delivery domain verification is provider-dependent
             </div>
           </div>
 
@@ -266,11 +266,11 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                PERSISTENT
+                AVAILABLE
               </span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Strict multi-tenant security barrier ensures data is partitioned by <code>businessId</code>.
+              Provides local demo persistence with tenant data partitioned by <code>businessId</code>.
             </p>
             <button
               onClick={handleResetData}
@@ -368,7 +368,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               </div>
               <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                 <span className="text-slate-400">Primary Channel:</span>
-                <span className="font-bold text-blue-400">{business.country === 'IN' ? 'WhatsApp Gateway' : 'Twilio SMS Gateway'}</span>
+                <span className="font-bold text-blue-400">{business.country === 'IN' ? 'WhatsApp available' : 'Twilio available'}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Physical Address:</span>
