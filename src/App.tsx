@@ -103,25 +103,26 @@ export type SaaSNavTab =
 
 export type AppView = 'landing' | 'pricing' | 'login' | 'platform_login' | 'onboarding' | 'checkout' | 'dashboard' | 'setup_account' | 'reset_password' | 'verify_email';
 
+export function resolveAppRoute(pathname: string, hash: string): AppView {
+  const path = pathname.toLowerCase();
+  const normalizedHash = hash.toLowerCase();
+
+  if (path === '/setup-account' || normalizedHash.startsWith('#setup-account') || normalizedHash.startsWith('#/setup-account')) return 'setup_account';
+  if (path === '/reset-password' || normalizedHash.startsWith('#reset-password') || normalizedHash.startsWith('#/reset-password')) return 'reset_password';
+  if (path === '/verify-email' || normalizedHash.startsWith('#verify-email') || normalizedHash.startsWith('#/verify-email')) return 'verify_email';
+  if (path === '/pricing' || normalizedHash === '#pricing') return 'pricing';
+  if (path === '/login' || normalizedHash === '#login') return 'login';
+  if (path === '/platform/login' || normalizedHash === '#platform-login' || normalizedHash === '#platform/login') return 'platform_login';
+  if (path === '/get-started' || path === '/signup' || path === '/checkout' || normalizedHash === '#get-started' || normalizedHash === '#signup' || normalizedHash === '#checkout') return 'checkout';
+  if (path === '/billing' || normalizedHash === '#billing' || path.startsWith('/dashboard') || path.startsWith('/admin') || normalizedHash.startsWith('#admin') || path === '/embed' || normalizedHash === '#embed') return 'dashboard';
+
+  return 'landing';
+}
+
 export default function App() {
   const { currentUser, activeBusinessId, setActiveBusinessId, refreshAuth } = useAuth();
   
-  // Initialize view from URL
-  const getInitialView = (): AppView => {
-    if (typeof window !== 'undefined') {
-      const path = window.location.pathname.toLowerCase();
-      const hash = window.location.hash.toLowerCase();
-      if (path === '/setup-account' || hash.startsWith('#setup-account') || hash.startsWith('#/setup-account')) return 'setup_account';
-      if (path === '/reset-password' || hash.startsWith('#reset-password') || hash.startsWith('#/reset-password')) return 'reset_password';
-      if (path === '/verify-email' || hash.startsWith('#verify-email') || hash.startsWith('#/verify-email')) return 'verify_email';
-      if (path === '/pricing' || hash === '#pricing') return 'pricing';
-      if (path === '/login' || hash === '#login') return 'login';
-      if (path === '/platform/login' || hash === '#platform-login' || hash === '#platform/login') return 'platform_login';
-      if (path === '/get-started' || path === '/signup' || path === '/checkout' || hash === '#get-started' || hash === '#signup' || hash === '#checkout') return 'checkout';
-      if (path === '/billing' || hash === '#billing' || path.startsWith('/dashboard') || path.startsWith('/admin') || hash.startsWith('#admin') || path === '/embed' || hash === '#embed') return 'dashboard';
-    }
-    return 'landing';
-  };
+  const getInitialView = (): AppView => typeof window !== 'undefined' ? resolveAppRoute(window.location.pathname, window.location.hash) : 'landing';
 
   const getInitialTab = (): SaaSNavTab => {
     if (typeof window !== 'undefined') {
