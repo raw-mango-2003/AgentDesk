@@ -50,6 +50,7 @@ import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/inte
 import { postgresClient } from './src/server/db/postgresClient.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
+import { saveLead } from './src/lib/dbService.js';
 import { 
   serverBusinessesStore, 
   serverAgentsStore, 
@@ -1297,40 +1298,50 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 });
 
 // POST Public Widget Lead Capture
-app.post('/api/widget/lead', (req: Request, res: Response) => {
+app.post('/api/widget/lead', async (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
   if (!checkRateLimit(`lead:${clientIp}`, 10, 60000)) {
     return res.status(429).json({ error: 'Lead submission rate limit exceeded. Please wait a moment.' });
   }
 
-  const { agentId, businessId, tenantId, conversationId, name, email, phone, notes } = req.body;
-  const targetIdentifier = agentId || tenantId || businessId;
-  const { business } = resolveBusinessAndKnowledge(targetIdentifier);
-  if (!business) return res.status(404).json({ success: false, error: 'Business not found.' });
+  try {
+    const { agentId, businessId, tenantId, conversationId, name, email, phone, notes } = req.body || {};
+    const targetIdentifier = agentId || tenantId || businessId;
+    const { business } = resolveBusinessAndKnowledge(targetIdentifier);
+    if (!business) return res.status(404).json({ success: false, error: 'Business not found.' });
 
-  const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const leadRecord = {
-    id: leadId,
-    businessId: business.id,
-    conversationId: (conversationId || `conv_${Date.now()}`).toString().slice(0, 100),
-    name: (name || 'Website Visitor').toString().trim().slice(0, 100),
-    email: (email || '').toString().trim().slice(0, 100),
-    phone: (phone || '').toString().trim().slice(0, 50),
-    source: 'Embed Widget',
-    status: 'new',
-    score: 85,
-    notes: (notes || 'Lead submitted through embedded website AI widget').toString().trim().slice(0, 500),
-    createdAt: new Date().toISOString()
-  };
+    const leadId = `lead_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const leadRecord = {
+      id: leadId,
+      businessId: business.id,
+      conversationId: (conversationId || `conv_${Date.now()}`).toString().slice(0, 100),
+      name: (name || 'Website Visitor').toString().trim().slice(0, 100),
+      email: (email || '').toString().trim().slice(0, 100),
+      phone: (phone || '').toString().trim().slice(0, 50),
+      source: 'Embed Widget',
+      status: 'new',
+      score: 85,
+      notes: (notes || 'Lead submitted through embedded website AI widget').toString().trim().slice(0, 500),
+      createdAt: new Date().toISOString()
+    };
 
-  console.log(`[Widget Lead Capture] New lead captured for tenant (${business.id})`);
+    const savedLead = await saveLead(leadRecord);
 
-  return res.json({
-    success: true,
-    message: 'Lead captured successfully',
-    lead: leadRecord
-  });
+    console.log(`[Widget Lead Capture] New lead captured for tenant (${business.id})`);
+
+    return res.json({
+      success: true,
+      message: 'Lead captured successfully',
+      lead: savedLead
+    });
+  } catch (error: any) {
+    console.error('[Widget Lead Capture] Persistence failed:', error?.message || 'Unknown error');
+    return res.status(500).json({
+      success: false,
+      error: 'Lead could not be saved right now. Please try again.'
+    });
+  }
 });
 
 // GET Agent Widget Config for Embeds
