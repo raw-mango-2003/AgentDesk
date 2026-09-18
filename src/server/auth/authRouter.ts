@@ -505,7 +505,6 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
 
       return res.json({
         success: true,
-        token: session.token,
         user: sanitizeUser(user),
         mustChangePassword: !!user.mustChangePassword,
         redirect: '/platform/dashboard',
@@ -591,13 +590,13 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
     }
 
     const session = await createSession(user.id, user.email, user.role, user.tenantId);
+    setSessionCookie(res, session.token);
 
     analyticsService.track('login_success', { email: user.email, role: user.role }, user.id);
 
     // Requirement 4 & 15: If mustChangePassword, return mustChangePassword flag
     return res.json({
       success: true,
-      token: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirectUrl: user.mustChangePassword ? '/change-password' : '/business/dashboard',
@@ -665,7 +664,6 @@ authRouter.post('/verify-2fa-login', authRateLimiter, async (req: Request, res: 
 
     return res.json({
       success: true,
-      token: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirectUrl: user.role === 'PLATFORM_ADMIN' ? '/platform/dashboard' : (user.mustChangePassword ? '/change-password' : '/business/dashboard'),
@@ -834,7 +832,6 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
 
     return res.json({
       success: true,
-      token: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirect: redirectTarget,
@@ -1821,6 +1818,7 @@ authRouter.post('/setup-account', passwordResetRateLimiter, async (req: Request,
     // Create active session cookie so owner is logged in seamlessly
     const session = await createSession(updatedUser.id, updatedUser.email, updatedUser.role, updatedUser.tenantId);
     setSessionCookie(res, session.token);
+    setSessionCookie(res, session.token);
 
     // Emit BUSINESS_CREATED event
     automationEngine.emit('BUSINESS_CREATED', {
@@ -1844,7 +1842,6 @@ authRouter.post('/setup-account', passwordResetRateLimiter, async (req: Request,
     return res.json({
       success: true,
       message: 'Account successfully set up! Your business workspace is initialized.',
-      token: session.token,
       user: {
         id: updatedUser.id,
         name: updatedUser.name,
