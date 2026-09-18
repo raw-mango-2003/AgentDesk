@@ -164,7 +164,7 @@ app.use('/api/platform', authRouter);
 
 // Mount Production Integrations, Notifications, Security & Health API Router
 app.use('/api', integrationsRouter);
-app.use('/', integrationsRouter);
+// Integrations are exposed only through the canonical /api mount.\n// Legacy root aliases are intentionally removed.
 
 // Secure Local Storage Files Endpoint with Strict Tenant Isolation
 app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
