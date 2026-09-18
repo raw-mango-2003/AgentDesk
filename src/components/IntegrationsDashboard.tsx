@@ -132,7 +132,11 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
 
       {/* SUBTAB 1: INTEGRATIONS GATEWAYS */}
       {activeSubTab === 'integrations' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <div className="mb-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3 text-[11px] text-slate-300">
+            <span className="font-semibold text-blue-300">Integration availability:</span> The gateways below are available capabilities. A gateway is only active after its required credentials are configured and verified.
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Gemini AI */}
           <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
             <div className="flex items-center justify-between">
@@ -193,9 +197,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                   <p className="text-[10px] text-slate-400">Verified Business API</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                CONNECTED
-              </span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CONFIGURE TO ACTIVATE</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               Supports WhatsApp customer messaging and interactive messages when Meta WhatsApp credentials are configured.
@@ -217,9 +219,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                   <p className="text-[10px] text-slate-400">2-Way Appointment Sync</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                SYNCED
-              </span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CONFIGURE TO ACTIVATE</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               Supports appointment synchronization when Google Calendar credentials are configured.
@@ -241,9 +241,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                   <p className="text-[10px] text-slate-400">Transactional Proposals</p>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                HEALTHY
-              </span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CONFIGURE TO ACTIVATE</span>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               Supports transactional email when a Resend API key is configured.
@@ -280,6 +278,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
               <Trash2 className="w-3.5 h-3.5" />
               <span>{isResetting ? 'Resetting...' : 'Re-seed Demo Database'}</span>
             </button>
+          </div>
           </div>
         </div>
       )}
