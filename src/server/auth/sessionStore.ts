@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import { generateSecureToken } from './passwordUtils.js';
 import { postgresClient } from '../db/postgresClient.js';
@@ -20,39 +18,6 @@ export interface ServerSession {
 export const activeSessions = new Map<string, ServerSession>();
 
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const SESSION_CACHE_FILE = path.join(process.cwd(), '.sessions_cache.json');
-
-function saveSessionsToDisk() {
-  try {
-    const list = Array.from(activeSessions.entries()).map(([hash, session]) => ({ hash, session }));
-    fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify(list), 'utf-8');
-  } catch {
-    // Non-fatal fallback
-  }
-}
-
-function loadSessionsFromDisk() {
-  try {
-    if (fs.existsSync(SESSION_CACHE_FILE)) {
-      const raw = fs.readFileSync(SESSION_CACHE_FILE, 'utf-8');
-      const list = JSON.parse(raw);
-      const now = Date.now();
-      if (Array.isArray(list)) {
-        for (const item of list) {
-          if (item?.hash && item?.session && item.session.expiresAt > now) {
-            activeSessions.set(item.hash, item.session);
-          }
-        }
-      }
-    }
-  } catch {
-    // Non-fatal fallback
-  }
-}
-
-// Immediately restore active sessions across restarts
-loadSessionsFromDisk();
-
 export function hashSessionToken(rawToken: string): string {
   return crypto.createHash('sha256').update(rawToken.trim()).digest('hex');
 }
@@ -217,7 +182,6 @@ export async function createSession(
   };
 
   activeSessions.set(tokenHash, session);
-  saveSessionsToDisk();
   return session;
 }
 
