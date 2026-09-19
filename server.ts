@@ -48,7 +48,7 @@ import { storageService, gmailService } from './src/server/integrations/index.js
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
-import { syncUsersFromPostgres, bootstrapPlatformAdminAsync } from './src/server/auth/userRegistry.js';
+import { syncUsersFromPostgres, bootstrapPlatformAdminAsync, userRegistryReady } from './src/server/auth/userRegistry.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
 import { saveLead } from './src/lib/dbService.js';
@@ -1880,6 +1880,7 @@ async function startServer() {
     console.log(`[Diagnostic] DATABASE provider initialization: ${isDbReady ? 'success' : 'failure'}`);
     if (isDbReady) {
       console.log('[Diagnostic] migration initialization: success');
+      await userRegistryReady;
       await syncUsersFromPostgres();
       await bootstrapPlatformAdminAsync();
       console.log('[Diagnostic] user registry initialization: success');
