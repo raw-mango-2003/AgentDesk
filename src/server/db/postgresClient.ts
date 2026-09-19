@@ -187,10 +187,19 @@ class PostgresClient {
         }
       }
 
-      if (process.env.ENABLE_EMBEDDED_DB !== 'true') {
+      const hasConfiguredDatabaseUrl = Boolean((process.env.DATABASE_URL || '').trim());
+
+      // Never silently replace a configured PostgreSQL deployment with an
+      // instance-local embedded database. A configured DATABASE_URL is the
+      // persistence contract for sessions, integrations, tenants, and OAuth
+      // credentials. Embedded storage is only a fallback when DATABASE_URL is
+      // completely absent.
+      if (hasConfiguredDatabaseUrl || process.env.ENABLE_EMBEDDED_DB !== 'true') {
         this.isConnected = false;
         if (!this.lastError) {
-          this.lastError = 'PostgreSQL DATABASE_URL is unavailable or contains placeholder credentials. Set ENABLE_EMBEDDED_DB=true to enable development embedded PostgreSQL.';
+          this.lastError = hasConfiguredDatabaseUrl
+            ? 'Configured DATABASE_URL could not be reached. Fix DATABASE_URL before enabling persistent application data.'
+            : 'PostgreSQL DATABASE_URL is not configured. Set DATABASE_URL for persistent storage or ENABLE_EMBEDDED_DB=true for local development.';
         }
         return false;
       }
