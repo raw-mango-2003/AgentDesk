@@ -10,7 +10,8 @@
     "clean": "rm -rf dist server.cjs",
     "lint": "tsc --noEmit",
     "verify": "node scripts/verify-build.mjs",
-    "e2e:customer": "node scripts/e2e-customer-journey.mjs"
+    "e2e:customer": "node scripts/e2e-customer-journey.mjs",
+    "e2e:admin-auth": "node scripts/e2e-admin-auth.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
