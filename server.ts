@@ -745,12 +745,26 @@ app.get('/api/tenants/:tenantId', async (req: Request, res: Response) => {
 });
 
 app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
+  const dbStatus = postgresClient.getStatus();
+  const healthy = dbStatus.isConnected;
+
   res.removeHeader('Access-Control-Allow-Origin');
   res.setHeader('Content-Type', 'application/json');
-  res.json({
-    success: true,
+  res.status(healthy ? 200 : 503).json({
+    success: healthy,
     service: 'AgentDesk',
-    status: 'healthy',
+    status: healthy ? 'healthy' : 'degraded',
+    database: {
+      connected: dbStatus.isConnected,
+      configured: dbStatus.isConfigured,
+      provider: dbStatus.provider
+    },
+    ...(healthy ? {} : {
+      error: {
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database is not ready.'
+      }
+    }),
     timestamp: new Date().toISOString()
   });
 });
