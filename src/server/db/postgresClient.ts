@@ -154,12 +154,6 @@ class PostgresClient {
       return this.initPromise;
     }
 
-    const now = Date.now();
-    if (now - this.lastAttemptAt < this.retryCooldownMs && !this.pglite) {
-      return this.isConnected;
-    }
-    this.lastAttemptAt = now;
-
     this.initPromise = (async () => {
       // 1. If valid external DATABASE_URL is configured, attempt remote PostgreSQL pool
       if (this.pool) {
