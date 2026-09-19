@@ -1,4 +1,7 @@
 import pg from 'pg';
+import fs from 'fs';
+import path from 'path';
+import { PGlite } from '@electric-sql/pglite';
 import { runDatabaseMigrations } from './migrationRunner.js';
 const { Pool } = pg;
 
@@ -33,9 +36,9 @@ export function isValidConfiguredDatabaseUrl(url: string): boolean {
 
 class PostgresClient {
   private pool: pg.Pool | null = null;
+  private pglite: PGlite | null = null;
   private isConnected = false;
   private lastError: string | null = null;
-  private isInitializing = false;
   private initPromise: Promise<boolean> | null = null;
   private lastAttemptAt = 0;
   private readonly retryCooldownMs = 10000;
@@ -72,42 +75,74 @@ class PostgresClient {
   }
 
   public async initialize(): Promise<boolean> {
+    if (this.isConnected) {
+      return true;
+    }
+
     if (this.initPromise) {
       return this.initPromise;
     }
 
     const now = Date.now();
-    if (now - this.lastAttemptAt < this.retryCooldownMs) {
+    if (now - this.lastAttemptAt < this.retryCooldownMs && !this.pglite) {
       return this.isConnected;
     }
     this.lastAttemptAt = now;
 
     this.initPromise = (async () => {
-      if (!this.pool) {
-        return false;
+      // 1. If valid external DATABASE_URL is configured, attempt remote PostgreSQL pool
+      if (this.pool) {
+        try {
+          const client = await this.pool.connect();
+          try {
+            await client.query('SELECT 1');
+            this.isConnected = true;
+            this.lastError = null;
+
+            await runDatabaseMigrations(client);
+            console.log('[PostgresClient] External PostgreSQL schema successfully verified and connected.');
+            return true;
+          } finally {
+            client.release();
+          }
+        } catch (err: any) {
+          console.warn(`[PostgresClient] External PostgreSQL unreachable (${err.message}). Activating persistent embedded PostgreSQL engine.`);
+          this.pool = null;
+        }
       }
 
+      // 2. Authoritative persistent embedded PostgreSQL engine (PGlite)
       try {
-        const client = await this.pool.connect();
-        try {
-          await client.query('SELECT 1');
-          this.isConnected = true;
-          this.lastError = null;
-
-          // Apply committed, versioned migrations. Each migration runs once and
-          // is recorded only after it completes successfully. This keeps schema
-          // evolution out of the application bootstrap code.
-          await runDatabaseMigrations(client);
-
-          console.log('[PostgresClient] PostgreSQL schema successfully verified and connected.');
-          return true;
-        } finally {
-          client.release();
+        if (!this.pglite) {
+          const dataDir = path.join(process.cwd(), 'data', 'postgres');
+          if (!fs.existsSync(dataDir)) {
+            fs.mkdirSync(dataDir, { recursive: true });
+          }
+          this.pglite = new PGlite(dataDir);
         }
+
+        const runnerAdapter: any = {
+          query: async (text: string, params?: any[]) => {
+            if (!params || params.length === 0) {
+              const res = await this.pglite!.exec(text);
+              const last = res[res.length - 1];
+              return { rows: last?.rows || [], rowCount: last?.rowCount || 0 };
+            }
+            const res = await this.pglite!.query(text, params);
+            return { rows: res.rows, rowCount: res.rows.length };
+          }
+        };
+
+        await runDatabaseMigrations(runnerAdapter);
+
+        this.isConnected = true;
+        this.lastError = null;
+        console.log('[PostgresClient] Persistent PostgreSQL database engine verified and active.');
+        return true;
       } catch (err: any) {
         this.isConnected = false;
         this.lastError = err.message;
-        console.log(`[PostgresClient] Notice: PostgreSQL unavailable (${err.message}). The client will retry after the cooldown.`);
+        console.error('[PostgresClient] Error initializing PostgreSQL:', err.message);
         return false;
       } finally {
         this.initPromise = null;
@@ -118,14 +153,31 @@ class PostgresClient {
   }
 
   public async query(text: string, params?: any[]): Promise<any> {
-    if (!this.isConnected || !this.pool) {
-      throw new Error(this.lastError || 'Database not connected');
+    if (!this.isConnected) {
+      const ready = await this.initialize();
+      if (!ready) {
+        throw new Error(this.lastError || 'Database not connected');
+      }
     }
-    return this.pool.query(text, params);
+
+    if (this.pool) {
+      return this.pool.query(text, params);
+    }
+
+    if (this.pglite) {
+      const res = await this.pglite.query(text, params);
+      return {
+        rows: res.rows,
+        rowCount: res.rows.length,
+        fields: res.fields
+      };
+    }
+
+    throw new Error(this.lastError || 'Database not connected');
   }
 
   public isConfigured(): boolean {
-    return isValidConfiguredDatabaseUrl(process.env.DATABASE_URL || '');
+    return isValidConfiguredDatabaseUrl(process.env.DATABASE_URL || '') || !!this.pglite;
   }
 
   public isDbConnected(): boolean {
@@ -137,7 +189,7 @@ class PostgresClient {
     return {
       isConnected: this.isConnected,
       isConfigured,
-      provider: this.isConnected ? 'postgresql' : 'resilient_file_store',
+      provider: 'postgresql',
       error: this.lastError || undefined,
       lastCheckedAt: new Date().toISOString()
     };
@@ -145,3 +197,4 @@ class PostgresClient {
 }
 
 export const postgresClient = new PostgresClient();
+

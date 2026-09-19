@@ -48,6 +48,7 @@ import { storageService, gmailService } from './src/server/integrations/index.js
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient } from './src/server/db/postgresClient.js';
+import { syncUsersFromPostgres, bootstrapPlatformAdminAsync } from './src/server/auth/userRegistry.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
 import { saveLead } from './src/lib/dbService.js';
@@ -84,7 +85,7 @@ const app = express();
 const PORT = 3000;
 
 // Enable trust proxy for Google Cloud Run / reverse proxies so req.ip, req.secure, and protocol are accurate
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 // Security Headers Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -1851,6 +1852,17 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
 
 // Start Server, Create HTTP + WebSocket Server for Live Voice Audio
 async function startServer() {
+  // Authoritative PostgreSQL initialization and platform administrator verification
+  try {
+    const isDbReady = await postgresClient.initialize();
+    if (isDbReady) {
+      await syncUsersFromPostgres();
+      await bootstrapPlatformAdminAsync();
+    }
+  } catch (err: any) {
+    console.error('[ServerStartup] PostgreSQL database bootstrap failed:', err.message);
+  }
+
   const server = createServer(app);
   const wss = new WebSocketServer({ server, path: '/ws/live-voice' });
 

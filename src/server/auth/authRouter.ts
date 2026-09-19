@@ -160,30 +160,56 @@ export function isRequestSecure(req?: Request): boolean {
  */
 export function setSessionCookie(res: Response, token: string, req?: Request) {
   const isHttps = isRequestSecure(req);
+  const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+  const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
+
+  const isCrossSiteOrIframe = Boolean(
+    req?.headers['sec-fetch-dest'] === 'iframe' ||
+    req?.headers['sec-fetch-site'] === 'cross-site' ||
+    (req?.headers.origin && req?.headers.host && !req?.headers.origin.includes(req?.headers.host)) ||
+    (req?.headers.referer && (req.headers.referer.includes('ai.studio') || req.headers.referer.includes('.google.com') || req.headers.referer.includes('.run.app')))
+  );
+
+  const sameSiteFlags = isHttps
+    ? (isCrossSiteOrIframe ? 'SameSite=None; Secure; Partitioned' : 'SameSite=Lax; Secure')
+    : 'SameSite=Lax';
+
   const cookieFlags = [
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    ...(isHttps ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
-    `Max-Age=${7 * 24 * 60 * 60}`
+    sameSiteFlags,
+    `Max-Age=${maxAge}`,
+    `Expires=${expires}`
   ].join('; ');
+
   const csrfToken = crypto.randomBytes(32).toString('hex');
   const csrfFlags = [
     `agentdesk_csrf=${csrfToken}`,
     'Path=/',
-    ...(isHttps ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
-    `Max-Age=${7 * 24 * 60 * 60}`
+    sameSiteFlags,
+    `Max-Age=${maxAge}`,
+    `Expires=${expires}`
   ].join('; ');
+
   res.setHeader('Set-Cookie', [cookieFlags, csrfFlags]);
   return csrfToken;
 }
 
 export function clearSessionCookies(res: Response, req?: Request) {
   const isHttps = isRequestSecure(req);
-  const flags = isHttps ? '; SameSite=None; Secure; Partitioned' : '; SameSite=Lax';
+  const isCrossSiteOrIframe = Boolean(
+    req?.headers['sec-fetch-dest'] === 'iframe' ||
+    req?.headers['sec-fetch-site'] === 'cross-site' ||
+    (req?.headers.origin && req?.headers.host && !req?.headers.origin.includes(req?.headers.host)) ||
+    (req?.headers.referer && (req.headers.referer.includes('ai.studio') || req.headers.referer.includes('.google.com') || req.headers.referer.includes('.run.app')))
+  );
+  const sameSite = isHttps ? (isCrossSiteOrIframe ? 'SameSite=None; Partitioned' : 'SameSite=Lax') : 'SameSite=Lax';
+  const secure = isHttps ? '; Secure' : '';
+
   res.setHeader('Set-Cookie', [
-    `agentdesk_session=; Path=/; HttpOnly${flags}; Max-Age=0`,
-    `agentdesk_csrf=; Path=/${flags}; Max-Age=0`
+    `agentdesk_session=; Path=/; HttpOnly; SameSite=${sameSite}${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+    `agentdesk_csrf=; Path=/; SameSite=${sameSite}${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
   ]);
 }
 
@@ -244,7 +270,7 @@ export async function requireAuth(req: Request, res: Response, next: Function) {
     });
   }
 
-  const user = getUserById(session.userId);
+  const user = getUserById(session.userId) || await getUserByIdAsync(session.userId);
   if (!user) {
     return res.status(401).json({
       success: false,
@@ -643,8 +669,6 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
     // Requirement 4 & 15: If mustChangePassword, return mustChangePassword flag
     return res.json({
       success: true,
-      token: session.token,
-      sessionToken: session.token,
       csrfToken,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
@@ -713,8 +737,6 @@ authRouter.post('/verify-2fa-login', authRateLimiter, async (req: Request, res: 
 
     return res.json({
       success: true,
-      token: session.token,
-      sessionToken: session.token,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirectUrl: user.role === 'PLATFORM_ADMIN' ? '/platform/dashboard' : (user.mustChangePassword ? '/change-password' : '/business/dashboard'),
@@ -883,8 +905,6 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
 
     return res.json({
       success: true,
-      token: session.token,
-      sessionToken: session.token,
       csrfToken,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
@@ -897,8 +917,8 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
       return res.status(503).json({
         success: false,
         error: {
-          code: 'DATABASE_UNAVAILABLE',
-          message: 'PostgreSQL database is currently unavailable. Please verify DATABASE_URL configuration.'
+          code: 'AUTH_SERVICE_UNAVAILABLE',
+          message: 'Authentication service is temporarily unavailable.'
         }
       });
     }
@@ -1047,10 +1067,11 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     });
   }
 
-  const user = getUserById(session.userId);
+  const user = getUserById(session.userId) || await getUserByIdAsync(session.userId);
   if (!user || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
     await destroySession(session.token);
     return res.status(401).json({
+      success: false,
       authenticated: false,
       user: null,
       error: 'Session invalid or account inactive.'
@@ -1063,6 +1084,7 @@ authRouter.get('/me', async (req: Request, res: Response) => {
   }
 
   return res.json({
+    success: true,
     authenticated: true,
     user: sanitizeUser(user),
     mustChangePassword: !!user.mustChangePassword,

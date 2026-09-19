@@ -124,7 +124,7 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@agentdesk"
+                  placeholder="admin@company.com"
                   className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                 />
               </div>

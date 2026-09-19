@@ -213,6 +213,85 @@ export function bootstrapPlatformAdmin(): { created: boolean; email: string; mes
   };
 }
 
+export async function bootstrapPlatformAdminAsync(): Promise<{ created: boolean; email: string; message: string }> {
+  await postgresClient.initialize();
+
+  // Check PostgreSQL first for existing PLATFORM_ADMIN account
+  try {
+    const res = await postgresClient.query("SELECT * FROM agentdesk_users WHERE role = 'PLATFORM_ADMIN' LIMIT 1");
+    if (res?.rows?.length > 0) {
+      const dbAdmin = mapDbRowToUserRecord(res.rows[0]);
+      usersByEmailStore.set(dbAdmin.email, dbAdmin);
+      usersByIdStore.set(dbAdmin.id, dbAdmin);
+      const message = `[Auth Bootstrap] Existing platform admin account is already configured in PostgreSQL (${dbAdmin.email}).`;
+      console.log(message);
+      return { created: false, email: dbAdmin.email, message };
+    }
+  } catch (err: any) {
+    console.warn('[Auth Bootstrap] Error querying PostgreSQL for admin:', err.message);
+  }
+
+  const initialEmail = (
+    process.env.PLATFORM_ADMIN_EMAIL ||
+    process.env.INITIAL_ADMIN_EMAIL ||
+    ''
+  ).toLowerCase().trim();
+
+  if (!initialEmail) {
+    const errorMsg = '[Auth Bootstrap] PLATFORM_ADMIN_EMAIL is not configured in environment. Production admin bootstrap deferred until configured.';
+    console.log(errorMsg);
+    return { created: false, email: '', message: errorMsg };
+  }
+
+  const initialPassword = (
+    process.env.PLATFORM_ADMIN_INITIAL_PASSWORD ||
+    process.env.PLATFORM_ADMIN_PASSWORD ||
+    process.env.INITIAL_ADMIN_PASSWORD ||
+    ''
+  ).trim();
+
+  if (!initialPassword || initialPassword.length < 8) {
+    const errorMsg = '[Auth Bootstrap] PLATFORM_ADMIN_INITIAL_PASSWORD is not set or under 8 chars in environment. Administrator bootstrap deferred.';
+    console.log(errorMsg);
+    return { created: false, email: initialEmail, message: errorMsg };
+  }
+
+  const newAdmin = seedUser({
+    id: 'usr_platform_admin_root',
+    name: 'Platform Administrator',
+    email: initialEmail,
+    passwordPlain: initialPassword,
+    role: 'PLATFORM_ADMIN',
+    tenantId: 'platform',
+    status: 'ACTIVE',
+    mustChangePassword: false,
+    emailVerified: true
+  });
+
+  await persistUserToPostgres(newAdmin);
+
+  logCredentialAction({
+    actorId: 'system',
+    actorEmail: 'system@agentdesk',
+    actorRole: 'SYSTEM',
+    action: 'PLATFORM_ADMIN_BOOTSTRAP',
+    targetUserId: newAdmin.id,
+    targetUserEmail: newAdmin.email,
+    targetTenantId: 'platform',
+    metadata: {
+      reason: 'Initial platform administrator setup. Bootstrap completed in PostgreSQL.'
+    }
+  });
+
+  const message = `[Auth Bootstrap] Initial platform administrator account created and persisted in PostgreSQL for ${initialEmail}. Password hashed using crypto scrypt.`;
+  console.log(message);
+  return {
+    created: true,
+    email: initialEmail,
+    message
+  };
+}
+
 export function seedUser(params: {
   id: string;
   name: string;

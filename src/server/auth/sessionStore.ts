@@ -186,24 +186,24 @@ export async function createSession(
   const normTenantId = (tenantId || '').toLowerCase().trim();
 
   const isReady = await postgresClient.initialize();
+  if (!isReady) {
+    throw new Error('Database persistence unavailable: PostgreSQL session store could not be initialized.');
+  }
 
-  if (isReady) {
-    try {
-      // IMPORTANT: never persist the raw session token. token_hash is the only
-      // credential representation stored in PostgreSQL.
-      await postgresClient.query(`
-        INSERT INTO agentdesk_sessions (token_hash, user_id, email, role, tenant_id, created_at, expires_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (token_hash) DO UPDATE SET
-          expires_at = EXCLUDED.expires_at,
-          role = EXCLUDED.role,
-          tenant_id = EXCLUDED.tenant_id
-      `, [tokenHash, userId, normEmail, role, normTenantId, now, expiresAt]);
-    } catch (err: any) {
-      console.warn('[SessionStore] PostgreSQL session write failed, falling back to disk-backed store:', err.message);
-    }
-  } else {
-    console.warn('[SessionStore] PostgreSQL not connected/configured. Using resilient disk-backed session store with SHA-256 token hashing.');
+  // IMPORTANT: never persist the raw session token. token_hash is the only
+  // credential representation stored in PostgreSQL.
+  try {
+    await postgresClient.query(`
+      INSERT INTO agentdesk_sessions (token_hash, user_id, email, role, tenant_id, created_at, expires_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (token_hash) DO UPDATE SET
+        expires_at = EXCLUDED.expires_at,
+        role = EXCLUDED.role,
+        tenant_id = EXCLUDED.tenant_id
+    `, [tokenHash, userId, normEmail, role, normTenantId, now, expiresAt]);
+  } catch (err: any) {
+    console.error('[SessionStore] PostgreSQL session write failed:', err.message);
+    throw new Error('Database session write failed: Unable to persist session in PostgreSQL.');
   }
 
   const session: ServerSession = {
