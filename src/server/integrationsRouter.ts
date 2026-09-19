@@ -357,6 +357,10 @@ integrationsRouter.get(
   requirePlatformAdmin,
   (req: Request, res: Response) => {
     try {
+      // Reload the platform-level Gmail credential from authoritative PostgreSQL
+      // before reporting status. The connection must not depend on the current
+      // browser session, process memory, or a previous server instance.
+      await integrationStore.syncWithPostgres();
       const status = gmailService.getConnectionStatus();
       const callbackUrl = `${getAppUrl(req)}/api/integrations/google/callback`;
       const oauthStartUrl = '/integrations/google/start';
