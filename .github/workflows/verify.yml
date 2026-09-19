@@ -45,10 +45,15 @@ jobs:
           grep -q 'id="root"' /tmp/agentdesk-home.html
           echo "Production startup smoke test passed."
           cat /tmp/agentdesk-health.json
+          # Stop the smoke-test server before starting the auth E2E server on the same port.
+          kill "$SERVER_PID" 2>/dev/null || true
+          wait "$SERVER_PID" 2>/dev/null || true
+          trap - EXIT
 
       - name: Platform admin auth E2E
         run: |
           set -e
+          rm -rf data/postgres
           NODE_ENV=production ENABLE_EMBEDDED_DB=true PLATFORM_ADMIN_EMAIL=e2e-admin@agentdesk.internal PLATFORM_ADMIN_INITIAL_PASSWORD='E2E-Admin-Password-123!' PORT=3000 npm run dev > /tmp/agentdesk-auth-e2e.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
