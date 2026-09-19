@@ -394,7 +394,7 @@ export async function persistUserToPostgres(user: UserRecord): Promise<void> {
     ]);
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresPersistWarning]', err.message);
-    if (process.env.REQUIRE_PERSISTENT_USERS === 'true') throw err;
+    if (process.env.NODE_ENV === 'production' || process.env.REQUIRE_PERSISTENT_USERS === 'true') throw err;
   }
 }
 
@@ -487,9 +487,12 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Authentication database unavailable.');
+    }
   }
 
-  // Resilient fallback when PostgreSQL is not configured or unavailable
+  // Development-only cache fallback. Production authentication must remain PostgreSQL-authoritative.
   return getUserByEmail(clean);
 }
 
@@ -518,9 +521,12 @@ export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Authentication database unavailable.');
+    }
   }
 
-  // Resilient fallback when PostgreSQL is not configured or unavailable
+  // Development-only cache fallback. Production authentication must remain PostgreSQL-authoritative.
   return getUserById(cleanId);
 }
 
