@@ -105,6 +105,15 @@ export function getSafeDatabaseDiagnostics(): {
   }
 }
 
+function shouldUseSsl(dbUrl: string): boolean {
+  try {
+    const hostname = new URL(dbUrl).hostname.toLowerCase();
+    return !['localhost', '127.0.0.1', '::1'].includes(hostname);
+  } catch {
+    return true;
+  }
+}
+
 class PostgresClient {
   private pool: pg.Pool | null = null;
   private pglite: PGlite | null = null;
@@ -129,7 +138,7 @@ class PostgresClient {
     try {
       this.pool = new Pool({
         connectionString: dbUrl,
-        ssl: dbUrl.includes('localhost') ? false : { rejectUnauthorized: false },
+        ssl: shouldUseSsl(dbUrl) ? { rejectUnauthorized: false } : false,
         connectionTimeoutMillis: 5000,
         idleTimeoutMillis: 30000,
         max: 10
@@ -155,16 +164,15 @@ class PostgresClient {
     }
 
     this.initPromise = (async () => {
-      // 1. If valid external DATABASE_URL is configured, attempt remote PostgreSQL pool
       if (this.pool) {
         try {
           const client = await this.pool.connect();
           try {
             await client.query('SELECT 1');
-            this.isConnected = true;
             this.lastError = null;
 
             await runDatabaseMigrations(client);
+            this.isConnected = true;
             console.log('[PostgresClient] External PostgreSQL schema successfully verified and connected.');
             return true;
           } finally {
@@ -173,16 +181,12 @@ class PostgresClient {
         } catch (err: any) {
           const safeMessage = err?.code ? `${err.message} (code: ${err.code})` : err.message;
           console.warn(`[PostgresClient] External PostgreSQL unreachable: ${safeMessage}`);
+          this.isConnected = false;
           this.pool = null;
           this.lastError = `External PostgreSQL unreachable: ${safeMessage}`;
         }
       }
 
-      // 2. Explicit embedded PostgreSQL engine.
-      // AI Studio preview deployments may run without an external DATABASE_URL, so an
-      // operator can explicitly opt into the instance-local database with
-      // ENABLE_EMBEDDED_DB=true. External PostgreSQL remains preferred for durable,
-      // multi-instance production deployments.
       if (process.env.ENABLE_EMBEDDED_DB !== 'true') {
         this.isConnected = false;
         if (!this.lastError) {
@@ -292,4 +296,3 @@ class PostgresClient {
 }
 
 export const postgresClient = new PostgresClient();
-
