@@ -45,7 +45,7 @@ jobs:
       - name: Production startup smoke test
         run: |
           set -e
-          PORT=3000 npm start > /tmp/agentdesk-server.log 2>&1 &
+          DATABASE_URL='postgresql://agentdesk:agentdesk-ci@127.0.0.1:5432/agentdesk_ci' NODE_ENV=production ENABLE_EMBEDDED_DB=false PORT=3000 npm start > /tmp/agentdesk-server.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do
@@ -55,6 +55,7 @@ jobs:
             sleep 1
           done
           test -s /tmp/agentdesk-health.json
+          grep -q '"database":{"connected":true' /tmp/agentdesk-health.json
           curl -fsS http://127.0.0.1:3000/ > /tmp/agentdesk-home.html
           grep -q 'id="root"' /tmp/agentdesk-home.html
           echo "Production startup smoke test passed."
