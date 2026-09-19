@@ -1,6 +1,6 @@
 import pg from 'pg';
-import fs from 'fs';
 import path from 'path';
+import fs from 'fs';
 import { PGlite } from '@electric-sql/pglite';
 import { runDatabaseMigrations } from './migrationRunner.js';
 const { Pool } = pg;
@@ -111,7 +111,15 @@ class PostgresClient {
         }
       }
 
-      // 2. Authoritative persistent embedded PostgreSQL engine (PGlite)
+      // 2. Optional development-only embedded PostgreSQL engine.
+      // Production must use an external PostgreSQL DATABASE_URL so sessions and tenant data
+      // are durable and shareable across instances.
+      if (process.env.NODE_ENV === 'production' || process.env.ENABLE_EMBEDDED_DB !== 'true') {
+        this.isConnected = false;
+        this.lastError = 'PostgreSQL DATABASE_URL is unavailable; embedded database is disabled.';
+        return false;
+      }
+
       try {
         if (!this.pglite) {
           const dataDir = path.join(process.cwd(), 'data', 'postgres');
@@ -137,7 +145,7 @@ class PostgresClient {
 
         this.isConnected = true;
         this.lastError = null;
-        console.log('[PostgresClient] Persistent PostgreSQL database engine verified and active.');
+        console.log('[PostgresClient] Development embedded PostgreSQL engine verified and active.');
         return true;
       } catch (err: any) {
         this.isConnected = false;
@@ -189,7 +197,7 @@ class PostgresClient {
     return {
       isConnected: this.isConnected,
       isConfigured,
-      provider: 'postgresql',
+      provider: this.pglite ? 'postgresql' : 'postgresql',
       error: this.lastError || undefined,
       lastCheckedAt: new Date().toISOString()
     };
