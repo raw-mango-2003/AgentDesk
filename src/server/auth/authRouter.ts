@@ -1522,7 +1522,7 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Requ
 /**
  * GET /api/tenants - Returns list of accessible tenants
  */
-authRouter.get(['/api/tenants', '/tenants'], async (req: Request, res: Response) => {
+authRouter.get('/tenants', async (req: Request, res: Response) => {
   try {
     const token = extractTokenFromRequest(req);
     const session = await getSession(token);
@@ -1557,7 +1557,7 @@ authRouter.get(['/api/tenants', '/tenants'], async (req: Request, res: Response)
 /**
  * GET /api/tenants/:tenantId - Returns individual business record
  */
-authRouter.get(['/api/tenants/:tenantId', '/tenants/:tenantId'], async (req: Request, res: Response) => {
+authRouter.get('/tenants/:tenantId', async (req: Request, res: Response) => {
   try {
     const { tenantId } = req.params;
     if (!tenantId) {
@@ -1597,7 +1597,7 @@ authRouter.get(['/api/tenants/:tenantId', '/tenants/:tenantId'], async (req: Req
 /**
  * PUT /api/tenants/:tenantId - Update business settings
  */
-authRouter.put(['/api/tenants/:tenantId', '/tenants/:tenantId'], requireAuth, async (req: Request, res: Response) => {
+authRouter.put('/tenants/:tenantId', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as UserRecord;
     const { tenantId } = req.params;
