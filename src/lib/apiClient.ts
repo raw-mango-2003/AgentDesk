@@ -23,7 +23,7 @@ export interface ApiResponse<T = any> {
 
 function getCsrfToken(): string | undefined {
   if (typeof document === 'undefined') return undefined;
-  const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+  const match = document.cookie.match(/(?:^|;\s*)agentdesk_csrf=([^;]*)/);
   return match ? decodeURIComponent(match[1]) : undefined;
 }
 
@@ -40,6 +40,12 @@ export async function safeFetchJson<T = any>(
     };
     if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       requestHeaders['x-csrf-token'] = csrfToken;
+    }
+    if (!requestHeaders['Authorization'] && !requestHeaders['authorization'] && typeof window !== 'undefined') {
+      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
+      if (token) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
     }
     const res = await fetch(url, {
       ...options,

@@ -83,6 +83,9 @@ const appDirectory = getAppDirectory();
 const app = express();
 const PORT = 3000;
 
+// Enable trust proxy for Google Cloud Run / reverse proxies so req.ip, req.secure, and protocol are accurate
+app.set('trust proxy', 1);
+
 // Security Headers Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -192,20 +195,6 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 
 const csrfProtectedMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const csrfExemptPaths = new Set([
-  '/api/auth/login',
-  '/api/auth/platform/login',
-  '/api/auth/platform-login',
-  '/api/auth/signup',
-  '/api/auth/verify-2fa-login',
-  '/api/auth/verify-email',
-  '/api/auth/forgot-password',
-  '/api/auth/reset-password',
-  '/api/auth/setup-account/verify',
-  '/api/auth/logout',
-  '/api/billing/webhook',
-  '/api/webhooks'
-]);
 
 function readCookie(req: Request, name: string): string | null {
   const header = typeof req.headers.cookie === 'string' ? req.headers.cookie : '';
@@ -213,15 +202,78 @@ function readCookie(req: Request, name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+function isCsrfExempt(req: Request): boolean {
+  const fullPath = (req.originalUrl || req.url).split('?')[0];
+  const subPath = (req.path || '').split('?')[0];
+
+  const exemptExact = new Set([
+    '/api/auth/login',
+    '/auth/login',
+    '/api/auth/platform/login',
+    '/auth/platform/login',
+    '/api/auth/platform-login',
+    '/auth/platform-login',
+    '/api/auth/signup',
+    '/auth/signup',
+    '/api/auth/verify-2fa-login',
+    '/auth/verify-2fa-login',
+    '/api/auth/verify-email',
+    '/auth/verify-email',
+    '/api/auth/forgot-password',
+    '/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/auth/reset-password',
+    '/api/auth/resend-verification',
+    '/auth/resend-verification',
+    '/api/auth/setup-account',
+    '/auth/setup-account',
+    '/api/auth/setup-account/verify',
+    '/auth/setup-account/verify',
+    '/api/auth/logout',
+    '/auth/logout',
+    '/api/auth/csrf',
+    '/auth/csrf',
+    '/api/voice/process',
+    '/voice/process'
+  ]);
+
+  if (exemptExact.has(fullPath) || exemptExact.has(subPath)) return true;
+  if (fullPath.startsWith('/api/billing/webhook') || fullPath.startsWith('/api/webhooks')) return true;
+  if (subPath.startsWith('/billing/webhook') || subPath.startsWith('/webhooks')) return true;
+  if (fullPath.startsWith('/api/chat') || subPath.startsWith('/chat')) return true;
+
+  return false;
+}
+
 app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-  if (!csrfProtectedMethods.has(req.method) || csrfExemptPaths.has(req.path)) return next();
+  if (!csrfProtectedMethods.has(req.method) || isCsrfExempt(req)) return next();
+
+  // If request is authenticated with an Authorization Bearer header, browser cross-site ambient cookies
+  // are not relied upon; custom headers prevent standard CSRF.
+  const authHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization.trim() : '';
+  if (authHeader && /^Bearer\s+[a-f0-9_.-]+/i.test(authHeader)) {
+    return next();
+  }
+
+  // Double-submit cookie verification for cookie-authenticated sessions
   const sessionCookie = readCookie(req, 'agentdesk_session');
   if (!sessionCookie) return next();
+
   const csrfCookie = readCookie(req, 'agentdesk_csrf');
-  const csrfHeader = typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'] : '';
-  if (!csrfCookie || !csrfHeader || csrfCookie.length !== csrfHeader.length ||
-      !crypto.timingSafeEqual(Buffer.from(csrfCookie), Buffer.from(csrfHeader))) {
-    return res.status(403).json({ success: false, error: { code: 'CSRF_VALIDATION_FAILED', message: 'Security validation failed. Please refresh and try again.' } });
+  const csrfHeader = typeof req.headers['x-csrf-token'] === 'string' ? req.headers['x-csrf-token'].trim() : '';
+  if (
+    !csrfCookie ||
+    !csrfHeader ||
+    csrfCookie.length !== csrfHeader.length ||
+    !crypto.timingSafeEqual(Buffer.from(csrfCookie), Buffer.from(csrfHeader))
+  ) {
+    return res.status(403).json({
+      success: false,
+      error: {
+        code: 'CSRF_VALIDATION_FAILED',
+        message: 'Security validation failed. Please refresh and try again.'
+      }
+    });
   }
   next();
 });

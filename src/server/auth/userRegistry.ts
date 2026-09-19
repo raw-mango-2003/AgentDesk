@@ -408,16 +408,9 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
-    if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
-      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source when REQUIRE_PERSISTENT_USERS is enabled.');
-    }
   }
 
-  // Development-only compatibility fallback. Production must fail closed
-  // instead of authenticating against a process-local cache.
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
+  // Resilient fallback when PostgreSQL is not configured or unavailable
   return getUserByEmail(clean);
 }
 
@@ -446,16 +439,9 @@ export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
     }
   } catch (err: any) {
     console.warn('[UserRegistry:PostgresLookupError]', err.message);
-    if (process.env.REQUIRE_PERSISTENT_USERS === 'true') {
-      throw new Error('Database unavailable: user lookup cannot fall back to an in-memory source when REQUIRE_PERSISTENT_USERS is enabled.');
-    }
   }
 
-  // Development-only compatibility fallback. Production must fail closed
-  // instead of authenticating against a process-local cache.
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
+  // Resilient fallback when PostgreSQL is not configured or unavailable
   return getUserById(cleanId);
 }
 

@@ -138,23 +138,39 @@ export function extractCookie(cookieHeader: string | undefined, name: string): s
 /**
  * Set session token as an HttpOnly, secure (production) cookie
  */
-export function setSessionCookie(res: Response, token: string) {
-  const isProd = process.env.NODE_ENV === 'production';
+export function setSessionCookie(res: Response, token: string, req?: Request) {
+  const isHttps = (process.env.APP_URL || '').startsWith('https') ||
+    req?.secure ||
+    req?.headers['x-forwarded-proto'] === 'https' ||
+    process.env.NODE_ENV === 'production';
   const cookieFlags = [
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    ...(isProd ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
+    ...(isHttps ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
     `Max-Age=${7 * 24 * 60 * 60}`
   ].join('; ');
   const csrfToken = crypto.randomBytes(32).toString('hex');
   const csrfFlags = [
     `agentdesk_csrf=${csrfToken}`,
     'Path=/',
-    ...(isProd ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
+    ...(isHttps ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
     `Max-Age=${7 * 24 * 60 * 60}`
   ].join('; ');
   res.setHeader('Set-Cookie', [cookieFlags, csrfFlags]);
+  return csrfToken;
+}
+
+export function clearSessionCookies(res: Response, req?: Request) {
+  const isHttps = (process.env.APP_URL || '').startsWith('https') ||
+    req?.secure ||
+    req?.headers['x-forwarded-proto'] === 'https' ||
+    process.env.NODE_ENV === 'production';
+  const flags = isHttps ? '; SameSite=None; Secure; Partitioned' : '; SameSite=Lax';
+  res.setHeader('Set-Cookie', [
+    `agentdesk_session=; Path=/; HttpOnly${flags}; Max-Age=0`,
+    `agentdesk_csrf=; Path=/${flags}; Max-Age=0`
+  ]);
 }
 /**
  * Extract auth token from Authorization header or HttpOnly cookie
@@ -417,6 +433,28 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
 });
 
 // ----------------------------------------------------
+// 1B. CSRF TOKEN ENDPOINT (/csrf)
+// ----------------------------------------------------
+authRouter.get('/csrf', (req: Request, res: Response) => {
+  let csrfToken = extractCookie(req.headers.cookie || '', 'agentdesk_csrf');
+  if (!csrfToken) {
+    csrfToken = crypto.randomBytes(32).toString('hex');
+    const isHttps = (process.env.APP_URL || '').startsWith('https') ||
+      req.secure ||
+      req.headers['x-forwarded-proto'] === 'https' ||
+      process.env.NODE_ENV === 'production';
+    const csrfFlags = [
+      `agentdesk_csrf=${csrfToken}`,
+      'Path=/',
+      ...(isHttps ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
+      `Max-Age=${7 * 24 * 60 * 60}`
+    ].join('; ');
+    res.setHeader('Set-Cookie', csrfFlags);
+  }
+  return res.json({ success: true, csrfToken });
+});
+
+// ----------------------------------------------------
 // 2. PUBLIC AUTHENTICATION: BUSINESS LOGIN (/login)
 // ----------------------------------------------------
 authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) => {
@@ -482,42 +520,14 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
     // Successful password: reset failed login counters
     resetFailedLogins(user);
 
-    // Platform Administrator authentication (platform-level identity, no tenant required)
+    // Platform Administrator credentials MUST NOT be valid for business logins (portal isolation)
     if (user.role === 'PLATFORM_ADMIN') {
-      if (user.status === 'DISABLED') {
-        return res.status(403).json({
-          success: false,
-          error: {
-            code: 'ACCOUNT_DISABLED',
-            message: 'Your account has been disabled. Please contact platform support.'
-          }
-        });
-      }
-
-      if (user.status === 'SUSPENDED') {
-        return res.status(403).json({
-          success: false,
-          error: {
-            code: 'ACCOUNT_SUSPENDED',
-            message: 'Your account has been suspended. Please contact platform support.'
-          }
-        });
-      }
-
-      const session = await createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
-      setSessionCookie(res, session.token);
-      analyticsService.track('login_success', { email: user.email, role: user.role }, user.id);
-
-      return res.json({
-        success: true,
-        token: session.token,
-        sessionToken: session.token,
-        user: sanitizeUser(user),
-        mustChangePassword: !!user.mustChangePassword,
-        redirect: '/platform/dashboard',
-        redirectUrl: '/platform/dashboard',
-        tenant: null,
-        onboardingPending: false
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'FORBIDDEN_PORTAL',
+          message: 'Platform Administrator accounts must sign in via the dedicated Platform Admin portal (/platform/login).'
+        }
       });
     }
 
@@ -597,7 +607,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
     }
 
     const session = await createSession(user.id, user.email, user.role, user.tenantId);
-    setSessionCookie(res, session.token);
+    const csrfToken = setSessionCookie(res, session.token, req);
 
     analyticsService.track('login_success', { email: user.email, role: user.role }, user.id);
 
@@ -606,6 +616,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
       success: true,
       token: session.token,
       sessionToken: session.token,
+      csrfToken,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirectUrl: user.mustChangePassword ? '/change-password' : '/business/dashboard',
@@ -821,7 +832,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
     }
 
     const session = await createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
-    setSessionCookie(res, session.token);
+    const csrfToken = setSessionCookie(res, session.token, req);
 
     logCredentialAction({
       actorId: user.id,
@@ -845,6 +856,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
       success: true,
       token: session.token,
       sessionToken: session.token,
+      csrfToken,
       user: sanitizeUser(user),
       mustChangePassword: !!user.mustChangePassword,
       redirect: redirectTarget,
@@ -1044,7 +1056,7 @@ authRouter.post('/logout', async (req: Request, res: Response) => {
   if (token) {
     await destroySession(token);
   }
-  res.setHeader('Set-Cookie', 'agentdesk_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  clearSessionCookies(res, req);
   return res.json({
     success: true,
     message: 'Successfully logged out and session invalidated.'
