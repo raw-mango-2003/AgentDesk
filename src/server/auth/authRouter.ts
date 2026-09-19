@@ -177,7 +177,7 @@ export function setSessionCookie(res: Response, token: string, req?: Request) {
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    ...(isHttps ? ['SameSite=Lax', 'Secure'] : ['SameSite=Lax']),
+    ...(isHttps ? ['SameSite=None', 'Secure'] : ['SameSite=Lax']),
     `Max-Age=${maxAge}`,
     `Expires=${expires}`
   ].join('; ');
