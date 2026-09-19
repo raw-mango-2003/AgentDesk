@@ -4,6 +4,7 @@ import {
   getUserByEmail, 
   getUserByEmailAsync,
   getUserById, 
+  getUserByIdAsync,
   createUser, 
   updateUser, 
   updateUserEmail,
