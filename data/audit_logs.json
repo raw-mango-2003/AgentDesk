@@ -1,0 +1,63 @@
+[
+  {
+    "id": "aud_1789815255421_ht69d",
+    "actorId": "usr_1789815255328_uvcz0",
+    "actorEmail": "hello.agentdesktech@gmail.com",
+    "actorRole": "SYSTEM_AUTOMATION",
+    "tenantId": "",
+    "action": "AUTOMATION_DISPATCHED:EMAIL_VERIFIED",
+    "entityType": "AUTOMATION",
+    "entityId": "evt_1789815255416_6atyj",
+    "metadata": {
+      "event": "EMAIL_VERIFIED",
+      "recipient": "cust_1789815255303@example.com",
+      "idempotencyKey": "[REDACTED]"
+    },
+    "timestamp": "2026-09-19T10:54:15.421Z"
+  },
+  {
+    "id": "aud_1789815255411_3hvu5",
+    "actorId": "usr_1789815255328_uvcz0",
+    "actorEmail": "hello.agentdesktech@gmail.com",
+    "actorRole": "SYSTEM_AUTOMATION",
+    "action": "AUTOMATION_DISPATCHED:EMAIL_VERIFICATION_REQUESTED",
+    "entityType": "AUTOMATION",
+    "entityId": "evt_1789815255396_nl1me",
+    "metadata": {
+      "event": "EMAIL_VERIFICATION_REQUESTED",
+      "recipient": "cust_1789815255303@example.com",
+      "idempotencyKey": "[REDACTED]"
+    },
+    "timestamp": "2026-09-19T10:54:15.411Z"
+  },
+  {
+    "id": "aud_1789815247024_ssiaj",
+    "actorId": "usr_1789815246974_t8en8",
+    "actorEmail": "hello.agentdesktech@gmail.com",
+    "actorRole": "SYSTEM_AUTOMATION",
+    "action": "AUTOMATION_DISPATCHED:EMAIL_VERIFICATION_REQUESTED",
+    "entityType": "AUTOMATION",
+    "entityId": "evt_1789815247019_lk2v2",
+    "metadata": {
+      "event": "EMAIL_VERIFICATION_REQUESTED",
+      "recipient": "cust_1789815246863@example.com",
+      "idempotencyKey": "[REDACTED]"
+    },
+    "timestamp": "2026-09-19T10:54:07.024Z"
+  },
+  {
+    "id": "aud_1789815220863_3icj9",
+    "actorId": "usr_1789815220785_cqxzk",
+    "actorEmail": "hello.agentdesktech@gmail.com",
+    "actorRole": "SYSTEM_AUTOMATION",
+    "action": "AUTOMATION_DISPATCHED:EMAIL_VERIFICATION_REQUESTED",
+    "entityType": "AUTOMATION",
+    "entityId": "evt_1789815220848_9m4sa",
+    "metadata": {
+      "event": "EMAIL_VERIFICATION_REQUESTED",
+      "recipient": "cust_1789815220671@example.com",
+      "idempotencyKey": "[REDACTED]"
+    },
+    "timestamp": "2026-09-19T10:53:40.863Z"
+  }
+]

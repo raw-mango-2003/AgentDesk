@@ -98,11 +98,7 @@ export async function initUserRegistry() {
   }
 
   // 2. Initial Platform Admin Check and Creation
-  if (process.env.NODE_ENV === 'production') {
-    await bootstrapPlatformAdminAsync();
-  } else {
-    bootstrapPlatformAdmin();
-  }
+  await bootstrapPlatformAdminAsync();
 }
 
 /**

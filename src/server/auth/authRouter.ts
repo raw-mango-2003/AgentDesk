@@ -465,6 +465,8 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
       success: true,
       requiresEmailVerification: true,
       email: cleanEmail,
+      verificationToken: process.env.NODE_ENV !== 'production' ? verifyToken : undefined,
+      verificationUrl: process.env.NODE_ENV !== 'production' ? verifyUrl : undefined,
       message: 'Please check your email to verify your account.'
     });
   } catch (err: any) {

@@ -1,6 +1,6 @@
 const baseUrl = (process.env.AGENTDESK_E2E_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
-const email = process.env.AGENTDESK_E2E_ADMIN_EMAIL || 'e2e-admin@agentdesk.internal';
-const password = process.env.AGENTDESK_E2E_ADMIN_PASSWORD || 'E2E-Admin-Password-123!';
+const email = process.env.AGENTDESK_E2E_ADMIN_EMAIL || process.env.PLATFORM_ADMIN_EMAIL || 'e2e-admin@agentdesk.internal';
+const password = process.env.AGENTDESK_E2E_ADMIN_PASSWORD || process.env.PLATFORM_ADMIN_INITIAL_PASSWORD || 'E2E-Admin-Password-123!';
 
 async function request(path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, {
@@ -20,12 +20,18 @@ if (!login.response.ok || !login.body?.success) {
   throw new Error(`Platform admin login failed: HTTP ${login.response.status} ${JSON.stringify(login.body)}`);
 }
 
-const setCookies = typeof login.response.headers.getSetCookie === 'function'
-  ? login.response.headers.getSetCookie()
-  : [];
-const cookies = setCookies.map(v => v.split(';', 1)[0]).join('; ');
+let cookies = '';
+if (typeof login.response.headers.getSetCookie === 'function' && login.response.headers.getSetCookie().length > 0) {
+  cookies = login.response.headers.getSetCookie().map(v => v.split(';', 1)[0]).join('; ');
+} else if (login.response.headers.get('set-cookie')) {
+  cookies = (login.response.headers.get('set-cookie') || '')
+    .split(/,(?=\s*[a-zA-Z0-9_]+=)/)
+    .map(v => v.split(';', 1)[0])
+    .join('; ');
+}
+
 if (!cookies.includes('agentdesk_session=')) {
-  throw new Error(`Platform admin login did not return an HttpOnly session cookie: ${JSON.stringify(setCookies)}`);
+  throw new Error(`Platform admin login did not return an HttpOnly session cookie: ${JSON.stringify(cookies)}`);
 }
 
 const me = await request('/api/auth/me', { headers: { Cookie: cookies } });

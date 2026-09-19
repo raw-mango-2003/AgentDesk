@@ -114,9 +114,15 @@ class PostgresClient {
       // 2. Optional development-only embedded PostgreSQL engine.
       // Production must use an external PostgreSQL DATABASE_URL so sessions and tenant data
       // are durable and shareable across instances.
-      if (process.env.NODE_ENV === 'production' || process.env.ENABLE_EMBEDDED_DB !== 'true') {
+      if (process.env.NODE_ENV === 'production') {
         this.isConnected = false;
-        this.lastError = 'PostgreSQL DATABASE_URL is unavailable; embedded database is disabled.';
+        this.lastError = 'Production requires a valid external PostgreSQL DATABASE_URL. Embedded database fallback is strictly disabled in production.';
+        return false;
+      }
+
+      if (process.env.ENABLE_EMBEDDED_DB !== 'true') {
+        this.isConnected = false;
+        this.lastError = 'PostgreSQL DATABASE_URL is unavailable or contains placeholder credentials. Set ENABLE_EMBEDDED_DB=true to enable development embedded PostgreSQL.';
         return false;
       }
 

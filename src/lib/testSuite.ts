@@ -70,7 +70,10 @@ export function runBusinessResolutionSafetyTests(resolveBusinessAndKnowledge: (i
   }];
 }
 
-export function runConversationTestSuite(business: any, knowledgeBase: any[]): TestCaseResult[] {
+export function runConversationTestSuite(
+  business: any = DEMO_BUSINESS,
+  knowledgeBase: any[] = DEMO_KNOWLEDGE_ITEMS
+): TestCaseResult[] {
   const testResults: TestCaseResult[] = [];
 
   function createFreshRecord(testId: string): ConversationRecord {
