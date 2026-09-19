@@ -114,13 +114,14 @@ class PostgresClient {
       // 2. Optional development-only embedded PostgreSQL engine.
       // Production must use an external PostgreSQL DATABASE_URL so sessions and tenant data
       // are durable and shareable across instances.
-      if (process.env.NODE_ENV === 'production') {
-        this.isConnected = false;
-        this.lastError = 'Production requires a valid external PostgreSQL DATABASE_URL. Embedded database fallback is strictly disabled in production.';
-        return false;
-      }
+      // An explicitly enabled embedded database is supported for AI Studio/preview and
+      // other single-instance environments that do not provide an external PostgreSQL service.
+      // It must never be an implicit fallback: operators must opt in with
+      // ENABLE_EMBEDDED_DB=true. External PostgreSQL remains preferred and is required for
+      // durable multi-instance production deployments.
+      const embeddedDbExplicitlyEnabled = process.env.ENABLE_EMBEDDED_DB === 'true';
 
-      if (process.env.ENABLE_EMBEDDED_DB !== 'true') {
+      if (!embeddedDbExplicitlyEnabled) {
         this.isConnected = false;
         this.lastError = 'PostgreSQL DATABASE_URL is unavailable or contains placeholder credentials. Set ENABLE_EMBEDDED_DB=true to enable development embedded PostgreSQL.';
         return false;
@@ -151,7 +152,14 @@ class PostgresClient {
 
         this.isConnected = true;
         this.lastError = null;
-        console.log('[PostgresClient] Development embedded PostgreSQL engine verified and active.');
+        const runtimeLabel = process.env.NODE_ENV === 'production'
+          ? 'explicitly enabled production/preview'
+          : 'development';
+        console.warn(
+          `[PostgresClient] Embedded PostgreSQL engine is active in ${runtimeLabel} mode. ` +
+          'This storage is instance-local and is not suitable for durable multi-instance production data. ' +
+          'Configure DATABASE_URL for persistent production deployments.'
+        );
         return true;
       } catch (err: any) {
         this.isConnected = false;
