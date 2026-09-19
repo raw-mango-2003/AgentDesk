@@ -10,6 +10,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      SESSION_SECRET: agentdesk-ci-session-secret-2026-09-19-long-enough
     services:
       postgres:
         image: postgres:16
