@@ -160,25 +160,18 @@ export function isRequestSecure(req?: Request): boolean {
  */
 export function setSessionCookie(res: Response, token: string, req?: Request) {
   const isHttps = isRequestSecure(req);
-  const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+  const maxAge = 7 * 24 * 60 * 60;
   const expires = new Date(Date.now() + maxAge * 1000).toUTCString();
 
-  const isCrossSiteOrIframe = Boolean(
-    req?.headers['sec-fetch-dest'] === 'iframe' ||
-    req?.headers['sec-fetch-site'] === 'cross-site' ||
-    (req?.headers.origin && req?.headers.host && !req?.headers.origin.includes(req?.headers.host)) ||
-    (req?.headers.referer && (req.headers.referer.includes('ai.studio') || req.headers.referer.includes('.google.com') || req.headers.referer.includes('.run.app')))
-  );
-
-  const sameSiteFlags = isHttps
-    ? (isCrossSiteOrIframe ? 'SameSite=None; Secure; Partitioned' : 'SameSite=Lax; Secure')
-    : 'SameSite=Lax';
-
-  const cookieFlags = [
+  // AgentDesk's production UI and API are same-origin at agentdesk.ai.studio.
+  // Keep the session host-only and SameSite=Lax. Do not infer cross-site state
+  // from Referer/Host strings, which can incorrectly turn ordinary same-origin
+  // requests into partitioned third-party cookies.
+  const sessionFlags = [
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    sameSiteFlags,
+    ...(isHttps ? ['SameSite=Lax', 'Secure'] : ['SameSite=Lax']),
     `Max-Age=${maxAge}`,
     `Expires=${expires}`
   ].join('; ');
@@ -187,29 +180,21 @@ export function setSessionCookie(res: Response, token: string, req?: Request) {
   const csrfFlags = [
     `agentdesk_csrf=${csrfToken}`,
     'Path=/',
-    sameSiteFlags,
+    ...(isHttps ? ['SameSite=Lax', 'Secure'] : ['SameSite=Lax']),
     `Max-Age=${maxAge}`,
     `Expires=${expires}`
   ].join('; ');
 
-  res.setHeader('Set-Cookie', [cookieFlags, csrfFlags]);
+  res.setHeader('Set-Cookie', [sessionFlags, csrfFlags]);
   return csrfToken;
 }
 
 export function clearSessionCookies(res: Response, req?: Request) {
   const isHttps = isRequestSecure(req);
-  const isCrossSiteOrIframe = Boolean(
-    req?.headers['sec-fetch-dest'] === 'iframe' ||
-    req?.headers['sec-fetch-site'] === 'cross-site' ||
-    (req?.headers.origin && req?.headers.host && !req?.headers.origin.includes(req?.headers.host)) ||
-    (req?.headers.referer && (req.headers.referer.includes('ai.studio') || req.headers.referer.includes('.google.com') || req.headers.referer.includes('.run.app')))
-  );
-  const sameSite = isHttps ? (isCrossSiteOrIframe ? 'SameSite=None; Partitioned' : 'SameSite=Lax') : 'SameSite=Lax';
   const secure = isHttps ? '; Secure' : '';
-
   res.setHeader('Set-Cookie', [
-    `agentdesk_session=; Path=/; HttpOnly; SameSite=${sameSite}${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-    `agentdesk_csrf=; Path=/; SameSite=${sameSite}${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    `agentdesk_session=; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+    `agentdesk_csrf=; Path=/; SameSite=Lax${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
   ]);
 }
 
