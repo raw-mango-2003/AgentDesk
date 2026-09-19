@@ -184,17 +184,11 @@ class PostgresClient {
         }
       }
 
-      // 2. Optional development-only embedded PostgreSQL engine.
-      // Production must use an external PostgreSQL DATABASE_URL so sessions and tenant data
-      // are durable and shareable across instances.
-      if (process.env.NODE_ENV === 'production') {
-        this.isConnected = false;
-        if (!this.lastError) {
-          this.lastError = 'Production requires a valid external PostgreSQL DATABASE_URL. Embedded database fallback is strictly disabled in production.';
-        }
-        return false;
-      }
-
+      // 2. Explicit embedded PostgreSQL engine.
+      // AI Studio preview deployments may run without an external DATABASE_URL, so an
+      // operator can explicitly opt into the instance-local database with
+      // ENABLE_EMBEDDED_DB=true. External PostgreSQL remains preferred for durable,
+      // multi-instance production deployments.
       if (process.env.ENABLE_EMBEDDED_DB !== 'true') {
         this.isConnected = false;
         if (!this.lastError) {
@@ -237,7 +231,14 @@ class PostgresClient {
 
         this.isConnected = true;
         this.lastError = null;
-        console.log('[PostgresClient] Development embedded PostgreSQL engine verified and active.');
+        const runtimeLabel = process.env.NODE_ENV === 'production'
+          ? 'explicitly enabled production/preview'
+          : 'development';
+        console.warn(
+          `[PostgresClient] Embedded PostgreSQL engine is active in ${runtimeLabel} mode. ` +
+          'This storage is instance-local and is not suitable for durable multi-instance production data. ' +
+          'Configure DATABASE_URL for persistent production deployments.'
+        );
         return true;
       } catch (err: any) {
         this.isConnected = false;
