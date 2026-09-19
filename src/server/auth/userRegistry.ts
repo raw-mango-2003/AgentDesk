@@ -45,7 +45,7 @@ export const usersByIdStore = new Map<string, UserRecord>();
 
 let isUsersInitialized = false;
 
-export function initUserRegistry() {
+export async function initUserRegistry() {
   if (isUsersInitialized) return;
   isUsersInitialized = true;
 
@@ -98,7 +98,11 @@ export function initUserRegistry() {
   }
 
   // 2. Initial Platform Admin Check and Creation
-  bootstrapPlatformAdmin();
+  if (process.env.NODE_ENV === 'production') {
+    await bootstrapPlatformAdminAsync();
+  } else {
+    bootstrapPlatformAdmin();
+  }
 }
 
 /**
@@ -214,7 +218,12 @@ export function bootstrapPlatformAdmin(): { created: boolean; email: string; mes
 }
 
 export async function bootstrapPlatformAdminAsync(): Promise<{ created: boolean; email: string; message: string }> {
-  await postgresClient.initialize();
+  const isReady = await postgresClient.initialize();
+  if (!isReady) {
+    const message = '[Auth Bootstrap] PostgreSQL is unavailable. Platform administrator bootstrap was not completed.';
+    console.error(message);
+    return { created: false, email: '', message };
+  }
 
   // Check PostgreSQL first for existing PLATFORM_ADMIN account
   try {
@@ -456,8 +465,8 @@ export async function syncUsersFromPostgres(): Promise<void> {
   }
 }
 
-// Auto-initialize memory store & start sync from PostgreSQL
-initUserRegistry();
+// Initialize the registry before authentication requests can depend on it.
+export const userRegistryReady = initUserRegistry();
 syncUsersFromPostgres().catch(() => {});
 
 /**
@@ -465,6 +474,7 @@ syncUsersFromPostgres().catch(() => {});
  */
 export async function getUserByEmailAsync(email: string): Promise<UserRecord | null> {
   if (!email) return null;
+  await userRegistryReady;
   const clean = email.toLowerCase().trim();
 
   try {
@@ -492,6 +502,10 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
     }
   }
 
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Authentication database unavailable.');
+  }
+
   // Development-only cache fallback. Production authentication must remain PostgreSQL-authoritative.
   return getUserByEmail(clean);
 }
@@ -501,6 +515,7 @@ export async function getUserByEmailAsync(email: string): Promise<UserRecord | n
  */
 export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
   if (!id) return null;
+  await userRegistryReady;
   const cleanId = id.trim();
 
   try {
@@ -524,6 +539,10 @@ export async function getUserByIdAsync(id: string): Promise<UserRecord | null> {
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Authentication database unavailable.');
     }
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Authentication database unavailable.');
   }
 
   // Development-only cache fallback. Production authentication must remain PostgreSQL-authoritative.
