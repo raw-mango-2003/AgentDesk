@@ -177,7 +177,7 @@ export function setSessionCookie(res: Response, token: string, req?: Request) {
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
-    ...(isHttps ? ['SameSite=None', 'Secure'] : ['SameSite=Lax']),
+    ...(isHttps ? ['SameSite=None', 'Secure', 'Partitioned'] : ['SameSite=Lax']),
     `Max-Age=${maxAge}`,
     `Expires=${expires}`
   ].join('; ');
@@ -656,6 +656,7 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
 
     const session = await createSession(user.id, user.email, user.role, user.tenantId);
     const csrfToken = setSessionCookie(res, session.token, req);
+    console.log(`[Auth login] session created for ${user.email}; secure cookie: ${isRequestSecure(req)}; set-cookie emitted: true`);
 
     analyticsService.track('login_success', { email: user.email, role: user.role }, user.id);
 
@@ -877,6 +878,7 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
 
     const session = await createSession(user.id, user.email, 'PLATFORM_ADMIN', 'platform');
     const csrfToken = setSessionCookie(res, session.token, req);
+    console.log(`[Auth platform/login] session created for ${user.email}; secure cookie: ${isRequestSecure(req)}; set-cookie emitted: true`);
 
     logCredentialAction({
       actorId: user.id,
