@@ -11,3 +11,6 @@ data/*session*.json
 sessions_store.json
 data/integrations_store.json
 data/integrations_store.json.tmp
+
+.sessions_cache.json
+data/postgres/
