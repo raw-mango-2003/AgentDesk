@@ -49,7 +49,7 @@ jobs:
       - name: Platform admin auth E2E
         run: |
           set -e
-          NODE_ENV=development ENABLE_EMBEDDED_DB=true PLATFORM_ADMIN_EMAIL=e2e-admin@agentdesk.internal PLATFORM_ADMIN_INITIAL_PASSWORD='E2E-Admin-Password-123!' PORT=3000 npm run dev > /tmp/agentdesk-auth-e2e.log 2>&1 &
+          NODE_ENV=production ENABLE_EMBEDDED_DB=true PLATFORM_ADMIN_EMAIL=e2e-admin@agentdesk.internal PLATFORM_ADMIN_INITIAL_PASSWORD='E2E-Admin-Password-123!' PORT=3000 npm run dev > /tmp/agentdesk-auth-e2e.log 2>&1 &
           SERVER_PID=$!
           trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do
