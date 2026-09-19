@@ -44,7 +44,7 @@ import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTen
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
-import { storageService, gmailService } from './src/server/integrations/index.js';
+import { storageService, gmailService, integrationStore } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
@@ -1885,7 +1885,13 @@ async function startServer() {
       await userRegistryReady;
       await syncUsersFromPostgres();
       await bootstrapPlatformAdminAsync();
+
+      // Hydrate persisted integrations from the authoritative PostgreSQL store
+      // after the database is fully ready. Gmail connectivity is platform-level
+      // and must survive admin logout, browser changes, and server restarts.
+      await integrationStore.syncWithPostgres();
       console.log('[Diagnostic] user registry initialization: success');
+      console.log('[Diagnostic] persistent integrations synchronized.');
     } else {
       console.log('[Diagnostic] migration initialization: failure');
       console.log('[Diagnostic] user registry initialization: failure');
