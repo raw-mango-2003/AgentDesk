@@ -267,7 +267,6 @@ export async function destroySession(token: string | undefined): Promise<boolean
   const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
   const tokenHash = hashSessionToken(cleanToken);
   const removed = activeSessions.delete(tokenHash);
-  saveSessionsToDisk();
 
   try {
     const isReady = await postgresClient.initialize();
@@ -285,7 +284,6 @@ export async function destroyAllUserSessions(userId: string): Promise<void> {
   for (const [hashKey, session] of activeSessions.entries()) {
     if (session.userId === userId) activeSessions.delete(hashKey);
   }
-  saveSessionsToDisk();
 
   try {
     const isReady = await postgresClient.initialize();
