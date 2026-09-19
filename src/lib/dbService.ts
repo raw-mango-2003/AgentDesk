@@ -60,18 +60,45 @@ import {
   BETA_TENANT_ID
 } from '../data/seedData';
 
+function getCsrfTokenFromDocument(): string | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const match = document.cookie.match(/(?:^|;\s*)agentdesk_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 export async function safeFetchJson(url: string, options?: RequestInit): Promise<any> {
   const timeoutMs = 12000;
   const controller = new AbortController();
   const timeoutId = typeof window !== 'undefined' ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+  const method = (options?.method || 'GET').toUpperCase();
+
+  let csrfToken = getCsrfTokenFromDocument();
+  if (!csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && typeof window !== 'undefined' && !url.includes('/api/auth/csrf')) {
+    try {
+      const csrfRes = await fetch('/api/auth/csrf', { credentials: 'include' });
+      const csrfJson = await csrfRes.json().catch(() => null);
+      if (csrfJson?.csrfToken) {
+        csrfToken = csrfJson.csrfToken;
+      } else {
+        csrfToken = getCsrfTokenFromDocument();
+      }
+    } catch {}
+  }
+
+  const customHeaders: Record<string, string> = {
+    'Accept': 'application/json',
+    ...(options?.headers as Record<string, string> || {})
+  };
+
+  if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    customHeaders['x-csrf-token'] = csrfToken;
+  }
+
   const requestOptions: RequestInit = {
-    credentials: 'include',
     ...options,
+    credentials: options?.credentials || 'include',
     signal: options?.signal || controller.signal,
-    headers: {
-      'Accept': 'application/json',
-      ...(options?.headers || {})
-    }
+    headers: customHeaders
   };
 
   try {

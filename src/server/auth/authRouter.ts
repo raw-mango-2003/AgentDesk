@@ -136,13 +136,30 @@ export function extractCookie(cookieHeader: string | undefined, name: string): s
 }
 
 /**
+ * Helper to determine if the connection or environment is HTTPS/Secure
+ */
+export function isRequestSecure(req?: Request): boolean {
+  if (process.env.NODE_ENV === 'production') return true;
+  if (!req) {
+    return (process.env.APP_URL || '').startsWith('https');
+  }
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  if (forwardedProto) {
+    return String(forwardedProto).includes('https');
+  }
+  if (req.secure) return true;
+  const host = req.headers.host || '';
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    return false;
+  }
+  return (process.env.APP_URL || '').startsWith('https');
+}
+
+/**
  * Set session token as an HttpOnly, secure (production) cookie
  */
 export function setSessionCookie(res: Response, token: string, req?: Request) {
-  const isHttps = (process.env.APP_URL || '').startsWith('https') ||
-    req?.secure ||
-    req?.headers['x-forwarded-proto'] === 'https' ||
-    process.env.NODE_ENV === 'production';
+  const isHttps = isRequestSecure(req);
   const cookieFlags = [
     `agentdesk_session=${encodeURIComponent(token)}`,
     'Path=/',
@@ -162,38 +179,34 @@ export function setSessionCookie(res: Response, token: string, req?: Request) {
 }
 
 export function clearSessionCookies(res: Response, req?: Request) {
-  const isHttps = (process.env.APP_URL || '').startsWith('https') ||
-    req?.secure ||
-    req?.headers['x-forwarded-proto'] === 'https' ||
-    process.env.NODE_ENV === 'production';
+  const isHttps = isRequestSecure(req);
   const flags = isHttps ? '; SameSite=None; Secure; Partitioned' : '; SameSite=Lax';
   res.setHeader('Set-Cookie', [
     `agentdesk_session=; Path=/; HttpOnly${flags}; Max-Age=0`,
     `agentdesk_csrf=; Path=/${flags}; Max-Age=0`
   ]);
 }
+
 /**
- * Extract auth token from Authorization header or HttpOnly cookie
+ * Extract auth token from HttpOnly cookie or Authorization header
+ * Primary authoritative source: HttpOnly cookie 'agentdesk_session'
+ * Secondary fallback: Authorization: Bearer <token>
  */
 export function extractTokenFromRequest(req: Request): string | undefined {
+  if (req.headers.cookie) {
+    const cookieToken = extractCookie(req.headers.cookie, 'agentdesk_session');
+    if (cookieToken && cookieToken !== 'null' && cookieToken !== 'undefined') {
+      return cookieToken;
+    }
+  }
+
   const authorization = typeof req.headers.authorization === 'string'
     ? req.headers.authorization.trim()
     : '';
 
-  // Ignore empty/malformed placeholder headers so the secure HttpOnly cookie
-  // can still authenticate the request.
-  if (
-    authorization &&
-    !/^Bearer\s+(?:null|undefined)$/i.test(authorization)
-  ) {
-    return authorization;
-  }
-
-  if (req.headers.cookie) {
-    const cookieToken = extractCookie(req.headers.cookie, 'agentdesk_session');
-    if (cookieToken) {
-      return cookieToken;
-    }
+  const match = authorization.match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
+  if (match && match[1] && match[1] !== 'null' && match[1] !== 'undefined') {
+    return match[1];
   }
 
   return undefined;
@@ -203,8 +216,27 @@ export function extractTokenFromRequest(req: Request): string | undefined {
  * Middleware: Extract authenticated user from session token
  */
 export async function requireAuth(req: Request, res: Response, next: Function) {
-  const token = extractTokenFromRequest(req);
-  const session = await getSession(token);
+  let session = null;
+
+  // 1. Primary: HttpOnly session cookie
+  if (req.headers.cookie) {
+    const cookieToken = extractCookie(req.headers.cookie, 'agentdesk_session');
+    if (cookieToken && cookieToken !== 'null' && cookieToken !== 'undefined') {
+      session = await getSession(cookieToken);
+    }
+  }
+
+  // 2. Secondary fallback: Authorization header
+  if (!session) {
+    const authorization = typeof req.headers.authorization === 'string'
+      ? req.headers.authorization.trim()
+      : '';
+    const match = authorization.match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
+    if (match && match[1] && match[1] !== 'null' && match[1] !== 'undefined') {
+      session = await getSession(match[1]);
+    }
+  }
+
   if (!session) {
     return res.status(401).json({
       success: false,
@@ -439,10 +471,7 @@ authRouter.get('/csrf', (req: Request, res: Response) => {
   let csrfToken = extractCookie(req.headers.cookie || '', 'agentdesk_csrf');
   if (!csrfToken) {
     csrfToken = crypto.randomBytes(32).toString('hex');
-    const isHttps = (process.env.APP_URL || '').startsWith('https') ||
-      req.secure ||
-      req.headers['x-forwarded-proto'] === 'https' ||
-      process.env.NODE_ENV === 'production';
+    const isHttps = isRequestSecure(req);
     const csrfFlags = [
       `agentdesk_csrf=${csrfToken}`,
       'Path=/',

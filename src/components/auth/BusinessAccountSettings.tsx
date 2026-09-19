@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeFetchJson } from '../../lib/apiClient';
 import { 
   KeyRound, 
   User, 
@@ -96,17 +97,10 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
     whatsappAlerts: false
   });
 
-  const getAuthToken = () => {
-    return localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-  };
-
   const loadSessions = async () => {
     setSessionsLoading(true);
     try {
-      const res = await fetch('/api/auth/sessions', {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      });
-      const data = await res.json();
+      const data = await safeFetchJson('/api/auth/sessions');
       if (data.success && data.sessions) {
         setSessions(data.sessions);
       }
@@ -173,15 +167,13 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
     setTwoFactorError(null);
     setTwoFactorLoading(true);
     try {
-      const res = await fetch('/api/auth/2fa/setup', {
+      const data = await safeFetchJson('/api/auth/2fa/setup', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ phone: setupPhoneInput })
       });
-      const data = await res.json();
       if (data.success) {
         setSetupChallengeId(data.challengeId);
         setTwoFactorStep('OTP');
@@ -201,18 +193,16 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
     setTwoFactorError(null);
     setTwoFactorLoading(true);
     try {
-      const res = await fetch('/api/auth/2fa/enable', {
+      const data = await safeFetchJson('/api/auth/2fa/enable', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           challengeId: setupChallengeId,
           code: setupOtpCode
         })
       });
-      const data = await res.json();
       if (data.success) {
         setTwoFactorEnabled(true);
         setTwoFactorPhone(setupPhoneInput);
@@ -236,15 +226,13 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
     setTwoFactorError(null);
     setTwoFactorLoading(true);
     try {
-      const res = await fetch('/api/auth/2fa/disable', {
+      const data = await safeFetchJson('/api/auth/2fa/disable', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ password: disablePasswordInput })
       });
-      const data = await res.json();
       if (data.success) {
         setTwoFactorEnabled(false);
         setTwoFactorPhone('');
@@ -265,11 +253,9 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
   const handleRevokeOtherSessions = async () => {
     setRevokingSessions(true);
     try {
-      const res = await fetch('/api/auth/sessions/revoke-others', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      const data = await safeFetchJson('/api/auth/sessions/revoke-others', {
+        method: 'POST'
       });
-      const data = await res.json();
       if (data.success) {
         loadSessions();
       }
@@ -285,11 +271,9 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
     setExportLoading(true);
     setExportSuccess(null);
     try {
-      const res = await fetch('/api/auth/export-data', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+      const data = await safeFetchJson('/api/auth/export-data', {
+        method: 'POST'
       });
-      const data = await res.json();
       if (data.success && data.archive) {
         // Trigger browser JSON download
         const blob = new Blob([JSON.stringify(data.archive, null, 2)], { type: 'application/json' });
@@ -313,18 +297,16 @@ export const BusinessAccountSettings: React.FC<BusinessAccountSettingsProps> = (
     setDeleteError(null);
     setDeleteLoading(true);
     try {
-      const res = await fetch('/api/auth/request-deletion', {
+      const data = await safeFetchJson('/api/auth/request-deletion', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           password: deletePassword,
           confirmationText: deleteConfirmText
         })
       });
-      const data = await res.json();
       if (data.success) {
         logout();
       } else {

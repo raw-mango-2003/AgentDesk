@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeFetchJson } from '../../lib/apiClient';
 import { 
   Mail, 
   CreditCard, 
@@ -105,34 +106,9 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const [testEmailInput, setTestEmailInput] = useState('hello.agentdesktech@gmail.com');
   const [testPhoneInput, setTestPhoneInput] = useState('+15551234567');
 
-  const getAuthToken = () => {
-    return localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token') || '';
-  };
-
   const fetchGmailStatus = async () => {
     try {
-      const token = getAuthToken();
-      let res: Response;
-      try {
-        res = await fetch('/api/integrations/google/status', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      } catch (netErr) {
-        console.warn('Network error fetching Gmail status:', netErr);
-        return;
-      }
-
-      if (!res.ok) {
-        console.warn(`Gmail status endpoint returned HTTP ${res.status}`);
-        return;
-      }
-
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return;
-
-      const data = await res.json();
+      const data = await safeFetchJson('/api/integrations/google/status');
       if (data.success) {
         setGmailDetails({
           status: data.status,
@@ -160,28 +136,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const fetchIntegrations = async () => {
     setLoading(true);
     try {
-      const token = getAuthToken();
-      let res: Response;
-      try {
-        res = await fetch('/api/platform/integrations', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      } catch (netErr) {
-        console.warn('Network error loading integrations:', netErr);
-        return;
-      }
-
-      if (!res.ok) {
-        console.warn(`Platform integrations returned HTTP ${res.status}`);
-        return;
-      }
-
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return;
-
-      const data = await res.json();
+      const data = await safeFetchJson('/api/platform/integrations');
       if (data.success && data.integrations) {
         setIntegrations(data.integrations);
       }
@@ -228,26 +183,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const fetchEnvStatus = async () => {
     setLoadingEnv(true);
     try {
-      const token = getAuthToken();
-      let res: Response;
-      try {
-        res = await fetch('/api/platform/environment-status', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } catch (netErr) {
-        console.warn('Network error loading environment status:', netErr);
-        return;
-      }
-
-      if (!res.ok) {
-        console.warn(`Environment status returned HTTP ${res.status}`);
-        return;
-      }
-
-      const contentType = res.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) return;
-
-      const data = await res.json();
+      const data = await safeFetchJson('/api/platform/environment-status');
       if (data.success && data.report) {
         setEnvReport(data.report);
       }
@@ -275,39 +211,18 @@ export const PlatformIntegrationsManager: React.FC = () => {
     e.preventDefault();
     setSavingCredentials(true);
     try {
-      const token = getAuthToken();
-      let res: Response;
-      try {
-        res = await fetch('/api/integrations/google/credentials', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            clientId: clientIdInput.trim(),
-            clientSecret: clientSecretInput.trim()
-          })
-        });
-      } catch (netErr: any) {
-        alert('Unable to reach server to save credentials. Check network connection.');
-        return;
-      }
+      const data = await safeFetchJson('/api/integrations/google/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          clientId: clientIdInput.trim(),
+          clientSecret: clientSecretInput.trim()
+        })
+      });
 
-      const contentType = res.headers.get('content-type') || '';
-      let data: any = {};
-      if (contentType.includes('application/json')) {
-        try {
-          data = await res.json();
-        } catch {
-          data = { success: false, error: 'Malformed response from server' };
-        }
-      } else {
-        const text = await res.text();
-        data = { success: false, error: text || `HTTP ${res.status}` };
-      }
-
-      if (res.ok && data.success) {
+      if (data.success) {
         setShowCredentialsModal(false);
         await fetchGmailStatus();
         await fetchIntegrations();
@@ -316,7 +231,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
         // Continue through the HttpOnly session cookie, not a query-string token.
         window.location.href = '/api/integrations/google/start';
       } else {
-        alert(data.error || `Failed to save credentials (HTTP ${res.status})`);
+        alert(data.error || 'Failed to save credentials');
       }
     } catch (err: any) {
       alert(err.message || 'Unexpected error saving credentials');
@@ -333,34 +248,11 @@ export const PlatformIntegrationsManager: React.FC = () => {
 
     setDisconnectingGmail(true);
     try {
-      const token = getAuthToken();
-      let res: Response;
-      try {
-        res = await fetch('/api/integrations/google/disconnect', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      } catch (netErr: any) {
-        alert('Unable to reach server to disconnect Gmail. Check network connection.');
-        return;
-      }
+      const data = await safeFetchJson('/api/integrations/google/disconnect', {
+        method: 'POST'
+      });
 
-      const contentType = res.headers.get('content-type') || '';
-      let data: any = {};
-      if (contentType.includes('application/json')) {
-        try {
-          data = await res.json();
-        } catch {
-          data = { success: false, error: 'Malformed response from server' };
-        }
-      } else {
-        const text = await res.text();
-        data = { success: false, error: text || `HTTP ${res.status}` };
-      }
-
-      if (res.ok && data.success) {
+      if (data.success) {
         setGmailDetails(prev => ({
           ...prev,
           status: 'NOT_CONNECTED',
@@ -375,7 +267,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
         });
         await fetchIntegrations();
       } else {
-        alert(data.error || `Failed to disconnect Gmail (HTTP ${res.status})`);
+        alert(data.error || 'Failed to disconnect Gmail');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to disconnect Gmail');
@@ -396,83 +288,16 @@ export const PlatformIntegrationsManager: React.FC = () => {
     setGmailTestResult(null);
 
     try {
-      const token = getAuthToken();
-      let res: Response;
-      try {
-        res = await fetch('/api/integrations/google/test-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            to: cleanRecipient
-          })
-        });
-      } catch (networkErr: any) {
-        setGmailTestResult({
-          status: 'FAILED',
-          timestamp: new Date().toLocaleTimeString(),
-          error: 'Unable to reach backend server. Please verify the application server is running and accessible.'
-        });
-        return;
-      }
+      const data = await safeFetchJson('/api/integrations/google/test-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          to: cleanRecipient
+        })
+      });
 
-      // Check content-type before parsing
-      const contentType = res.headers.get('content-type') || '';
-      let data: any = {};
-      let parseFailed = false;
-
-      if (contentType.includes('application/json')) {
-        try {
-          data = await res.json();
-        } catch {
-          parseFailed = true;
-        }
-      } else {
-        const rawText = await res.text();
-        data = { error: rawText || `HTTP ${res.status} response from server` };
-      }
-
-      if (parseFailed) {
-        setGmailTestResult({
-          status: 'FAILED',
-          timestamp: new Date().toLocaleTimeString(),
-          error: `Failed to parse JSON response from server (HTTP ${res.status}).`
-        });
-        return;
-      }
-
-      // Handle HTTP error statuses explicitly
-      if (!res.ok) {
-        let errorMsg = data?.error || data?.message;
-        if (typeof errorMsg !== 'string') {
-          errorMsg = errorMsg?.message || '';
-        }
-
-        if (!errorMsg) {
-          if (res.status === 401) {
-            errorMsg = 'Authentication session invalid or expired. Please refresh and log in again.';
-          } else if (res.status === 403) {
-            errorMsg = 'Forbidden: Platform Administrator privileges are required to perform integration tests.';
-          } else if (res.status === 404) {
-            errorMsg = 'Test email endpoint not found (HTTP 404). Check API route mounting.';
-          } else if (res.status >= 500) {
-            errorMsg = `Internal server error (HTTP ${res.status}). Check server logs for details.`;
-          } else {
-            errorMsg = `Server returned HTTP ${res.status}`;
-          }
-        }
-
-        setGmailTestResult({
-          status: data?.status === 'NOT_CONNECTED' ? 'NOT_CONNECTED' : 'FAILED',
-          timestamp: new Date().toLocaleTimeString(),
-          error: errorMsg
-        });
-        return;
-      }
-
-      // 2xx response
       if (data.status === 'SUCCESS' && data.success) {
         setGmailTestResult({
           status: 'SUCCESS',
@@ -491,7 +316,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
         setGmailTestResult({
           status: 'FAILED',
           timestamp: new Date().toLocaleTimeString(),
-          error: data.error || data.message || 'Gmail dispatch rejected by Google API.'
+          error: data.error?.message || (typeof data.error === 'string' ? data.error : (data.message || 'Gmail dispatch rejected by Google API.'))
         });
       }
     } catch (err: any) {
@@ -508,7 +333,6 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const runGenericTest = async (integrationId: string) => {
     setTestingId(integrationId);
     setTestResult(null);
-    const token = getAuthToken();
 
     let endpoint = '';
     let body: any = {};
@@ -540,42 +364,18 @@ export const PlatformIntegrationsManager: React.FC = () => {
     }
 
     try {
-      let res: Response;
-      try {
-        res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(body)
-        });
-      } catch (netErr: any) {
-        setTestResult({
-          id: integrationId,
-          success: false,
-          message: 'Network request failed: backend server unreachable.'
-        });
-        return;
-      }
-
-      const contentType = res.headers.get('content-type') || '';
-      let result: any = {};
-      if (contentType.includes('application/json')) {
-        try {
-          result = await res.json();
-        } catch {
-          result = { success: false, message: 'Invalid JSON response from server' };
-        }
-      } else {
-        const text = await res.text();
-        result = { success: false, message: text || `HTTP ${res.status}` };
-      }
+      const result = await safeFetchJson(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
 
       setTestResult({
         id: integrationId,
-        success: result.success && res.ok,
-        message: result.message || (result.success ? 'Test completed successfully' : `Test failed (HTTP ${res.status})`),
+        success: !!result.success,
+        message: result.message || (result.success ? 'Test completed successfully' : 'Test failed'),
         details: result
       });
     } catch (err: any) {

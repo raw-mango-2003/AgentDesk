@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeFetchJson } from '../../lib/apiClient';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -50,26 +51,12 @@ export const PlatformSystemHealth: React.FC = () => {
     testResults: TestResult[];
   } | null>(null);
 
-  const getAuthToken = () => {
-    return typeof window !== 'undefined'
-      ? (localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token') || '')
-      : '';
-  };
-
   const fetchHealth = async () => {
     setLoadingHealth(true);
     try {
-      const token = getAuthToken();
-      const res = await fetch('/api/platform/system-health', {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setHealth(data);
+      const res = await safeFetchJson('/api/platform/system-health');
+      if (res.success) {
+        setHealth(res as unknown as SystemHealthData);
       }
     } catch (err) {
       console.error('Failed to load system health:', err);
@@ -81,18 +68,14 @@ export const PlatformSystemHealth: React.FC = () => {
   const runProductionTests = async () => {
     setRunningTests(true);
     try {
-      const token = getAuthToken();
-      const res = await fetch('/api/system/run-production-tests', {
+      const res = await safeFetchJson('/api/system/run-production-tests', {
         method: 'POST',
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          'Content-Type': 'application/json'
         }
       });
-      const data = await res.json();
-      if (data.success) {
-        setTestSuiteResults(data);
+      if (res.success) {
+        setTestSuiteResults(res as any);
       }
     } catch (err) {
       console.error('Failed to run production tests:', err);

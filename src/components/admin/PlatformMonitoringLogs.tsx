@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeFetchJson } from '../../lib/apiClient';
 import { 
   Mail, 
   Shield, 
@@ -30,13 +31,9 @@ export const PlatformMonitoringLogs: React.FC = () => {
   const fetchMonitoringData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-      const res = await fetch('/api/platform/monitoring', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const result = await res.json();
+      const result = await safeFetchJson('/api/platform/monitoring');
       if (result.success) {
-        setData(result);
+        setData(result as any);
       }
     } catch (err) {
       console.error('Failed to load monitoring data:', err);
@@ -52,9 +49,8 @@ export const PlatformMonitoringLogs: React.FC = () => {
   const retryDelivery = async (id: string) => {
     setRetryingId(id);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-      await fetch(`/api/platform/monitoring/${encodeURIComponent(id)}/retry`, {
-        method: 'POST', headers: { 'Authorization': `Bearer ${token}` }
+      await safeFetchJson(`/api/platform/monitoring/${encodeURIComponent(id)}/retry`, {
+        method: 'POST'
       });
       await fetchMonitoringData();
     } finally {

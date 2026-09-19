@@ -130,7 +130,9 @@ function isAllowedOrigin(origin: string, req: Request): boolean {
   if (
     origin === 'https://agentdesk.ai.studio' ||
     origin === 'https://ai.studio' ||
+    origin === 'https://aistudio.google.com' ||
     origin.endsWith('.ai.studio') ||
+    origin.endsWith('.google.com') ||
     origin.endsWith('.run.app')
   ) {
     return true;
@@ -165,7 +167,9 @@ app.use(cors({
     if (
       origin === 'https://agentdesk.ai.studio' ||
       origin === 'https://ai.studio' ||
+      origin === 'https://aistudio.google.com' ||
       origin.endsWith('.ai.studio') ||
+      origin.endsWith('.google.com') ||
       origin.endsWith('.run.app')
     ) {
       return callback(null, true);

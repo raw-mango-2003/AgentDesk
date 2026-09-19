@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { safeFetchJson } from '../../lib/apiClient';
 import { 
   Zap, 
   CheckCircle2, 
@@ -88,47 +89,11 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<'rules' | 'test_runner' | 'logs'>('rules');
 
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = typeof window !== 'undefined'
-      ? (localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token') || '')
-      : '';
-    const headers: Record<string, string> = { 'Accept': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-  };
-
-  const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-    try {
-      return await fetch(url, {
-        ...options,
-        credentials: 'include',
-        signal: options.signal || controller.signal
-      });
-    } catch (err: any) {
-      if (err?.name === 'AbortError') {
-        throw new Error(`Request timed out after ${timeoutMs / 1000}s.`);
-      }
-      throw err;
-    } finally {
-      window.clearTimeout(timeoutId);
-    }
-  };
-
   const fetchAutomations = async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetchWithTimeout('/api/platform/automations', {
-        headers: getAuthHeaders()
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error?.message || data?.error || `Unable to load automations (HTTP ${res.status})`);
-      }
+      const data = await safeFetchJson('/api/platform/automations');
       if (data.success) {
         const rawList = Array.isArray(data.automations) ? data.automations : [];
         const normalized: AutomationRule[] = rawList.map((r: any) => {
@@ -192,10 +157,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const fetchLogs = async () => {
     setLoadingLogs(true);
     try {
-      const res = await fetchWithTimeout('/api/platform/email-logs?limit=50', {
-        headers: getAuthHeaders()
-      });
-      const data = await res.json();
+      const data = await safeFetchJson('/api/platform/email-logs?limit=50');
       if (data.success && data.logs) {
         setLogs(data.logs);
       }
@@ -213,11 +175,9 @@ export const PlatformAutomationsDashboard: React.FC = () => {
   const handleToggle = async (id: string) => {
     setTogglingId(id);
     try {
-      const res = await fetchWithTimeout(`/api/platform/automations/${id}/toggle`, {
-        method: 'POST',
-        headers: getAuthHeaders()
+      const data = await safeFetchJson(`/api/platform/automations/${id}/toggle`, {
+        method: 'POST'
       });
-      const data = await res.json();
       if (data.success && data.rule) {
         setAutomations(prev => prev.map(a => a.id === id ? { ...a, active: data.rule.active } : a));
         // Update stats
@@ -238,11 +198,9 @@ export const PlatformAutomationsDashboard: React.FC = () => {
     setRunningTestSuite(true);
     setTestSuiteResults(null);
     try {
-      const res = await fetchWithTimeout('/api/platform/automations/test-suite', {
-        method: 'POST',
-        headers: getAuthHeaders()
+      const data = await safeFetchJson('/api/platform/automations/test-suite', {
+        method: 'POST'
       });
-      const data = await res.json();
       if (data.success) {
         setTestSuiteResults({
           allPassed: data.allPassed,

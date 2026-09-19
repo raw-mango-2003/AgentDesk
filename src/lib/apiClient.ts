@@ -7,10 +7,7 @@
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
-  error?: {
-    code: string;
-    message: string;
-  };
+  error?: any;
   message?: string;
   token?: string;
   user?: any;
@@ -18,7 +15,9 @@ export interface ApiResponse<T = any> {
   mustChangePassword?: boolean;
   onboardingPending?: boolean;
   redirectUrl?: string;
-  status: number;
+  status?: any;
+  httpStatus?: number;
+  [key: string]: any;
 }
 
 function getCsrfToken(): string | undefined {
@@ -32,8 +31,22 @@ export async function safeFetchJson<T = any>(
   options?: RequestInit
 ): Promise<ApiResponse<T>> {
   try {
-    const csrfToken = getCsrfToken();
+    let csrfToken = getCsrfToken();
     const method = (options?.method || 'GET').toUpperCase();
+
+    // If mutating request is made before csrf cookie is populated, proactively retrieve it
+    if (!csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && typeof window !== 'undefined' && !url.includes('/api/auth/csrf')) {
+      try {
+        const csrfRes = await fetch('/api/auth/csrf', { credentials: 'include' });
+        const csrfJson = await csrfRes.json().catch(() => null);
+        if (csrfJson?.csrfToken) {
+          csrfToken = csrfJson.csrfToken;
+        } else {
+          csrfToken = getCsrfToken();
+        }
+      } catch {}
+    }
+
     const requestHeaders: Record<string, string> = {
       'Accept': 'application/json',
       ...(options?.headers as Record<string, string> || {})
@@ -41,12 +54,7 @@ export async function safeFetchJson<T = any>(
     if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       requestHeaders['x-csrf-token'] = csrfToken;
     }
-    if (!requestHeaders['Authorization'] && !requestHeaders['authorization'] && typeof window !== 'undefined') {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-      if (token) {
-        requestHeaders['Authorization'] = `Bearer ${token}`;
-      }
-    }
+
     const res = await fetch(url, {
       ...options,
       credentials: options?.credentials || 'include',

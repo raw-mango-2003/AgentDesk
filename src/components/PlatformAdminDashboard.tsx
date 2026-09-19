@@ -217,11 +217,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   const [planError, setPlanError] = useState<string | null>(null);
   const [showPlanComparison, setShowPlanComparison] = useState(false);
 
-  const getAdminAuthHeaders = (): Record<string, string> => {
-    const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
-  };
-
   const loadData = async () => {
     setLoading(true);
     try {
@@ -237,13 +232,12 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
       setAdminPlans(pConfigs);
 
       // Optional platform diagnostics must never block the core admin dashboard.
-      const adminHeaders = getAdminAuthHeaders();
       const requests = [
-        safeFetchJson('/api/webhooks/status', { credentials: 'include', headers: adminHeaders }).catch(() => null),
-        safeFetchJson('/api/billing/admin/subscriptions', { credentials: 'include', headers: adminHeaders }).catch(() => null),
-        safeFetchJson('/api/billing/admin/pending-signups', { credentials: 'include', headers: adminHeaders }).catch(() => null),
-        safeFetchJson('/api/billing/admin/payment-records', { credentials: 'include', headers: adminHeaders }).catch(() => null),
-        safeFetchJson('/api/billing/tax-settings', { credentials: 'include', headers: adminHeaders }).catch(() => null)
+        safeFetchJson('/api/webhooks/status', { credentials: 'include' }).catch(() => null),
+        safeFetchJson('/api/billing/admin/subscriptions', { credentials: 'include' }).catch(() => null),
+        safeFetchJson('/api/billing/admin/pending-signups', { credentials: 'include' }).catch(() => null),
+        safeFetchJson('/api/billing/admin/payment-records', { credentials: 'include' }).catch(() => null),
+        safeFetchJson('/api/billing/tax-settings', { credentials: 'include' }).catch(() => null)
       ];
 
       const [whData, subsData, pendingData, paymentsData, taxData] = await Promise.all(requests);
@@ -519,12 +513,10 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
     setQuickInviteLoading(true);
     setQuickInviteError(null);
     try {
-      const token = localStorage.getItem('agentdesk_session_token') || sessionStorage.getItem('agentdesk_session_token');
-      const res = await fetch('/api/platform/businesses/create', {
+      const data = await safeFetchJson('/api/platform/businesses/create', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           name: quickBizName.trim(),
@@ -534,7 +526,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
         })
       });
 
-      const data = await res.json();
       if (data.success) {
         setQuickInviteSuccess({
           businessName: data.business?.name || quickBizName,

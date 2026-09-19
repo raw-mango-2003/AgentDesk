@@ -98,29 +98,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      if (res.user) {
-        setCurrentUser(res.user);
+      // Authoritative verification: Ensure the backend session exists and is recognized via HttpOnly cookie
+      const meRes = await safeFetchJson('/api/auth/me');
+      if (!meRes.success || !meRes.user) {
+        setCurrentUser(null);
+        setCurrentTenant(null);
+        setActiveBusinessIdState('');
+        return {
+          success: false,
+          error: 'Authentication failed: Backend session could not be established or verified via HttpOnly cookie.'
+        };
       }
-      const sessionToken = (res as any).token || (res as any).sessionToken;
-      if (sessionToken && typeof window !== 'undefined') {
-        localStorage.setItem('agentdesk_session_token', sessionToken);
-        sessionStorage.setItem('agentdesk_session_token', sessionToken);
-      }
-      if (res.tenant) {
-        setCurrentTenant(res.tenant);
-        setActiveBusinessIdState(res.tenant.id);
-      } else if (res.user?.tenantId) {
-        setActiveBusinessIdState(res.user.tenantId);
+
+      setCurrentUser(meRes.user);
+      if (meRes.tenant) {
+        setCurrentTenant(meRes.tenant);
+        setActiveBusinessIdState(meRes.tenant.id);
+      } else if (meRes.user?.tenantId) {
+        setActiveBusinessIdState(meRes.user.tenantId);
       }
 
       return {
         success: true,
-        user: res.user,
-        tenant: res.tenant,
-        mustChangePassword: !!res.mustChangePassword,
+        user: meRes.user,
+        tenant: meRes.tenant || res.tenant,
+        mustChangePassword: !!(meRes.user.mustChangePassword ?? res.mustChangePassword),
         onboardingPending: res.onboardingPending
       };
     } catch (err: any) {
+      setCurrentUser(null);
       return { success: false, error: err.message || 'Network error during login' };
     } finally {
       setLoading(false);
@@ -150,22 +156,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: errorMsg };
       }
 
-      if (res.user) {
-        setCurrentUser(res.user);
+      // Authoritative verification: Ensure the backend session exists and is recognized via HttpOnly cookie
+      const meRes = await safeFetchJson('/api/auth/me');
+      if (!meRes.success || !meRes.user || meRes.user.role !== 'PLATFORM_ADMIN') {
+        setCurrentUser(null);
+        setCurrentTenant(null);
+        setActiveBusinessIdState('');
+        return {
+          success: false,
+          error: 'Authentication failed: Backend session could not be established or verified via HttpOnly cookie.'
+        };
       }
-      const sessionToken = (res as any).token || (res as any).sessionToken;
-      if (sessionToken && typeof window !== 'undefined') {
-        localStorage.setItem('agentdesk_session_token', sessionToken);
-        sessionStorage.setItem('agentdesk_session_token', sessionToken);
-      }
+
+      setCurrentUser(meRes.user);
       setCurrentTenant(null);
       setActiveBusinessIdState('platform');
 
       return {
         success: true,
-        user: res.user
+        user: meRes.user
       };
     } catch (err: any) {
+      setCurrentUser(null);
       return { success: false, error: err.message || 'Network error during platform admin sign in' };
     } finally {
       setLoading(false);
@@ -187,12 +199,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (res.user) {
-        setCurrentUser(res.user);
-      }
-      const sessionToken = (res as any).token || (res as any).sessionToken;
-      if (sessionToken && typeof window !== 'undefined') {
-        localStorage.setItem('agentdesk_session_token', sessionToken);
-        sessionStorage.setItem('agentdesk_session_token', sessionToken);
+        // If an automatic session was issued on signup, verify via /api/auth/me
+        const meRes = await safeFetchJson('/api/auth/me');
+        if (meRes.success && meRes.user) {
+          setCurrentUser(meRes.user);
+        }
       }
 
       return {
@@ -312,8 +323,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {}
     localStorage.removeItem('agentdesk_auth_user');
     localStorage.removeItem('agentdesk_active_tenant_id');
-    localStorage.removeItem('agentdesk_session_token');
-    sessionStorage.removeItem('agentdesk_session_token');
     setCurrentUser(null);
     setCurrentTenant(null);
     setActiveBusinessIdState('');
