@@ -64,6 +64,7 @@ import {
 } from '../integrations/index.js';
 
 export const authRouter = Router();
+export const tenantRouter = Router();
 
 // Re-export PendingTwoFactorChallenge for backward compatibility
 export type { PendingTwoFactorChallenge } from './twoFactorChallengeStore.js';
@@ -1522,7 +1523,7 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Requ
 /**
  * GET /api/tenants - Returns list of accessible tenants
  */
-authRouter.get('/tenants', async (req: Request, res: Response) => {
+tenantRouter.get('/tenants', async (req: Request, res: Response) => {
   try {
     const token = extractTokenFromRequest(req);
     const session = await getSession(token);
@@ -1557,7 +1558,7 @@ authRouter.get('/tenants', async (req: Request, res: Response) => {
 /**
  * GET /api/tenants/:tenantId - Returns individual business record
  */
-authRouter.get('/tenants/:tenantId', async (req: Request, res: Response) => {
+tenantRouter.get('/tenants/:tenantId', async (req: Request, res: Response) => {
   try {
     const { tenantId } = req.params;
     if (!tenantId) {
@@ -1597,7 +1598,7 @@ authRouter.get('/tenants/:tenantId', async (req: Request, res: Response) => {
 /**
  * PUT /api/tenants/:tenantId - Update business settings
  */
-authRouter.put('/tenants/:tenantId', requireAuth, async (req: Request, res: Response) => {
+tenantRouter.put('/tenants/:tenantId', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user as UserRecord;
     const { tenantId } = req.params;
