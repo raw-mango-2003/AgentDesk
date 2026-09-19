@@ -40,7 +40,7 @@ import {
 import { runConversationTestSuite, runMultiTenantIsolationTestSuite, runBusinessResolutionSafetyTests } from './src/lib/testSuite.js';
 import { runProductionSmokeTests } from './src/server/tests/smokeTests.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
-import { authRouter, requirePlatformAdmin, requireAuth, requireTenantAccess, extractTokenFromRequest } from './src/server/auth/authRouter.js';
+import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTenantAccess, extractTokenFromRequest } from './src/server/auth/authRouter.js';
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
@@ -293,6 +293,8 @@ app.use('/api/billing', billingRouter);
 // Mount Authentication API Router
 // Authentication has one canonical mount. Legacy duplicate mounts were removed to prevent route ambiguity.
 app.use('/api/auth', authRouter);
+// Canonical tenant API routes live directly under /api (not /api/auth).
+app.use('/api', tenantRouter);
 
 // Mount Production Integrations, Notifications, Security & Health API Router
 app.use('/api', integrationsRouter);
