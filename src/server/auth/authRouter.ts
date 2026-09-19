@@ -140,19 +140,23 @@ export function extractCookie(cookieHeader: string | undefined, name: string): s
  * Helper to determine if the connection or environment is HTTPS/Secure
  */
 export function isRequestSecure(req?: Request): boolean {
-  if (process.env.NODE_ENV === 'production') return true;
-  if (!req) {
-    return (process.env.APP_URL || '').startsWith('https');
+  // Determine transport security from the actual request first. This matters
+  // for AI Studio/preview deployments where NODE_ENV may be production while
+  // the preview itself is served over HTTP. Marking the cookie Secure in that
+  // case causes browsers to silently reject it.
+  if (req) {
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    if (forwardedProto) {
+      return String(forwardedProto).split(',')[0].trim().toLowerCase() === 'https';
+    }
+    if (req.secure) return true;
+
+    const host = req.headers.host || '';
+    if (host.includes('localhost') || host.includes('127.0.0.1')) {
+      return false;
+    }
   }
-  const forwardedProto = req.headers['x-forwarded-proto'];
-  if (forwardedProto) {
-    return String(forwardedProto).includes('https');
-  }
-  if (req.secure) return true;
-  const host = req.headers.host || '';
-  if (host.includes('localhost') || host.includes('127.0.0.1')) {
-    return false;
-  }
+
   return (process.env.APP_URL || '').startsWith('https');
 }
 
