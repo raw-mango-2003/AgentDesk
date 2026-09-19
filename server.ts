@@ -82,10 +82,10 @@ const getAppDirectory = (): string => {
 const appDirectory = getAppDirectory();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 
 // Enable trust proxy for Google Cloud Run / reverse proxies so req.ip, req.secure, and protocol are accurate
-app.set('trust proxy', true);
+app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : 1);
 
 // Security Headers Middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
