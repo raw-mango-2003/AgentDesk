@@ -197,7 +197,7 @@ class PostgresClient {
     return {
       isConnected: this.isConnected,
       isConfigured,
-      provider: this.pglite ? 'postgresql' : 'postgresql',
+      provider: 'postgresql',
       error: this.lastError || undefined,
       lastCheckedAt: new Date().toISOString()
     };
