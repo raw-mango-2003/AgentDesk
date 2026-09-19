@@ -19,19 +19,90 @@ export function isValidConfiguredDatabaseUrl(url: string): boolean {
   if (!trimmed.startsWith('postgres://') && !trimmed.startsWith('postgresql://')) {
     return false;
   }
-  // Check for template placeholder patterns
-  if (
-    trimmed.includes('[YOUR-PASSWORD]') ||
-    trimmed.includes('[PASSWORD]') ||
-    trimmed.includes('<PASSWORD>') ||
-    trimmed.includes('YOUR_PASSWORD') ||
-    trimmed.includes('YOUR-PASSWORD') ||
-    trimmed.includes('[your-password]') ||
-    trimmed.includes('your_password')
-  ) {
-    return false;
+
+  let decoded = trimmed;
+  try {
+    decoded = decodeURIComponent(trimmed);
+  } catch {
+    // ignore decoding errors
   }
+
+  const checks = [trimmed.toLowerCase(), decoded.toLowerCase()];
+  const placeholderKeywords = [
+    '[your-password]',
+    '[password]',
+    '<password>',
+    'your_password',
+    'your-password',
+    '%5byour-password%5d',
+    '%5bpassword%5d',
+    '%5byour_password%5d',
+    'your-db-host',
+    'localhost:5432/mydb'
+  ];
+
+  for (const str of checks) {
+    for (const ph of placeholderKeywords) {
+      if (str.includes(ph)) {
+        return false;
+      }
+    }
+  }
+
   return true;
+}
+
+export function getSafeDatabaseDiagnostics(): {
+  isConfigured: boolean;
+  isValidFormat: boolean;
+  hasPlaceholder: boolean;
+  host: string;
+  port: string;
+  database: string;
+  hasUsername: boolean;
+  hasPassword: boolean;
+} {
+  const raw = (process.env.DATABASE_URL || '').trim();
+  if (!raw) {
+    return {
+      isConfigured: false,
+      isValidFormat: false,
+      hasPlaceholder: false,
+      host: 'none',
+      port: 'none',
+      database: 'none',
+      hasUsername: false,
+      hasPassword: false
+    };
+  }
+
+  const isValidFormat = raw.startsWith('postgres://') || raw.startsWith('postgresql://');
+  const isValid = isValidConfiguredDatabaseUrl(raw);
+
+  try {
+    const u = new URL(raw);
+    return {
+      isConfigured: true,
+      isValidFormat,
+      hasPlaceholder: !isValid,
+      host: u.hostname || 'unknown',
+      port: u.port || '5432',
+      database: u.pathname ? u.pathname.replace(/^\//, '') : 'unknown',
+      hasUsername: Boolean(u.username),
+      hasPassword: Boolean(u.password)
+    };
+  } catch {
+    return {
+      isConfigured: true,
+      isValidFormat,
+      hasPlaceholder: true,
+      host: 'unparseable-host',
+      port: 'unknown',
+      database: 'unknown',
+      hasUsername: false,
+      hasPassword: false
+    };
+  }
 }
 
 class PostgresClient {
@@ -106,24 +177,29 @@ class PostgresClient {
             client.release();
           }
         } catch (err: any) {
-          console.warn(`[PostgresClient] External PostgreSQL unreachable (${err.message}). Activating persistent embedded PostgreSQL engine.`);
+          const safeMessage = err?.code ? `${err.message} (code: ${err.code})` : err.message;
+          console.warn(`[PostgresClient] External PostgreSQL unreachable: ${safeMessage}`);
           this.pool = null;
+          this.lastError = `External PostgreSQL unreachable: ${safeMessage}`;
         }
       }
 
       // 2. Optional development-only embedded PostgreSQL engine.
       // Production must use an external PostgreSQL DATABASE_URL so sessions and tenant data
       // are durable and shareable across instances.
-      // An explicitly enabled embedded database is supported for AI Studio/preview and
-      // other single-instance environments that do not provide an external PostgreSQL service.
-      // It must never be an implicit fallback: operators must opt in with
-      // ENABLE_EMBEDDED_DB=true. External PostgreSQL remains preferred and is required for
-      // durable multi-instance production deployments.
-      const embeddedDbExplicitlyEnabled = process.env.ENABLE_EMBEDDED_DB === 'true';
-
-      if (!embeddedDbExplicitlyEnabled) {
+      if (process.env.NODE_ENV === 'production') {
         this.isConnected = false;
-        this.lastError = 'PostgreSQL DATABASE_URL is unavailable or contains placeholder credentials. Set ENABLE_EMBEDDED_DB=true to enable development embedded PostgreSQL.';
+        if (!this.lastError) {
+          this.lastError = 'Production requires a valid external PostgreSQL DATABASE_URL. Embedded database fallback is strictly disabled in production.';
+        }
+        return false;
+      }
+
+      if (process.env.ENABLE_EMBEDDED_DB !== 'true') {
+        this.isConnected = false;
+        if (!this.lastError) {
+          this.lastError = 'PostgreSQL DATABASE_URL is unavailable or contains placeholder credentials. Set ENABLE_EMBEDDED_DB=true to enable development embedded PostgreSQL.';
+        }
         return false;
       }
 
@@ -133,7 +209,16 @@ class PostgresClient {
           if (!fs.existsSync(dataDir)) {
             fs.mkdirSync(dataDir, { recursive: true });
           }
-          this.pglite = new PGlite(dataDir);
+          try {
+            this.pglite = new PGlite(dataDir);
+            await this.pglite.waitReady;
+          } catch (initClusterErr: any) {
+            console.warn('[PostgresClient] Corrupted development cluster detected, rebuilding clean database directory:', initClusterErr.message);
+            fs.rmSync(dataDir, { recursive: true, force: true });
+            fs.mkdirSync(dataDir, { recursive: true });
+            this.pglite = new PGlite(dataDir);
+            await this.pglite.waitReady;
+          }
         }
 
         const runnerAdapter: any = {
@@ -152,14 +237,7 @@ class PostgresClient {
 
         this.isConnected = true;
         this.lastError = null;
-        const runtimeLabel = process.env.NODE_ENV === 'production'
-          ? 'explicitly enabled production/preview'
-          : 'development';
-        console.warn(
-          `[PostgresClient] Embedded PostgreSQL engine is active in ${runtimeLabel} mode. ` +
-          'This storage is instance-local and is not suitable for durable multi-instance production data. ' +
-          'Configure DATABASE_URL for persistent production deployments.'
-        );
+        console.log('[PostgresClient] Development embedded PostgreSQL engine verified and active.');
         return true;
       } catch (err: any) {
         this.isConnected = false;

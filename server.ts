@@ -47,7 +47,7 @@ import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { storageService, gmailService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
-import { postgresClient } from './src/server/db/postgresClient.js';
+import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
 import { syncUsersFromPostgres, bootstrapPlatformAdminAsync } from './src/server/auth/userRegistry.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
@@ -1852,14 +1852,33 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
 
 // Start Server, Create HTTP + WebSocket Server for Live Voice Audio
 async function startServer() {
+  // Safe Diagnostic Logging
+  const dbDiagnostics = getSafeDatabaseDiagnostics();
+  console.log(`[Diagnostic] DATABASE_URL configured: ${dbDiagnostics.isConfigured ? 'yes' : 'no'}`);
+  if (dbDiagnostics.isConfigured) {
+    console.log(`[Diagnostic] DATABASE host: ${dbDiagnostics.host}:${dbDiagnostics.port}, db: ${dbDiagnostics.database}, placeholder detected: ${dbDiagnostics.hasPlaceholder ? 'yes' : 'no'}`);
+  }
+
   // Authoritative PostgreSQL initialization and platform administrator verification
+  let isDbReady = false;
   try {
-    const isDbReady = await postgresClient.initialize();
+    isDbReady = await postgresClient.initialize();
+    console.log(`[Diagnostic] DATABASE provider initialization: ${isDbReady ? 'success' : 'failure'}`);
     if (isDbReady) {
+      console.log('[Diagnostic] migration initialization: success');
       await syncUsersFromPostgres();
       await bootstrapPlatformAdminAsync();
+      console.log('[Diagnostic] user registry initialization: success');
+    } else {
+      console.log('[Diagnostic] migration initialization: failure');
+      console.log('[Diagnostic] user registry initialization: failure');
+      const err = postgresClient.getStatus().error || 'Unavailable';
+      console.warn(`[Diagnostic] Database unavailable reason: ${err}`);
     }
   } catch (err: any) {
+    console.log(`[Diagnostic] DATABASE provider initialization: failure`);
+    console.log('[Diagnostic] migration initialization: failure');
+    console.log('[Diagnostic] user registry initialization: failure');
     console.error('[ServerStartup] PostgreSQL database bootstrap failed:', err.message);
   }
 
