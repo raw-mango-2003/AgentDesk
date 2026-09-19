@@ -431,7 +431,10 @@ export class GmailService {
     const now = new Date().toISOString();
 
     const existing = integrationStore.getIntegration('gmail_oauth');
-    integrationStore.saveIntegration({
+    // Persist the refresh token to the authoritative PostgreSQL store before
+    // declaring the connection established. This prevents a restart/deploy from
+    // losing a connection because the previous write was fire-and-forget.
+    await integrationStore.saveIntegrationAsync({
       id: 'gmail_oauth',
       provider: 'GOOGLE',
       type: 'GMAIL',
