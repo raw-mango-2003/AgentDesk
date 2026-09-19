@@ -355,7 +355,7 @@ integrationsRouter.get(
 integrationsRouter.get(
   ['/integrations/google/status', '/platform/integrations/gmail/status'],
   requirePlatformAdmin,
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
       // Reload the platform-level Gmail credential from authoritative PostgreSQL
       // before reporting status. The connection must not depend on the current
