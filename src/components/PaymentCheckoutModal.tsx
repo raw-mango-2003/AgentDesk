@@ -68,6 +68,28 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
     });
   };
 
+  const getPaymentErrorMessage = (payload: any, fallback: string): string => {
+    const candidates = [
+      payload,
+      payload?.error,
+      payload?.message,
+      payload?.description,
+      payload?.error?.message,
+      payload?.error?.description,
+      payload?.error?.error,
+      payload?.details
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim()) {
+        const message = candidate.trim();
+        if (message !== '[object Object]') return message;
+      }
+    }
+
+    return fallback;
+  };
+
   const handleProcessPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -89,7 +111,12 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
 
       const sessionData = await sessionRes.json();
       if (!sessionRes.ok || !sessionData.orderId) {
-        throw new Error(sessionData.error || 'Failed to initialize payment session with Razorpay');
+        throw new Error(
+          getPaymentErrorMessage(
+            sessionData,
+            'Payment service temporarily unavailable. Please try again.'
+          )
+        );
       }
 
       const orderId = sessionData.orderId;
@@ -143,7 +170,12 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
 
             const verifyData = await verifyRes.json();
             if (!verifyRes.ok || !verifyData.success) {
-              throw new Error(verifyData.error || 'Payment verification failed on server');
+              throw new Error(
+                getPaymentErrorMessage(
+                  verifyData,
+                  'Payment verification failed on server. Please try again.'
+                )
+              );
             }
 
             setTransactionDetails(verifyData);
