@@ -1,5 +1,6 @@
 import { ISMSService } from './interfaces.js';
 import { deliveryLogService } from './deliveryLogService.js';
+import { integrationStore } from './integrationStore.js';
 
 export class SMSService implements ISMSService {
   private accountSid: string;
@@ -7,9 +8,10 @@ export class SMSService implements ISMSService {
   private fromNumber: string;
 
   constructor() {
-    this.accountSid = (process.env.TWILIO_ACCOUNT_SID || '').trim();
-    this.authToken = (process.env.TWILIO_AUTH_TOKEN || '').trim();
-    this.fromNumber = (process.env.TWILIO_PHONE_NUMBER || '').trim();
+    const config = integrationStore.getPlatformConfig('twilio');
+    this.accountSid = (config.accountSid || process.env.TWILIO_ACCOUNT_SID || '').trim();
+    this.authToken = (config.authToken || process.env.TWILIO_AUTH_TOKEN || '').trim();
+    this.fromNumber = (config.phoneNumber || process.env.TWILIO_PHONE_NUMBER || '').trim();
   }
 
   public isConfigured(): boolean {
