@@ -179,13 +179,28 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
 
     const integrations = [
       {
+        id: 'brevo_email',
+        name: 'Brevo Transactional Email (Primary)',
+        category: 'Official Email',
+        status: process.env.BREVO_API_KEY ? 'CONNECTED' : 'NOT_CONFIGURED',
+        isConfigured: !!process.env.BREVO_API_KEY,
+        senderEmail: process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com',
+        description: 'Primary transactional email delivery through Brevo. No Google OAuth is required.',
+        envVars: ['BREVO_API_KEY', 'EMAIL_FROM', 'EMAIL_FROM_NAME', 'EMAIL_REPLY_TO'],
+        maskedConfig: {
+          senderEmail: process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com',
+          fromName: process.env.EMAIL_FROM_NAME || 'AgentDesk',
+          apiKey: process.env.BREVO_API_KEY ? ('***' + process.env.BREVO_API_KEY.slice(-4)) : 'Not Set'
+        }
+      },
+      {
         id: 'gmail_oauth',
-        name: 'Gmail API OAuth 2.0 (Official Sending Engine)',
+        name: 'Gmail API OAuth 2.0 (Legacy / Optional)',
         category: 'Official Email',
         status: gmailStatus.status,
         isConfigured: gmailService.isConfigured(),
         senderEmail: 'hello.agentdesktech@gmail.com',
-        description: 'Official Google OAuth 2.0 transactional email delivery for hello.agentdesktech@gmail.com using the minimal scope: https://www.googleapis.com/auth/gmail.send.',
+        description: 'Legacy Google OAuth integration retained for compatibility. AgentDesk transactional email now uses Brevo when BREVO_API_KEY is configured.',
         envVars: ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'APP_URL'],
         maskedConfig: {
           senderEmail: 'hello.agentdesktech@gmail.com',
