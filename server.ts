@@ -2139,6 +2139,25 @@ async function startServer() {
     console.log(`[AgentDesk Diagnostics] Environment: ${process.env.NODE_ENV || 'development'} | Frontend Mode: ${isProduction && distPath ? `Production Dist (${distPath})` : 'Vite Middleware'} | Database: ${postgresClient.isConfigured() ? 'Configured' : 'Unconfigured'} | Gemini: ${process.env.GEMINI_API_KEY ? 'Configured' : 'Unconfigured'} | Razorpay: ${(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) ? 'Configured' : 'Unconfigured'}`);
     validateEnvironmentOnStartup(gmailService.getConnectionStatus());
   });
+
+  const handleShutdown = (signal: string) => {
+    console.log(`[AgentDesk Server] Received ${signal}. Initiating graceful shutdown...`);
+    wss.close();
+    server.close(async () => {
+      console.log('[AgentDesk Server] HTTP server and WebSockets terminated.');
+      await postgresClient.close();
+      console.log('[AgentDesk Server] Database connections closed. Graceful shutdown complete.');
+      process.exit(0);
+    });
+
+    setTimeout(() => {
+      console.error('[AgentDesk Server] Graceful shutdown timed out. Exiting forcefully.');
+      process.exit(1);
+    }, 10000).unref();
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
 }
 
 startServer();

@@ -302,6 +302,26 @@ class PostgresClient {
       lastCheckedAt: new Date().toISOString()
     };
   }
+
+  public async close(): Promise<void> {
+    if (this.pool) {
+      try {
+        await this.pool.end();
+      } catch (err: any) {
+        console.warn('[PostgresClient] Pool shutdown warning:', err.message);
+      }
+      this.pool = null;
+    }
+    if (this.pglite) {
+      try {
+        await this.pglite.close();
+      } catch (err: any) {
+        console.warn('[PostgresClient] Embedded database shutdown warning:', err.message);
+      }
+      this.pglite = null;
+    }
+    this.isConnected = false;
+  }
 }
 
 export const postgresClient = new PostgresClient();
