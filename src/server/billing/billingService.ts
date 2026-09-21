@@ -476,6 +476,19 @@ export class BillingService {
         updatedAt: new Date().toISOString()
       },
       {
+        id: 'promo_entire100',
+        code: 'ENTIRE100',
+        description: '100% off initial checkout',
+        discountType: 'percentage',
+        discountValue: 100,
+        appliesTo: 'all',
+        usageLimit: 100,
+        usageCount: 0,
+        active: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
         id: 'promo_save50gbp',
         code: 'SAVE50GBP',
         description: '£50 Flat Discount on GBP Orders',
@@ -1303,6 +1316,86 @@ export class BillingService {
     };
   }
 
+  /**
+   * Activate a legitimately zero-value promotional checkout without calling Razorpay.
+   * A zero-value order must never be sent to the payment gateway.
+   */
+  public async activatePromotionalCheckout(params: {
+    businessId: string;
+    businessName: string;
+    planId: string;
+    currency: CurrencyCode;
+    couponCode: string;
+    customerEmail: string;
+    customerName: string;
+    customerPhone?: string;
+    billingAddress?: BillingAddressDetails;
+    displayCurrency?: CurrencyCode;
+    displayAmount?: number;
+  }) {
+    const { businessId, businessName, planId, currency, couponCode, customerEmail, customerName, customerPhone, billingAddress, displayCurrency, displayAmount } = params;
+    const cleanCoupon = couponCode.trim().toUpperCase();
+    const norm = businessId.trim().toLowerCase();
+    if (!norm || !businessName.trim() || !customerEmail.trim() || !customerName.trim()) {
+      throw new Error('Required customer and business details are missing.');
+    }
+    const coupon = this.promoCodesStore.get(cleanCoupon);
+    if (!coupon || !coupon.active) throw new Error('Invalid or expired promotional code.');
+    if (coupon.discountType !== 'percentage' || coupon.discountValue !== 100 || coupon.appliesTo !== 'all') {
+      throw new Error('This promotional code does not qualify for free activation.');
+    }
+    const calc = this.calculateOrderAmount({
+      planId, currency, type: 'initial_checkout', couponCode: cleanCoupon,
+      country: billingAddress?.country, state: billingAddress?.state, gstin: billingAddress?.gstin,
+      customerEmail, tenantId: norm
+    });
+    if (calc.couponError || calc.couponCode !== cleanCoupon) throw new Error('Invalid or expired promotional code.');
+    if (calc.total_due_today !== 0 || calc.discountAmount !== calc.subtotal) {
+      throw new Error('This promotional code does not cover the full initial checkout.');
+    }
+    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) throw new Error('This promotional code has reached its usage limit.');
+    const existing = serverBusinessesStore.get(norm);
+    if (existing?.status === 'active' && existing?.subscriptionState === 'ACTIVE') throw new Error('This workspace has already been activated.');
+    const now = new Date();
+    const nextDate = new Date(now);
+    nextDate.setDate(nextDate.getDate() + 30);
+    const nextBillingDateFormatted = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const promoOrderId = 'promo_' + cleanCoupon + '_' + Date.now();
+    const provResult = provisionCustomerTenant({
+      tenantId: norm, businessName: businessName.trim(), customerName: customerName.trim(),
+      customerEmail: customerEmail.trim(), customerPhone: customerPhone?.trim(), planId, currency, orderId: promoOrderId
+    });
+    const user = getUserByEmail(customerEmail.trim());
+    let sessionToken: string | undefined;
+    if (user) {
+      updateUser(user.id, { tenantId: norm, role: 'BUSINESS_ADMIN', status: 'ACTIVE', emailVerified: true });
+      const session = await createSession(user.id, user.email, 'BUSINESS_ADMIN', norm);
+      sessionToken = session.token;
+    }
+    const recurringAmount = calc.recurring_total_amount;
+    this.subscriptionRecordsStore.set(norm, {
+      id: 'promo_sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      userId: customerEmail.trim(), tenantId: norm, plan: planId, status: 'ACTIVE', billingInterval: 'monthly',
+      amount: recurringAmount, currency, monthly_price: calc.recurring_base_amount, monthlyPrice: calc.recurring_base_amount,
+      baseAmount: calc.recurring_base_amount, base_amount: calc.recurring_base_amount, taxAmount: calc.recurring_tax_amount,
+      tax_amount: calc.recurring_tax_amount, taxRate: calc.subscription_tax_rate, final_amount: recurringAmount,
+      setupPayment: 'ONE_TIME', subscriptionType: 'RECURRING', provider: 'razorpay',
+      currentPeriodStart: now.toISOString(), currentPeriodEnd: nextDate.toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(),
+      metadata: { billingMode: 'PROMOTIONAL_FREE_ACTIVATION', couponCode: cleanCoupon, initialAmountWaived: calc.subtotal, recurringAmountDue: recurringAmount, recurringPaymentSetupRequired: true, displayCurrency: displayCurrency || currency, displayAmount: displayAmount ?? calc.total_due_today }
+    });
+    const billing = this.getTenantBilling(norm);
+    billing.businessName = businessName.trim(); billing.customerName = customerName.trim(); billing.customerEmail = customerEmail.trim(); billing.customerPhone = customerPhone?.trim();
+    billing.planId = planId; billing.planName = calc.planName; billing.provider = 'razorpay'; billing.status = 'active'; billing.paymentStatus = 'paid';
+    billing.lastPaymentId = undefined; billing.paymentFailed = false; billing.currency = currency; billing.monthlyFee = recurringAmount;
+    billing.implementationFee = calc.setup_total; billing.implementationFeePaid = true; billing.setup_fee = calc.setup_fee; billing.setup_discount = calc.setup_discount;
+    billing.setup_tax = calc.setup_tax; billing.setup_fee_tax = calc.setup_fee_tax; billing.subscription_fee = calc.subscription_fee; billing.subscription_tax = calc.subscription_tax;
+    billing.recurring_base_amount = calc.recurring_base_amount; billing.recurring_tax_amount = calc.recurring_tax_amount; billing.recurring_total_amount = recurringAmount;
+    billing.subscription_tax_rate = calc.subscription_tax_rate; billing.setup_tax_rate = calc.setup_tax_rate; billing.nextBillingDate = nextBillingDateFormatted;
+    billing.providerSubscriptionId = undefined; billing.updatedAt = now.toISOString(); this.tenantBillingStore.set(norm, billing);
+    coupon.usageCount = (coupon.usageCount || 0) + 1; coupon.updatedAt = now.toISOString();
+    this.recordAuditLog({ action: 'tenant_activated', tenantId: norm, businessName: businessName.trim(), customerEmail: customerEmail.trim(), provider: 'razorpay', amount: 0, currency, status: 'PROMOTIONAL_FREE_ACTIVATION', details: { couponCode: cleanCoupon, initialAmountWaived: calc.subtotal, recurringAmountDue: recurringAmount, recurringPaymentSetupRequired: true } });
+    return { success: true, status: 'ACTIVATED', activationType: 'PROMOTIONAL_FREE', tenantId: norm, sessionToken, paymentId: 'PROMO-' + cleanCoupon, amount: 0, currency, displayCurrency: displayCurrency || currency, displayAmount: displayAmount ?? 0, planId, planName: calc.planName, setupFee: calc.setup_fee, subscriptionFee: calc.subscription_fee, nextBillingDate: nextBillingDateFormatted, recurringAmount, recurringPaymentSetupRequired: true, business: provResult.business, agent: provResult.agent, breakdown: calc };
+  }
   public async createCheckoutSession(params: {
     businessId: string;
     businessName?: string;
