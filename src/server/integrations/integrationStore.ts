@@ -303,6 +303,57 @@ class IntegrationStore {
   }
 
   /**
+   * Platform-level runtime configuration.
+   * Values are encrypted at rest and are intentionally not exposed to tenant users.
+   * This lets the Platform Admin change providers without editing source code or
+   * redeploying for routine credential/configuration changes.
+   */
+  public getPlatformConfig(provider: string): Record<string, string> {
+    const id = `platform_config_${provider.toLowerCase()}`;
+    const record = this.records.get(id);
+    if (!record?.encryptedRefreshToken) return {};
+    try {
+      const parsed = JSON.parse(this.decryptSecret(record.encryptedRefreshToken));
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  public savePlatformConfig(provider: string, config: Record<string, string>): void {
+    const normalizedProvider = provider.toLowerCase().trim();
+    const id = `platform_config_${normalizedProvider}`;
+    const now = new Date().toISOString();
+    const existing = this.records.get(id);
+    const record: IntegrationRecord = {
+      id,
+      provider: 'PLATFORM',
+      type: `PLATFORM_${normalizedProvider.toUpperCase()}`,
+      accountEmail: '',
+      encryptedRefreshToken: this.encryptSecret(JSON.stringify(config)),
+      status: 'CONNECTED',
+      connectedAt: existing?.connectedAt || now,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    this.records.set(id, record);
+    this.persistToDisk();
+    this.persistRecordToPostgres(record).catch((err) => {
+      console.error('[IntegrationStore:PlatformConfigSaveFailed]', err.message);
+    });
+  }
+
+  public getAllPlatformConfigs(): Record<string, Record<string, string>> {
+    const result: Record<string, Record<string, string>> = {};
+    for (const record of this.records.values()) {
+      if (!record.id.startsWith('platform_config_')) continue;
+      const provider = record.id.replace('platform_config_', '');
+      result[provider] = this.getPlatformConfig(provider);
+    }
+    return result;
+  }
+
+  /**
    * Securely encrypt and persist administrator-configured Google OAuth credentials
    */
   public saveClientCredentials(clientId: string, clientSecret: string): void {
