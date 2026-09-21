@@ -82,7 +82,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
           businessId,
           planId,
           type: type === 'add_payment_method' ? 'subscription' : type,
-          currency: 'INR',
+          currency,
           provider: 'razorpay'
         })
       });
@@ -136,7 +136,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 signature: response.razorpay_signature,
                 type: type === 'add_payment_method' ? 'subscription' : type,
                 planId,
-                currency: 'INR',
+                currency,
                 amount
               })
             });
