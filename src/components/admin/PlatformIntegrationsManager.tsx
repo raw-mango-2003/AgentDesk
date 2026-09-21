@@ -140,7 +140,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
         setBrevoTestResult({
           status: data.status === 'NOT_CONFIGURED' ? 'NOT_CONFIGURED' : 'FAILED',
           timestamp: new Date().toLocaleTimeString(),
-          error: data.error || data.message || 'Brevo delivery failed.'
+          error: data.error?.message || (typeof data.error === 'string' ? data.error : (data.message || 'Brevo delivery failed.'))
         });
       }
     } catch (err: any) {
