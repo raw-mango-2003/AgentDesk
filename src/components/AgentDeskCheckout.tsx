@@ -194,11 +194,14 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
   // Query server for authoritative calculation
   const fetchAuthoritativeCalculation = useCallback(async (
-    planIdToCalc: string, 
+    planIdToCalc: string,
     couponToApply?: string | null,
-    curToCalc?: CurrencyCode
+    curToCalc?: CurrencyCode,
+    billingState?: string,
+    billingGstin?: string,
+    customerEmail?: string
   ) => {
-    const activeCurrency = curToCalc || currency;
+    const activeCurrency = curToCalc || 'INR';
     try {
       setCalculating(true);
       const res = await fetch('/api/billing/calculate-order', {
@@ -210,9 +213,9 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           type: 'initial_checkout',
           couponCode: couponToApply || undefined,
           country: 'India',
-          state: state.trim() || undefined,
-          gstin: gstin.trim() || undefined,
-          customerEmail: email.trim() || undefined
+          state: billingState?.trim() || undefined,
+          gstin: billingGstin?.trim() || undefined,
+          customerEmail: customerEmail?.trim() || undefined
         })
       });
 
@@ -240,7 +243,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     } finally {
       setCalculating(false);
     }
-  }, [currency, state, gstin, email]);
+  }, []);
 
   // Fetch payment capability from backend
   const fetchPaymentCapabilities = useCallback(async (cur: CurrencyCode, planId: string) => {
@@ -260,7 +263,10 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   // Fetch authoritative INR calculation for international plans
   const fetchAuthoritativeINRCalculation = useCallback(async (
     planIdToCalc: string,
-    couponToApply?: string | null
+    couponToApply?: string | null,
+    billingState?: string,
+    billingGstin?: string,
+    customerEmail?: string
   ) => {
     try {
       const res = await fetch('/api/billing/calculate-order', {
@@ -272,9 +278,9 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           type: 'initial_checkout',
           couponCode: couponToApply || undefined,
           country: 'India',
-          state: state.trim() || undefined,
-          gstin: gstin.trim() || undefined,
-          customerEmail: email.trim() || undefined
+          state: billingState?.trim() || undefined,
+          gstin: billingGstin?.trim() || undefined,
+          customerEmail: customerEmail?.trim() || undefined
         })
       });
 
@@ -300,14 +306,34 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     } catch (err) {
       console.warn('Live INR calculation sync notice:', err);
     }
-  }, [state, gstin, email]);
+  }, []);
 
-  // Recalculate whenever plan changes, coupon changes, or currency changes
+  // Recalculate only when the plan/coupon/currency changes. Billing fields are
+  // deliberately passed as values so typing into the form does not create a
+  // new callback and fire a POST request for every keystroke.
   useEffect(() => {
-    fetchAuthoritativeCalculation(selectedPlanId, appliedCoupon, currency);
+    const currentState = state.trim();
+    const currentGstin = gstin.trim();
+    const currentEmail = email.trim();
+
+    fetchAuthoritativeCalculation(
+      selectedPlanId,
+      appliedCoupon,
+      currency,
+      currentState,
+      currentGstin,
+      currentEmail
+    );
     fetchPaymentCapabilities(currency, selectedPlanId);
+
     if (currency !== 'INR') {
-      fetchAuthoritativeINRCalculation(selectedPlanId, appliedCoupon);
+      fetchAuthoritativeINRCalculation(
+        selectedPlanId,
+        appliedCoupon,
+        currentState,
+        currentGstin,
+        currentEmail
+      );
     }
   }, [selectedPlanId, appliedCoupon, currency, fetchAuthoritativeCalculation, fetchPaymentCapabilities, fetchAuthoritativeINRCalculation]);
 
@@ -341,7 +367,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
       setAppliedCoupon(code);
       setCouponError(null);
-      await fetchAuthoritativeCalculation(selectedPlanId, code, currency);
     } catch (err: any) {
       setCouponError(err.message || 'Failed to validate promo code.');
     } finally {
@@ -353,7 +378,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     setAppliedCoupon(null);
     setCouponInput('');
     setCouponError(null);
-    fetchAuthoritativeCalculation(selectedPlanId, null, currency);
   };
 
   // Ensure Razorpay SDK script is ready
@@ -412,10 +436,23 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       // 1. Authoritative calculation check
       let totalAmountToCharge = 0;
       if (currency === 'INR') {
-        const calcData = await fetchAuthoritativeCalculation(selectedPlanId, appliedCoupon, 'INR');
+        const calcData = await fetchAuthoritativeCalculation(
+          selectedPlanId,
+          appliedCoupon,
+          'INR',
+          state,
+          gstin,
+          email
+        );
         totalAmountToCharge = calcData?.total_due_today || calculation.total_due_today;
       } else {
-        const inrData = await fetchAuthoritativeINRCalculation(selectedPlanId, appliedCoupon);
+        const inrData = await fetchAuthoritativeINRCalculation(
+          selectedPlanId,
+          appliedCoupon,
+          state,
+          gstin,
+          email
+        );
         totalAmountToCharge = inrData?.total_due_today || inrCalculation?.total_due_today || 0;
       }
 
@@ -869,10 +906,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         onClick={() => {
                           setCurrency(cur);
                           setPayInINROptIn(false);
-                          fetchAuthoritativeCalculation(selectedPlanId, appliedCoupon, cur);
-                          if (cur !== 'INR') {
-                            fetchAuthoritativeINRCalculation(selectedPlanId, appliedCoupon);
-                          }
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                           currency === cur
