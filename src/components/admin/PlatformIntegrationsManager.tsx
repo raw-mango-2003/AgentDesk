@@ -60,12 +60,23 @@ interface GmailDetails {
 }
 
 export const PlatformIntegrationsManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'gmail' | 'all' | 'env'>('gmail');
+  const [activeTab, setActiveTab] = useState<'brevo' | 'gmail' | 'all' | 'env'>('brevo');
   const [integrations, setIntegrations] = useState<IntegrationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [envReport, setEnvReport] = useState<any>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
   
+  // Brevo Primary Email State
+  const [brevoTestRecipient, setBrevoTestRecipient] = useState('hello.agentdesktech@gmail.com');
+  const [sendingBrevoTest, setSendingBrevoTest] = useState(false);
+  const [brevoTestResult, setBrevoTestResult] = useState<{
+    status: 'SUCCESS' | 'FAILED' | 'NOT_CONFIGURED';
+    messageId?: string;
+    timestamp: string;
+    message?: string;
+    error?: string;
+  } | null>(null);
+
   // Gmail Specific State
   const [gmailDetails, setGmailDetails] = useState<GmailDetails>({
     status: 'NOT_CONNECTED',
@@ -99,6 +110,50 @@ export const PlatformIntegrationsManager: React.FC = () => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+
+  // Send Test Email via Brevo API
+  const handleSendBrevoTestEmail = async () => {
+    const cleanRecipient = brevoTestRecipient.trim();
+    if (!cleanRecipient) {
+      alert('Please enter a recipient email address.');
+      return;
+    }
+
+    setSendingBrevoTest(true);
+    setBrevoTestResult(null);
+
+    try {
+      const data = await safeFetchJson('/api/platform/integrations/test-brevo-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: cleanRecipient })
+      });
+
+      if (data.success && data.status === 'SUCCESS') {
+        setBrevoTestResult({
+          status: 'SUCCESS',
+          messageId: data.messageId,
+          timestamp: new Date().toLocaleTimeString(),
+          message: data.message || 'Brevo accepted the test email.'
+        });
+      } else {
+        setBrevoTestResult({
+          status: data.status === 'NOT_CONFIGURED' ? 'NOT_CONFIGURED' : 'FAILED',
+          timestamp: new Date().toLocaleTimeString(),
+          error: data.error || data.message || 'Brevo delivery failed.'
+        });
+      }
+    } catch (err: any) {
+      setBrevoTestResult({
+        status: 'FAILED',
+        timestamp: new Date().toLocaleTimeString(),
+        error: err.message || 'An unexpected error occurred.'
+      });
+    } finally {
+      setSendingBrevoTest(false);
+      await fetchIntegrations();
+    }
+  };
 
   // General testing
   const [testingId, setTestingId] = useState<string | null>(null);
@@ -397,11 +452,17 @@ export const PlatformIntegrationsManager: React.FC = () => {
         <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
         <span>Settings</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-        <span className={activeTab === 'gmail' || activeTab === 'env' ? 'text-slate-400' : 'text-slate-200'}>Integrations</span>
+        <span className={activeTab === 'brevo' || activeTab === 'gmail' || activeTab === 'env' ? 'text-slate-400' : 'text-slate-200'}>Integrations</span>
+        {activeTab === 'brevo' && (
+          <>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-blue-400 font-bold">Brevo</span>
+          </>
+        )}
         {activeTab === 'gmail' && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-blue-400 font-bold">Gmail</span>
+            <span className="text-slate-400 font-bold">Gmail (Legacy)</span>
           </>
         )}
         {activeTab === 'env' && (
@@ -416,22 +477,34 @@ export const PlatformIntegrationsManager: React.FC = () => {
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab('gmail')}
+            onClick={() => setActiveTab('brevo')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              activeTab === 'gmail'
+              activeTab === 'brevo'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
             }`}
           >
             <Mail className="w-4 h-4" />
-            <span>Gmail Integration</span>
+            <span>Brevo Email</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              gmailDetails.status === 'CONNECTED' 
-                ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' 
+              integrations.find(i => i.id === 'brevo_email')?.status === 'CONNECTED'
+                ? 'bg-emerald-950 text-emerald-300 border border-emerald-700'
                 : 'bg-amber-950 text-amber-300 border border-amber-700'
             }`}>
-              {gmailDetails.status}
+              {integrations.find(i => i.id === 'brevo_email')?.status || 'CHECKING'}
             </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gmail')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              activeTab === 'gmail'
+                ? 'bg-slate-700 text-white shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <Mail className="w-4 h-4" />
+            <span>Gmail Legacy</span>
           </button>
 
           <button
@@ -507,6 +580,107 @@ export const PlatformIntegrationsManager: React.FC = () => {
       {/* ========================================================================= */}
       {/* GMAIL INTEGRATION VIEW (SPECIFIED REQUIREMENTS 2, 8, 9) */}
       {/* ========================================================================= */}
+      {/* BREVO PRIMARY TRANSACTIONAL EMAIL VIEW */}
+      {activeTab === 'brevo' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
+                  <Mail className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-white">Brevo Transactional Email</h2>
+                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-bold rounded-full border border-blue-500/30">
+                      PRIMARY SENDER
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    AgentDesk transactional email delivery through the Brevo API. Google OAuth is not required.
+                  </p>
+                </div>
+              </div>
+
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                {integrations.find(i => i.id === 'brevo_email')?.status === 'CONNECTED' ? 'Status: CONNECTED' : 'Status: NOT CONFIGURED'}
+              </span>
+            </div>
+
+            <div className="py-6 space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                <div className="bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Sender</span>
+                  <div className="font-mono text-slate-100 font-semibold truncate">
+                    {integrations.find(i => i.id === 'brevo_email')?.senderEmail || 'hello.agentdesktech@gmail.com'}
+                  </div>
+                  <span className="text-[10px] text-slate-400">Configured through EMAIL_FROM</span>
+                </div>
+                <div className="bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Transport</span>
+                  <div className="font-semibold text-emerald-400">Brevo HTTP API</div>
+                  <span className="text-[10px] text-slate-500">POST /v3/smtp/email</span>
+                </div>
+                <div className="bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-1">
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Google OAuth</span>
+                  <div className="font-semibold text-slate-300">Not required</div>
+                  <span className="text-[10px] text-slate-500">Gmail remains optional legacy support</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] text-slate-500 uppercase font-bold tracking-wider block mb-1.5">Test recipient</label>
+                    <input
+                      type="email"
+                      value={brevoTestRecipient}
+                      onChange={e => setBrevoTestRecipient(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-slate-200 text-sm focus:outline-none focus:border-blue-500"
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSendBrevoTestEmail}
+                    disabled={sendingBrevoTest}
+                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sendingBrevoTest ? 'Sending...' : 'Send Test Email'}
+                  </button>
+                </div>
+
+                {brevoTestResult && (
+                  <div className={`mt-4 rounded-xl border p-3 text-xs ${
+                    brevoTestResult.status === 'SUCCESS'
+                      ? 'bg-emerald-950/40 border-emerald-800 text-emerald-200'
+                      : 'bg-rose-950/40 border-rose-800 text-rose-200'
+                  }`}>
+                    <div className="font-bold">
+                      {brevoTestResult.status === 'SUCCESS' ? 'Test accepted by Brevo' : 'Test failed'}
+                    </div>
+                    <div className="mt-1 opacity-90">
+                      {brevoTestResult.message || brevoTestResult.error}
+                    </div>
+                    {brevoTestResult.messageId && (
+                      <div className="mt-1 font-mono opacity-70">Message ID: {brevoTestResult.messageId}</div>
+                    )}
+                    <div className="mt-1 opacity-60">Checked at {brevoTestResult.timestamp}</div>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-xs text-slate-300">
+                <div className="font-bold text-blue-300 mb-1">Environment</div>
+                <div className="font-mono text-slate-400">BREVO_API_KEY: {integrations.find(i => i.id === 'brevo_email')?.isConfigured ? 'Configured' : 'Not configured'}</div>
+                <div className="mt-1 text-slate-500">The API key is never displayed; only its configured state is shown.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'gmail' && (
         <div className="space-y-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
