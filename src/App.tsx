@@ -154,10 +154,16 @@ export default function App() {
     return 'overview';
   };
 
-  const getInitialAdminSubTab = (): 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' => {
+  const getInitialAdminSubTab = (): 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
+      const section = new URLSearchParams(window.location.search).get('section')?.toLowerCase();
+      if (section === 'integrations') return 'integrations';
+      if (section === 'automations') return 'automations';
+      if (section === 'system_health') return 'system_health';
+      if (section === 'monitoring') return 'monitoring';
+      if (section === 'settings') return 'settings';
       if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
         return 'my_agent';
       }
@@ -260,6 +266,16 @@ export default function App() {
     setActiveTab(tab);
     if (tab === 'admin') setAdminSubTab('workspaces');
     pushAgentDeskRoute(path, { agentDeskView: 'dashboard', agentDeskTab: tab });
+  };
+
+
+  const navigateAdminSection = (section: string) => {
+    if (typeof window === 'undefined') return;
+    const safeSection = section.toLowerCase();
+    setAdminSubTab(safeSection as typeof adminSubTab);
+    const path = safeSection === 'workspaces' ? '/admin' : '/admin?section=' + encodeURIComponent(safeSection);
+    if (window.location.pathname + window.location.search === path) return;
+    pushAgentDeskRoute(path, { agentDeskView: 'dashboard', agentDeskTab: 'admin' });
   };
 
   // Establish a state object for the entry the user originally loaded. This is
@@ -672,6 +688,7 @@ export default function App() {
               setActiveBusinessId(bizId);
               navigateTab('overview');
             }}
+            onNavigateAdminSection={navigateAdminSection}
             onSwitchToBusinessConsole={() => {
               if (allBusinesses.length > 0 && (!business || business.id === 'platform')) {
                 setActiveBusinessId(allBusinesses[0].id);
@@ -1262,7 +1279,6 @@ export default function App() {
                         Settings & Account
                       </div>
                       {[
-                        { id: 'integrations', label: 'Integrations', icon: Sliders, color: 'text-blue-400' },
                         { id: 'billing', label: 'Billing & Usage Quotas', icon: CreditCard, color: 'text-emerald-400' },
                         { id: 'localization', label: 'Localization & Market', icon: Globe, color: 'text-blue-400' },
                         { id: 'account_credentials', label: 'Account & Credentials', icon: KeyRound, color: 'text-amber-400' },
@@ -1392,7 +1408,7 @@ export default function App() {
                   <ConversationsDashboard business={business} />
                 )}
 
-                {activeTab === 'integrations' && (
+                {activeTab === 'integrations' && currentUser?.role === 'PLATFORM_ADMIN' && (
                   <IntegrationsDashboard
                     business={business}
                     onBusinessUpdated={(updated) => setBusiness(updated)}
