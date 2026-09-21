@@ -130,6 +130,7 @@ export default function App() {
       const hash = window.location.hash.toLowerCase();
       if (path === '/billing' || hash === '#billing') return 'billing';
       if (path === '/embed' || hash === '#embed') return 'embed';
+      if (path === '/admin/account-credentials') return 'account_credentials';
       if (path.startsWith('/admin') || hash.startsWith('#admin')) return 'admin';
       const match = path.match(/^\/dashboard\/([^/]+)$/);
       const slugToTab: Record<string, SaaSNavTab> = {
@@ -195,6 +196,7 @@ export default function App() {
     const path = window.location.pathname.toLowerCase();
     if (path === '/billing') return 'billing';
     if (path === '/embed') return 'embed';
+    if (path === '/admin/account-credentials') return 'account_credentials';
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
     const match = path.match(/^\/dashboard\/([^/]+)$/);
     const slugToTab: Record<string, SaaSNavTab> = {
@@ -281,7 +283,7 @@ export default function App() {
 
       if (resolvedView === 'dashboard') {
         setCurrentView('dashboard');
-        navigateTab(getTabFromLocation());
+        setActiveTab(getTabFromLocation());
         if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
           setAdminSubTab('my_agent');
         }
