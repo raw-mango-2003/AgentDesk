@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
@@ -224,6 +224,74 @@ export default function App() {
       window.history.pushState({ agentDeskTab: tab }, '', tabPathMap[tab] || '/dashboard');
     }
   };
+
+  // Mobile touch navigation. Chrome's system edge gesture remains browser-owned,
+  // but swipes inside the AgentDesk viewport behave like page-to-page navigation.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const dashboardTabOrder: SaaSNavTab[] = [
+    'overview',
+    'voice_receptionist',
+    'missed_calls',
+    'leads',
+    'crm',
+    'followup',
+    'reengagement',
+    'reviews',
+    'appointments',
+    'estimates',
+    'outreach',
+    'knowledge',
+    'conversations',
+    'integrations',
+    'billing',
+    'localization',
+    'embed',
+    'account_credentials'
+  ];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isMobile = () => window.matchMedia('(max-width: 1023px)').matches;
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (!isMobile() || event.touches.length !== 1) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, button, a, [data-no-swipe]')) {
+        touchStartRef.current = null;
+        return;
+      }
+      const touch = event.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      const start = touchStartRef.current;
+      touchStartRef.current = null;
+      if (!start || !isMobile() || event.changedTouches.length !== 1) return;
+
+      const touch = event.changedTouches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      if (Math.abs(dx) < 70 || Math.abs(dx) <= Math.abs(dy) * 1.35) return;
+      if (currentView !== 'dashboard') return;
+
+      const index = dashboardTabOrder.indexOf(activeTab);
+      if (index < 0) return;
+
+      // Swipe left = next section, swipe right = previous section.
+      const nextIndex = dx < 0 ? index + 1 : index - 1;
+      if (nextIndex >= 0 && nextIndex < dashboardTabOrder.length) {
+        navigateTab(dashboardTabOrder[nextIndex]);
+      }
+    };
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [activeTab, currentView]);
   const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs'>(getInitialAdminSubTab);
   
   // Active business workspace state
@@ -470,7 +538,7 @@ export default function App() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white touch-pan-y">
       {/* Top Navbar */}
       <Navbar
         currentView={currentView}
