@@ -100,12 +100,10 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         throw new Error('Razorpay SDK failed to load. Please check your connection.');
       }
 
-      const checkoutAmount = Number(sessionData.amount ?? amount);
-      const checkoutCurrency = (sessionData.currency || currency) as CurrencyCode;
       const options = {
         key: rzpKey,
-        amount: Math.round(checkoutAmount * 100),
-        currency: checkoutCurrency,
+        amount: Math.round(Number(sessionData.amount ?? amount) * 100),
+        currency: sessionData.currency || currency,
         name: 'AgentDesk',
         description: type === 'implementation_fee' 
           ? `${planName} Implementation Setup Fee` 
