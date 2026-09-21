@@ -7,6 +7,7 @@ import {
 import { renderEmailTemplate } from './emailTemplates.js';
 import { GmailService } from './gmailService.js';
 import { deliveryLogService } from './deliveryLogService.js';
+import { integrationStore } from './integrationStore.js';
 
 export class EmailService implements IEmailService {
   private gmailService: GmailService;
