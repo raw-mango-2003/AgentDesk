@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { IOTPService } from './interfaces.js';
+import { integrationStore } from './integrationStore.js';
 
 interface StoredOTP {
   identifier: string; // phone or email
@@ -17,9 +18,10 @@ export class OTPService implements IOTPService {
   private localStore = new Map<string, StoredOTP>();
 
   constructor() {
-    this.accountSid = (process.env.TWILIO_ACCOUNT_SID || '').trim();
-    this.authToken = (process.env.TWILIO_AUTH_TOKEN || '').trim();
-    this.verifyServiceSid = (process.env.TWILIO_VERIFY_SERVICE_SID || '').trim();
+    const config = integrationStore.getPlatformConfig('twilio');
+    this.accountSid = (config.accountSid || process.env.TWILIO_ACCOUNT_SID || '').trim();
+    this.authToken = (config.authToken || process.env.TWILIO_AUTH_TOKEN || '').trim();
+    this.verifyServiceSid = (config.verifyServiceSid || process.env.TWILIO_VERIFY_SERVICE_SID || '').trim();
 
     // Clean expired local OTPs periodically
     setInterval(() => {
