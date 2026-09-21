@@ -535,6 +535,91 @@ integrationsRouter.post(
 );
 
 
+// 6. Test Brevo Transactional Email Delivery
+integrationsRouter.post(
+  '/platform/integrations/test-brevo-email',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    try {
+      const recipient = (req.body?.to || req.body?.recipient || req.body?.email || 'hello.agentdesktech@gmail.com').trim();
+
+      if (!recipient || !recipient.includes('@') || !recipient.includes('.')) {
+        return res.status(400).json({
+          success: false,
+          status: 'FAILED',
+          error: 'A valid recipient email address is required.'
+        });
+      }
+
+      if (!(process.env.BREVO_API_KEY || '').trim()) {
+        return res.json({
+          success: false,
+          status: 'NOT_CONFIGURED',
+          provider: 'brevo',
+          error: 'BREVO_API_KEY is not configured in the server environment.'
+        });
+      }
+
+      const result = await emailService.sendEmail({
+        to: recipient,
+        subject: 'AgentDesk Brevo Test',
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+            <h2 style="color: #0f172a; margin-top: 0;">AgentDesk Brevo Test</h2>
+            <p style="color: #334155; font-size: 15px; line-height: 1.6;">
+              Your AgentDesk transactional email is being delivered through Brevo.
+            </p>
+            <div style="margin-top: 20px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 13px; color: #64748b;">
+              <div><strong>Sender:</strong> ${process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com'}</div>
+              <div><strong>Recipient:</strong> ${recipient}</div>
+              <div><strong>Provider:</strong> Brevo API</div>
+              <div><strong>Dispatched At:</strong> ${new Date().toISOString()}</div>
+            </div>
+          </div>
+        `,
+        text: 'Your AgentDesk transactional email is being delivered through Brevo.'
+      });
+
+      if (result.success && result.status === 'SENT') {
+        auditLogService.log({
+          actorId: (req as any).user?.id || 'admin',
+          actorEmail: (req as any).user?.email || 'platform-admin',
+          actorRole: 'PLATFORM_ADMIN',
+          action: 'TEST_EMAIL_SENT',
+          entityType: 'INTEGRATION',
+          entityId: 'brevo_email',
+          metadata: { provider: 'BREVO', recipient, messageId: result.messageId }
+        });
+
+        return res.json({
+          success: true,
+          status: 'SUCCESS',
+          provider: 'brevo',
+          messageId: result.messageId,
+          message: `Brevo accepted the AgentDesk test email. Message ID: ${result.messageId || 'accepted'}`
+        });
+      }
+
+      return res.json({
+        success: false,
+        status: result.status === 'NOT_CONFIGURED' ? 'NOT_CONFIGURED' : 'FAILED',
+        provider: 'brevo',
+        error: result.error || 'Brevo delivery failed',
+        message: `Brevo dispatch failed: ${result.error || 'Unknown error'}`
+      });
+    } catch (err: any) {
+      console.error('[BREVO TEST] Unexpected error in test-brevo-email handler:', err);
+      return res.status(500).json({
+        success: false,
+        status: 'FAILED',
+        provider: 'brevo',
+        error: err.message || 'An unexpected error occurred while executing the Brevo test dispatch'
+      });
+    }
+  }
+);
+
 // 6. Test Gmail Sending Engine: Displays SUCCESS, FAILED, or NOT_CONNECTED
 integrationsRouter.post(
   ['/integrations/google/test-email', '/platform/integrations/test-email'],
