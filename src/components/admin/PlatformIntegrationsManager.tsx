@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { safeFetchJson } from '../../lib/apiClient';
+import { PlatformConfigurationManager } from './PlatformConfigurationManager';
 import { 
   Mail, 
   CreditCard, 
@@ -60,7 +61,7 @@ interface GmailDetails {
 }
 
 export const PlatformIntegrationsManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'brevo' | 'gmail' | 'all' | 'env'>('brevo');
+  const [activeTab, setActiveTab] = useState<'brevo' | 'gmail' | 'all' | 'env' | 'config'>('brevo');
   const [integrations, setIntegrations] = useState<IntegrationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [envReport, setEnvReport] = useState<any>(null);
@@ -465,6 +466,12 @@ export const PlatformIntegrationsManager: React.FC = () => {
             <span className="text-slate-400 font-bold">Gmail (Legacy)</span>
           </>
         )}
+        {activeTab === 'config' && (
+          <>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+            <span className="text-emerald-400 font-bold">Platform Configuration</span>
+          </>
+        )}
         {activeTab === 'env' && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
@@ -476,6 +483,18 @@ export const PlatformIntegrationsManager: React.FC = () => {
       {/* Main Navigation Sub-Tabs */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('config')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              activeTab === 'config'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <Key className="w-4 h-4" />
+            <span>Platform Configuration</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('brevo')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
@@ -917,6 +936,10 @@ export const PlatformIntegrationsManager: React.FC = () => {
       {/* ========================================================================= */}
       {/* ALL INTEGRATIONS GRID */}
       {/* ========================================================================= */}
+      {activeTab === 'config' && (
+        <PlatformConfigurationManager />
+      )}
+
       {activeTab === 'all' && (
         <div className="space-y-6">
           {/* Test Feedback Notice */}
