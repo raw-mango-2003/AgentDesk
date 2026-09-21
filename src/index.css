@@ -164,3 +164,34 @@ html, body {
     white-space: nowrap;
   }
 }
+
+
+/* Global form contrast guard. White form surfaces always use dark readable text. */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  color: #0f172a;
+  background-color: #ffffff;
+}
+
+input:not([type="checkbox"]):not([type="radio"])::placeholder,
+textarea::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):disabled,
+textarea:disabled,
+select:disabled {
+  color: #475569;
+  background-color: #f8fafc;
+}
+
+/* Explicitly protect white cards/modals from inherited white text. */
+.bg-white input:not([type="checkbox"]):not([type="radio"]),
+.bg-white textarea,
+.bg-white select,
+.bg-white input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.bg-white textarea::placeholder {
+  color: #0f172a;
+}
