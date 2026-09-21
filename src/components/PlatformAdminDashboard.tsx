@@ -84,6 +84,7 @@ interface PlatformAdminDashboardProps {
   onSwitchToBusinessConsole?: () => void;
   initialTab?: PlatformAdminSection;
   allBusinesses?: Business[];
+  onNavigateAdminSection?: (section: PlatformAdminSection) => void;
 }
 
 export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
@@ -91,6 +92,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   onTenantDeleted,
   onTenantUpdated,
   onSwitchToBusinessConsole,
+  onNavigateAdminSection,
   initialTab
 }) => {
   const { currentUser } = useAuth();
@@ -691,6 +693,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
         onSelectSection={(sec) => {
           setActiveTab(sec);
           setIsMobileSidebarOpen(false);
+          onNavigateAdminSection?.(sec);
         }}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
