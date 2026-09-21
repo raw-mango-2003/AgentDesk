@@ -1,5 +1,6 @@
 import { IWhatsAppService } from './interfaces.js';
 import { deliveryLogService } from './deliveryLogService.js';
+import { integrationStore } from './integrationStore.js';
 
 export class WhatsAppService implements IWhatsAppService {
   private provider: string;
@@ -8,9 +9,10 @@ export class WhatsAppService implements IWhatsAppService {
   private consentStore = new Map<string, boolean>(); // phone -> optedIn
 
   constructor() {
-    this.provider = (process.env.WHATSAPP_PROVIDER || 'meta').toLowerCase().trim();
-    this.apiKey = (process.env.WHATSAPP_API_KEY || '').trim();
-    this.phoneNumberId = (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
+    const config = integrationStore.getPlatformConfig('whatsapp_business');
+    this.provider = 'meta';
+    this.apiKey = (config.accessToken || process.env.WHATSAPP_API_KEY || '').trim();
+    this.phoneNumberId = (config.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
   }
 
   public isConfigured(): boolean {
