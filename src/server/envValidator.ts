@@ -11,6 +11,7 @@
  * INTEGRATIONS (Modular & Optional):
  * - Gmail OAuth 2.0 (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET) -> Refresh token acquired via OAuth flow
  * - Razorpay (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET)
+ * - Brevo Transactional Email (BREVO_API_KEY)
  * - Resend (RESEND_API_KEY)
  * - Twilio (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, TWILIO_VERIFY_SERVICE_SID)
  * - PostHog (POSTHOG_API_KEY, POSTHOG_HOST)
@@ -190,7 +191,22 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'Optional secondary email backup provider. Not required for AgentDesk operations.'
   };
 
-  // 4. Twilio Integration (Optional)
+  // 4. Brevo Transactional Email (Primary)
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  const brevoFrom = (process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com').trim();
+  result['brevo_email'] = {
+    id: 'brevo_email',
+    name: 'Brevo Transactional Email',
+    category: 'Email',
+    status: brevoKey ? 'CONNECTED' : 'NOT_CONFIGURED',
+    isMandatory: false,
+    requiredVars: ['BREVO_API_KEY'],
+    configuredVars: brevoKey ? ['BREVO_API_KEY'] : [],
+    missingVars: brevoKey ? [] : ['BREVO_API_KEY'],
+    description: `Primary transactional email delivery for AgentDesk. Sender defaults to ${brevoFrom}. No Google OAuth is required.`
+  };
+
+  // 5. Twilio Integration (Optional)
   const twilioSid = (process.env.TWILIO_ACCOUNT_SID || '').trim();
   const twilioAuth = (process.env.TWILIO_AUTH_TOKEN || '').trim();
   const twilioPhone = (process.env.TWILIO_PHONE_NUMBER || '').trim();
@@ -217,7 +233,7 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'SMS and phone 2FA delivery. If missing, SMS/OTP is disabled while normal login and dashboard access continue uninterrupted.'
   };
 
-  // 5. PostHog Integration (Optional)
+  // 6. PostHog Integration (Optional)
   const posthogKey = (process.env.POSTHOG_API_KEY || '').trim();
   result['posthog_analytics'] = {
     id: 'posthog_analytics',
@@ -231,7 +247,7 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'Product telemetry & analytics. If unconfigured, events are buffered in memory without breaking startup.'
   };
 
-  // 6. Sentry Integration (Telemetry & Observability)
+  // 7. Sentry Integration (Telemetry & Observability)
   const sentryDsn = (process.env.SENTRY_DSN || '').trim();
   const isSentryConfigured = Boolean(sentryDsn && sentryDsn.startsWith('http') && !sentryDsn.includes('internal.agentdesk'));
   result['sentry_monitoring'] = {
@@ -246,7 +262,7 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'Real-time telemetry, stack trace capture, and health monitoring.'
   };
 
-  // 7. S3 Storage Integration (Optional)
+  // 8. S3 Storage Integration (Optional)
   const s3Access = (process.env.S3_ACCESS_KEY_ID || process.env.STORAGE_ACCESS_KEY || '').trim();
   const s3Secret = (process.env.S3_SECRET_ACCESS_KEY || process.env.STORAGE_SECRET_KEY || '').trim();
   const isS3Configured = Boolean(s3Access && s3Secret);
@@ -269,7 +285,7 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'Cloud object storage for file attachments. Missing S3 storage does not prevent login or platform usage.'
   };
 
-  // 8. Firebase Push Notifications (Optional)
+  // 9. Firebase Push Notifications (Optional)
   const fbProject = (process.env.FIREBASE_PROJECT_ID || '').trim();
   const fbEmail = (process.env.FIREBASE_CLIENT_EMAIL || '').trim();
   const fbKey = (process.env.FIREBASE_PRIVATE_KEY || '').trim();
@@ -293,7 +309,7 @@ export function getIntegrationsStatusReport(gmailStatus?: {
     description: 'Web push notifications. Internal notifications continue to work seamlessly even when Firebase is unconfigured.'
   };
 
-  // 9. WhatsApp Integration (Optional)
+  // 10. WhatsApp Integration (Optional)
   const waPhoneId = (process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
   const waToken = (process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_KEY || '').trim();
   const isWaConfigured = Boolean(waPhoneId && waToken);
