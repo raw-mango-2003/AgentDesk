@@ -199,7 +199,7 @@ export default function App() {
     if (path === '/embed') return 'embed';
     if (path === '/admin/account-credentials') return 'account_credentials';
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
-    const match = path.match(/^\\/dashboard\\/([^/]+)$/);
+    const match = path.match(/^\/dashboard\/([^/]+)$/);
     const slugToTab: Record<string, SaaSNavTab> = {
       'voice-receptionist': 'voice_receptionist',
       'missed-calls': 'missed_calls',
