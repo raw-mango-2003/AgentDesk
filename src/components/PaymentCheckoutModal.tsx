@@ -250,7 +250,9 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
             <div className="p-4 rounded-2xl bg-blue-950/30 border border-blue-800/40 space-y-2">
               <div className="text-xs font-bold text-white flex items-center justify-between">
                 <span>Supported Payment Methods in Razorpay</span>
-                <span className="text-[10px] text-blue-300 font-mono">{currency} ({currency === 'INR' ? '₹' : currency === 'GBP' ? '£' : '
+               <span className="text-[10px] text-blue-300 font-mono">
+  {currency} ({currency === 'INR' ? '₹' : currency === 'GBP' ? '£' : '$'})
+</span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
                 <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
