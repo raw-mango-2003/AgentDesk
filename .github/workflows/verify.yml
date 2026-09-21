@@ -10,8 +10,6 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      SESSION_SECRET: agentdesk-ci-session-secret-2026-09-19-long-enough
     services:
       postgres:
         image: postgres:16
@@ -71,7 +69,14 @@ jobs:
         run: |
           set -e
           trap 'status=$?; if [ "$status" -ne 0 ]; then echo "===== AgentDesk auth E2E server log ====="; cat /tmp/agentdesk-auth-e2e.log || true; fi; kill ${SERVER_PID:-} 2>/dev/null || true; exit $status' EXIT
-          DATABASE_URL='postgresql://agentdesk:agentdesk-ci@127.0.0.1:5432/agentdesk_ci' NODE_ENV=production ENABLE_EMBEDDED_DB=false PLATFORM_ADMIN_EMAIL=e2e-admin@agentdesk.internal PLATFORM_ADMIN_INITIAL_PASSWORD='E2E-Admin-Password-123!' PORT=3001 npm run dev > /tmp/agentdesk-auth-e2e.log 2>&1 &
+          export SESSION_SECRET="$(openssl rand -hex 48)"
+          export DATABASE_URL='postgresql://agentdesk:agentdesk-ci@127.0.0.1:5432/agentdesk_ci'
+          export NODE_ENV=production
+          export ENABLE_EMBEDDED_DB=false
+          export PLATFORM_ADMIN_EMAIL=e2e-admin@agentdesk.internal
+          export PLATFORM_ADMIN_INITIAL_PASSWORD="$(openssl rand -hex 24)"
+          export PORT=3001
+          npm run dev > /tmp/agentdesk-auth-e2e.log 2>&1 &
           SERVER_PID=$!
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:3001/api/health > /dev/null; then
@@ -79,7 +84,7 @@ jobs:
             fi
             sleep 1
           done
-          AGENTDESK_E2E_URL=http://127.0.0.1:3001 AGENTDESK_E2E_ADMIN_EMAIL=e2e-admin@agentdesk.internal AGENTDESK_E2E_ADMIN_PASSWORD='E2E-Admin-Password-123!' npm run e2e:admin-auth
+          AGENTDESK_E2E_URL=http://127.0.0.1:3001 AGENTDESK_E2E_ADMIN_EMAIL=e2e-admin@agentdesk.internal AGENTDESK_E2E_ADMIN_PASSWORD="$PLATFORM_ADMIN_INITIAL_PASSWORD" npm run e2e:admin-auth
 
       - name: Customer journey E2E (isolated development database)
         run: |
