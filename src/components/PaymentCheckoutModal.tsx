@@ -82,7 +82,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
           businessId,
           planId,
           type: type === 'add_payment_method' ? 'subscription' : type,
-          currency: 'INR',
+          currency,
           provider: 'razorpay'
         })
       });
@@ -136,7 +136,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 signature: response.razorpay_signature,
                 type: type === 'add_payment_method' ? 'subscription' : type,
                 planId,
-                currency: 'INR',
+                currency,
                 amount
               })
             });
@@ -239,7 +239,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 <div className="text-xs font-semibold text-slate-200">{planName} Tier</div>
               </div>
               <div className="text-xl font-black text-white">
-                {formatPrice(amount, 'INR')}
+                {formatPrice(amount, currency)}
                 <span className="text-xs text-slate-400 font-normal">
                   {type === 'subscription' ? '/mo' : ''}
                 </span>
@@ -250,7 +250,58 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
             <div className="p-4 rounded-2xl bg-blue-950/30 border border-blue-800/40 space-y-2">
               <div className="text-xs font-bold text-white flex items-center justify-between">
                 <span>Supported Payment Methods in Razorpay</span>
-                <span className="text-[10px] text-blue-300 font-mono">INR (₹)</span>
+                <span className="text-[10px] text-blue-300 font-mono">{currency} ({currency === 'INR' ? '₹' : currency === 'GBP' ? '£' : '
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
+                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <QrCode className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Instant UPI QR</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Cards / RuPay</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <Building className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>NetBanking</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Connecting to Razorpay...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Pay {formatPrice(amount, currency)} with Razorpay</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+})</span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
                 <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
