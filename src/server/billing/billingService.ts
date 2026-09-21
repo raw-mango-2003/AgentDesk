@@ -653,29 +653,50 @@ export class BillingService {
 
   public getTenantBilling(businessId: string): TenantBillingRecord {
     const norm = businessId.trim().toLowerCase();
-    if (!this.tenantBillingStore.has(norm)) {
-      const nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + 30);
+    const existing = this.tenantBillingStore.get(norm);
 
-      const record: TenantBillingRecord = {
-        businessId: norm,
-        planId: 'growth',
-        planName: 'Growth',
-        provider: 'razorpay',
-        currency: 'USD',
-        monthlyFee: 1497,
-        implementationFee: 7497,
-        implementationFeePaid: false,
-        status: 'trialing',
-        nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        autoRenew: true,
-        paymentFailed: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      this.tenantBillingStore.set(norm, record);
-    }
-    return this.tenantBillingStore.get(norm)!;
+    // Billing displayed to customers must always come from the canonical
+    // platform plan-price table, never from the legacy demo seed values.
+    const business = serverBusinessesStore.get(norm);
+    const planId = normalizePlanId(business?.plan || existing?.planId || 'growth');
+    const currency = (
+      business?.currency === 'INR' ||
+      business?.currency === 'GBP' ||
+      business?.currency === 'USD'
+    ) ? business.currency : (business?.country === 'IN' ? 'INR' : 'USD');
+
+    const priceRecord = this.getPlanPrice(planId, currency as CurrencyCode);
+    const fallbackPlan = FIXED_PLAN_PRICES[planId] || FIXED_PLAN_PRICES.growth;
+    const canonicalPricing = priceRecord
+      ? { monthly: priceRecord.monthly_fee, setup: priceRecord.setup_fee }
+      : fallbackPlan[currency as CurrencyCode] || fallbackPlan.USD;
+
+    const nextDate = existing?.nextBillingDate || (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 30);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    })();
+
+    const record: TenantBillingRecord = {
+      ...(existing || {}),
+      businessId: norm,
+      planId,
+      planName: fallbackPlan.name,
+      provider: existing?.provider || 'razorpay',
+      currency: currency as CurrencyCode,
+      monthlyFee: canonicalPricing.monthly,
+      implementationFee: canonicalPricing.setup,
+      implementationFeePaid: existing?.implementationFeePaid ?? true,
+      status: existing?.status || 'trialing',
+      nextBillingDate: nextDate,
+      autoRenew: existing?.autoRenew ?? true,
+      paymentFailed: existing?.paymentFailed ?? false,
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    this.tenantBillingStore.set(norm, record);
+    return record;
   }
 
   public getPaymentMethods(businessId: string): SafePaymentMethod[] {
