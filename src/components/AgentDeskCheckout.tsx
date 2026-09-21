@@ -444,7 +444,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           gstin,
           email
         );
-        totalAmountToCharge = calcData?.total_due_today || calculation.total_due_today;
+        totalAmountToCharge = calcData?.total_due_today ?? calculation.total_due_today;
       } else {
         const inrData = await fetchAuthoritativeINRCalculation(
           selectedPlanId,
@@ -453,11 +453,101 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           gstin,
           email
         );
-        totalAmountToCharge = inrData?.total_due_today || inrCalculation?.total_due_today || 0;
+        totalAmountToCharge = inrData?.total_due_today ?? inrCalculation?.total_due_today ?? 0;
       }
 
-      if (totalAmountToCharge <= 0) {
-        throw new Error('Unable to retrieve authoritative order amount. Please refresh and try again.');
+      // A legitimate 100% promotional checkout has a real payable amount of ₹0.
+      // Razorpay does not support a zero-value order, so activate it through the
+      // server's dedicated, coupon-validated free-activation path.
+      if (totalAmountToCharge === 0) {
+        if (!appliedCoupon) {
+          throw new Error('A zero-value checkout requires a valid promotional code.');
+        }
+
+        const cleanSlug = businessName
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '')
+          .slice(0, 24) || 'workspace';
+        const tenantId = `${cleanSlug}-${Date.now().toString().slice(-4)}`;
+
+        const freeRes = await fetch('/api/billing/activate-promotional-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId: tenantId,
+            businessName: businessName.trim(),
+            planId: selectedPlanId,
+            currency: 'INR',
+            couponCode: appliedCoupon,
+            customerName: fullName.trim(),
+            customerEmail: email.trim(),
+            customerPhone: phone.trim(),
+            displayCurrency: currency,
+            displayAmount: calculation.total_due_today,
+            billingAddress: {
+              address: address.trim(),
+              city: city.trim(),
+              state: state.trim(),
+              country: 'India',
+              gstin: gstin.trim().toUpperCase()
+            }
+          })
+        });
+
+        const freeData = await freeRes.json().catch(() => ({}));
+        if (!freeRes.ok || !freeData.success || freeData.status !== 'ACTIVATED') {
+          throw new Error(freeData.error || 'Promotional activation could not be completed. Please try again.');
+        }
+
+        if (freeData.business) await saveBusiness(freeData.business);
+        if (freeData.agent) await saveAgent(freeData.agent);
+
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + 30);
+        const nextBillingFormatted = nextDate.toLocaleDateString('en-IN', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        const freeSuccessPayload = {
+          tenantId: freeData.business?.id || tenantId,
+          businessName: businessName.trim(),
+          customerEmail: email.trim(),
+          planName: calculation.planName,
+          paymentId: freeData.paymentId || `PROMO-${appliedCoupon}`,
+          amount: 0,
+          currency: 'INR' as CurrencyCode,
+          displayCurrency: currency,
+          displayAmount: calculation.total_due_today,
+          setupFee: calculation.setup_fee,
+          subscriptionFee: calculation.subscription_fee,
+          gstAmount: calculation.subscription_tax,
+          nextBillingDate: freeData.nextBillingDate || nextBillingFormatted
+        };
+
+        try {
+          sessionStorage.removeItem('ad_checkout_name');
+          sessionStorage.removeItem('ad_checkout_biz');
+          sessionStorage.removeItem('ad_checkout_email');
+          sessionStorage.removeItem('ad_checkout_phone');
+          sessionStorage.removeItem('ad_checkout_addr');
+          sessionStorage.removeItem('ad_checkout_city');
+          sessionStorage.removeItem('ad_checkout_state');
+          sessionStorage.removeItem('ad_checkout_gstin');
+        } catch {}
+
+        setPaymentFailed(false);
+        setSuccessData(freeSuccessPayload);
+        setLoading(false);
+        if (onSuccess) onSuccess(freeSuccessPayload);
+        return;
+      }
+
+      if (totalAmountToCharge < 0) {
+        throw new Error('Invalid authoritative order amount. Please refresh and try again.');
       }
 
       // 2. Generate slug-safe tenant identifier
@@ -666,7 +756,9 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           </div>
 
           <div>
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">✓ Payment Successful</span>
+            <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+              {successData.amount === 0 ? '✓ Promotional Activation Successful' : '✓ Payment Successful'}
+            </span>
             <h2 className="text-2xl sm:text-3xl font-black text-white mt-1">Welcome to AgentDesk</h2>
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 mt-3 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
               <Check className="w-3.5 h-3.5" />
@@ -696,8 +788,8 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               </div>
             )}
             <div className="flex justify-between text-slate-400">
-              <span>Payment Gateway:</span>
-              <span className="text-white font-medium">Razorpay</span>
+              <span>Checkout Method:</span>
+              <span className="text-white font-medium">{successData.amount === 0 ? 'Promotional Activation' : 'Razorpay'}</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Payment Currency:</span>
@@ -718,11 +810,11 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               </div>
             )}
             <div className="flex justify-between pt-2 border-t border-slate-800 text-slate-200 font-bold">
-              <span>Amount Charged via Razorpay:</span>
+              <span>{successData.amount === 0 ? 'Amount Paid Today:' : 'Amount Charged via Razorpay:'}</span>
               <span className="text-emerald-400 font-black text-sm">{formatCurrencyAmount(successData.amount, 'INR')}</span>
             </div>
             <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/60">
-              <span>Payment ID:</span>
+              <span>{successData.amount === 0 ? 'Activation Reference:' : 'Payment ID:'}</span>
               <span className="text-slate-300 font-mono">{successData.paymentId}</span>
             </div>
             <div className="flex justify-between text-slate-400 text-[11px]">
