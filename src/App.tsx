@@ -303,7 +303,7 @@ export default function App() {
     };
   }, []);
 
-  const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs'>(getInitialAdminSubTab);
+  const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings'>(getInitialAdminSubTab);
   
   // Active business workspace state
   const [business, setBusiness] = useState<Business | null>(null);
