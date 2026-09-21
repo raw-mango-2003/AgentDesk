@@ -40,7 +40,8 @@ import { createSession } from '../auth/sessionStore.js';
 import { postgresClient } from '../db/postgresClient.js';
 import {
   PLAN_CONFIGS,
-  getPlanPricing
+  getPlanPricing,
+  normalizePlanId
 } from '../../data/pricing.js';
 
 export interface CouponDefinition {
