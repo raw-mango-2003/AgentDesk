@@ -67,7 +67,7 @@ export interface EmailDeliveryRecord {
   eventType: string;
   recipient: string;
   subject: string;
-  provider: 'gmail' | 'resend' | 'system';
+  provider: 'gmail' | 'resend' | 'brevo' | 'system';
   providerMessageId?: string;
   status: 'SENT' | 'FAILED' | 'QUEUED' | 'RETRYING' | 'NOT_CONFIGURED';
   attemptCount: number;
