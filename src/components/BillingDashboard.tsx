@@ -351,7 +351,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
                 <div>
-                  <div className="text-xs font-bold text-white">12-Step Architecture Setup Fee</div>
+                  <div className="text-xs font-bold text-white">One-time Setup & Implementation</div>
                   <div className="text-[10px] text-slate-400">
                     {formatPrice(displayedSetupFee, currency)} one-time implementation
                   </div>
