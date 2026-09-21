@@ -15,8 +15,17 @@ export class WhatsAppService implements IWhatsAppService {
     this.phoneNumberId = (config.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
   }
 
+  private getRuntimeConfig() {
+    const config = integrationStore.getPlatformConfig('whatsapp_business');
+    return {
+      apiKey: (config.accessToken || process.env.WHATSAPP_API_KEY || this.apiKey || '').trim(),
+      phoneNumberId: (config.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID || this.phoneNumberId || '').trim()
+    };
+  }
+
   public isConfigured(): boolean {
-    return !!(this.apiKey && this.phoneNumberId);
+    const config = this.getRuntimeConfig();
+    return !!(config.apiKey && config.phoneNumberId);
   }
 
   public recordConsent(phone: string, optedIn: boolean): void {
@@ -42,7 +51,8 @@ export class WhatsAppService implements IWhatsAppService {
       return { success: false, error: 'Recipient has opted out of WhatsApp business communications.' };
     }
 
-    if (!this.isConfigured()) {
+    const runtime = this.getRuntimeConfig();
+    if (!(runtime.apiKey && runtime.phoneNumberId)) {
       const errorMsg = 'WhatsApp Meta Cloud API is not configured. Missing WHATSAPP_API_KEY or WHATSAPP_PHONE_NUMBER_ID.';
       await deliveryLogService.update(logId, { status: 'NOT_CONFIGURED', error: errorMsg });
       return { success: false, error: errorMsg };
@@ -50,11 +60,11 @@ export class WhatsAppService implements IWhatsAppService {
 
     try {
       // Standard Meta Cloud API format
-      const url = `https://graph.facebook.com/v18.0/${this.phoneNumberId}/messages`;
+      const url = `https://graph.facebook.com/${runtime.phoneNumberId ? (integrationStore.getPlatformConfig('whatsapp_business').apiVersion || 'v18.0') : 'v18.0'}/${runtime.phoneNumberId}/messages`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${runtime.apiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
