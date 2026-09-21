@@ -63,7 +63,9 @@ export const PasswordResetPage: React.FC<PasswordResetPageProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/reset-password', {
+      // The auth router is mounted at /api/auth, so password reset must use
+      // the canonical endpoint. /api/reset-password is not a registered route.
+      const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -74,6 +76,7 @@ export const PasswordResetPage: React.FC<PasswordResetPageProps> = ({
       });
 
       const data = await res.json();
+
       if (data.success) {
         setResetComplete(true);
         setTimeout(() => {
@@ -86,10 +89,19 @@ export const PasswordResetPage: React.FC<PasswordResetPageProps> = ({
           }
         }, 2000);
       } else {
-        setSubmitError(data.error || 'Password reset failed. The link may have expired or already been used.');
+        // API errors may be objects such as { code, message }. Always reduce
+        // them to a string before rendering so React never receives an object
+        // as a child and throws minified error #31.
+        const errorMessage =
+          typeof data.error === 'string'
+            ? data.error
+            : data.error?.message ||
+              data.message ||
+              'Password reset failed. The link may have expired or already been used.';
+        setSubmitError(String(errorMessage));
       }
     } catch (err: any) {
-      setSubmitError(err.message || 'Network error occurred.');
+      setSubmitError(err?.message || 'Network error occurred.');
     } finally {
       setSubmitting(false);
     }
