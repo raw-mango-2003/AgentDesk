@@ -116,6 +116,85 @@ export class EmailService implements IEmailService {
   }
 
   /**
+   * Optional Resend fallback for deployments that already have RESEND_API_KEY.
+   */
+  private async sendViaResendFallback(
+    record: EmailDeliveryRecord,
+    options: SendEmailOptions,
+    apiKey: string
+  ): Promise<{
+    success: boolean;
+    status: 'SENT' | 'FAILED' | 'QUEUED' | 'RETRYING' | 'NOT_CONFIGURED';
+    messageId?: string;
+    error?: string
+  }> {
+    record.provider = 'resend';
+    const fromEmail = (process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com').trim();
+    const fromName = (process.env.EMAIL_FROM_NAME || 'AgentDesk').trim();
+    const replyTo = (options.replyTo || process.env.EMAIL_REPLY_TO || fromEmail).trim();
+
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: `${fromName} <${fromEmail}>`,
+          to: [options.to],
+          reply_to: replyTo,
+          subject: options.subject,
+          html: options.html,
+          text: options.text || undefined
+        })
+      });
+
+      const responseData = await response.json().catch(() => ({})) as any;
+
+      if (!response.ok) {
+        const errMsg = responseData.message || responseData.name || `Resend HTTP error ${response.status}`;
+        record.status = 'FAILED';
+        await deliveryLogService.update(record.id, {
+          status: 'FAILED',
+          provider: record.provider,
+          retryCount: record.attemptCount,
+          error: errMsg
+        });
+        record.failedAt = new Date().toISOString();
+        record.error = errMsg;
+        return { success: false, status: 'FAILED', error: errMsg };
+      }
+
+      const messageId = responseData.id;
+      record.status = 'SENT';
+      await deliveryLogService.update(record.id, {
+        status: 'SENT',
+        provider: record.provider,
+        providerId: messageId,
+        retryCount: record.attemptCount
+      });
+      record.sentAt = new Date().toISOString();
+      record.providerMessageId = messageId;
+      record.error = undefined;
+
+      return { success: true, status: 'SENT', messageId };
+    } catch (err: any) {
+      const errMsg = err.message || 'Resend network error';
+      record.status = 'FAILED';
+      record.failedAt = new Date().toISOString();
+      record.error = errMsg;
+      await deliveryLogService.update(record.id, {
+        status: 'FAILED',
+        provider: record.provider,
+        retryCount: record.attemptCount,
+        error: errMsg
+      });
+      return { success: false, status: 'FAILED', error: errMsg };
+    }
+  }
+
+  /**
    * Send transactional email through Brevo's HTTP API.
    * The sender defaults to hello.agentdesktech@gmail.com and can be overridden
    * with EMAIL_FROM after the address has been verified in Brevo.
