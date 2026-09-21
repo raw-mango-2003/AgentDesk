@@ -280,93 +280,34 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public async verifyPayment(params: VerifyPaymentParams): Promise<VerifyPaymentResult> {
-    const { orderId, paymentId, subscriptionId, signature } = params;
+    const { orderId, paymentId, subscriptionId, signature, amount } = params;
 
-    if (!paymentId) {
-      return {
-        verified: false,
-        paymentId: '',
-        transactionId: '',
-        status: 'failed',
-        message: 'Missing Razorpay payment ID'
-      };
-    }
+    if (!paymentId) return { verified: false, paymentId: '', transactionId: '', status: 'failed', message: 'Missing Razorpay payment ID' };
+    if (!this.isConfigured()) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay integration is NOT_CONFIGURED. Live payment verification requires valid Razorpay credentials.' };
+    if (!signature) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Cryptographic signature is mandatory for live Razorpay verification.' };
 
-    // 1. Signature Verification with Key Secret
-    if (this.keySecret && signature) {
-      try {
-        const textToSign = subscriptionId
-          ? `${paymentId}|${subscriptionId}`
-          : `${orderId}|${paymentId}`;
-        
-        const expectedSignature = crypto
-          .createHmac('sha256', this.keySecret)
-          .update(textToSign)
-          .digest('hex');
-        
-        const expectedBuf = Buffer.from(expectedSignature, 'utf-8');
-        const signatureBuf = Buffer.from(signature.trim(), 'utf-8');
-        const isMatch = expectedBuf.length === signatureBuf.length && crypto.timingSafeEqual(expectedBuf, signatureBuf);
-
-        if (isMatch) {
-          return {
-            verified: true,
-            paymentId,
-            transactionId: `PAY-RZP-${paymentId.replace(/^pay_/, '')}`,
-            status: 'paid',
-            message: 'Razorpay HMAC signature verified successfully'
-          };
-        } else {
-          return {
-            verified: false,
-            paymentId,
-            transactionId: `PAY-RZP-${paymentId}`,
-            status: 'failed',
-            message: 'Razorpay signature mismatch'
-          };
-        }
-      } catch (err: any) {
-        return {
-          verified: false,
-          paymentId,
-          transactionId: `PAY-RZP-${paymentId}`,
-          status: 'failed',
-          message: err.message
-        };
+    try {
+      const textToSign = subscriptionId ? `${paymentId}|${subscriptionId}` : `${orderId}|${paymentId}`;
+      const expectedSignature = crypto.createHmac('sha256', this.keySecret).update(textToSign).digest('hex');
+      const expectedBuf = Buffer.from(expectedSignature, 'utf-8');
+      const signatureBuf = Buffer.from(signature.trim(), 'utf-8');
+      if (expectedBuf.length !== signatureBuf.length || !crypto.timingSafeEqual(expectedBuf, signatureBuf)) {
+        return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay signature mismatch' };
       }
+      if (!orderId || subscriptionId) {
+        return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'A server-authorized Razorpay order is required for checkout verification.' };
+      }
+      const payment = await this.fetchPaymentDetails(paymentId);
+      if (!payment) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment could not be confirmed on the server.' };
+      if (payment.order_id !== orderId) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment does not belong to the authorized order.' };
+      const expectedSubunits = Math.round(Number(amount) * 100);
+      if (!Number.isFinite(expectedSubunits) || Number(payment.amount) !== expectedSubunits) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment amount does not match the authorized order.' };
+      if (payment.status !== 'captured') return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: `Razorpay payment is not captured (status: ${payment.status || 'unknown'}).` };
+      return { verified: true, paymentId, transactionId: `PAY-RZP-${paymentId.replace(/^pay_/, '')}`, status: 'paid', message: 'Razorpay signature, order, amount, and captured status verified successfully', method: payment.method, raw: payment };
+    } catch {
+      return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment verification failed on the server.' };
     }
-
-    // 2. If not configured, strictly fail payment verification - never permit fake payment success
-    if (!this.isConfigured()) {
-      return {
-        verified: false,
-        paymentId: paymentId || '',
-        transactionId: '',
-        status: 'failed',
-        message: 'Razorpay integration is NOT_CONFIGURED. Live payment verification requires valid Razorpay credentials.'
-      };
-    }
-
-    // 3. If configured with live credentials, signature is MANDATORY
-    if (!signature) {
-      return {
-        verified: false,
-        paymentId,
-        transactionId: `PAY-RZP-${paymentId}`,
-        status: 'failed',
-        message: 'Cryptographic signature is mandatory for live Razorpay verification.'
-      };
-    }
-
-    return {
-      verified: false,
-      paymentId,
-      transactionId: `PAY-RZP-${paymentId}`,
-      status: 'failed',
-      message: 'Payment verification failed: invalid or unverified transaction.'
-    };
   }
-
   public async createSubscription(params: CreateSubscriptionParams): Promise<ProviderSubscription> {
     if (!this.supportsCurrency(params.currency)) {
       throw new Error('This payment method is not available for this currency.');
