@@ -173,6 +173,69 @@ integrationsRouter.post(
 // 1. PLATFORM ADMIN: INTEGRATIONS MANAGEMENT
 // ----------------------------------------------------------------------------
 
+const PLATFORM_CONFIG_PROVIDERS = ['gemini_ai', 'twilio', 'whatsapp_business', 'email_delivery'] as const;
+const PLATFORM_CONFIG_FIELDS: Record<string, string[]> = {
+  gemini_ai: ['apiKey', 'model'],
+  twilio: ['accountSid', 'authToken', 'phoneNumber', 'verifyServiceSid'],
+  whatsapp_business: ['accessToken', 'phoneNumberId', 'businessAccountId', 'apiVersion'],
+  email_delivery: ['apiKey', 'fromEmail', 'fromName', 'replyTo']
+};
+
+integrationsRouter.get('/platform/configuration', requirePlatformAdmin, async (req: Request, res: Response) => {
+  try {
+    const configurations: Record<string, any> = {};
+    for (const provider of PLATFORM_CONFIG_PROVIDERS) {
+      const config = integrationStore.getPlatformConfig(provider);
+      configurations[provider] = {
+        configured: Object.values(config).some(Boolean),
+        fields: Object.fromEntries((PLATFORM_CONFIG_FIELDS[provider] || []).map((field) => [
+          field,
+          config[field]
+            ? (field.toLowerCase().includes('key') || field.toLowerCase().includes('token') || field.toLowerCase().includes('secret')
+              ? `••••••••${config[field].slice(-4)}`
+              : config[field])
+            : ''
+        ]))
+      };
+    }
+    const appUrl = getAppUrl(req);
+    return res.json({
+      success: true,
+      configurations,
+      deployment: {
+        appUrl,
+        apiBaseUrl: appUrl + '/api',
+        widgetBaseUrl: process.env.WIDGET_URL || appUrl
+      }
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Failed to load platform configuration.' });
+  }
+});
+
+integrationsRouter.put('/platform/configuration/:provider', requirePlatformAdmin, async (req: Request, res: Response) => {
+  try {
+    const provider = String(req.params.provider || '').toLowerCase();
+    if (!(PLATFORM_CONFIG_PROVIDERS as readonly string[]).includes(provider)) {
+      return res.status(400).json({ success: false, error: 'Unsupported platform provider.' });
+    }
+    const incoming = req.body && typeof req.body === 'object' ? req.body : {};
+    const allowedFields = PLATFORM_CONFIG_FIELDS[provider] || [];
+    const existing = integrationStore.getPlatformConfig(provider);
+    const nextConfig: Record<string, string> = { ...existing };
+
+    for (const field of allowedFields) {
+      if (typeof incoming[field] === 'string' && incoming[field].trim()) nextConfig[field] = incoming[field].trim();
+      else if (incoming[field] === '') delete nextConfig[field];
+    }
+
+    integrationStore.savePlatformConfig(provider, nextConfig);
+    return res.json({ success: true, provider, configured: Object.values(nextConfig).some(Boolean), message: 'Platform configuration saved securely.' });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Failed to save platform configuration.' });
+  }
+});
+
 integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const gmailStatus = gmailService.getConnectionStatus();
