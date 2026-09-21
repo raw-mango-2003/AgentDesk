@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
@@ -168,8 +168,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
 
-  // Keep dashboard sections in browser history so mobile edge-swipe navigation
-  // behaves like a normal website and restores the exact previous section.
+  // AgentDesk uses the browser's real session history as its navigation model.
+  // Every meaningful console destination gets a URL, so Back/Forward and mobile
+  // browser gestures return the user to the exact previous/next destination.
   const tabPathMap: Record<SaaSNavTab, string> = {
     overview: '/dashboard',
     voice_receptionist: '/dashboard/voice-receptionist',
@@ -198,7 +199,7 @@ export default function App() {
     if (path === '/embed') return 'embed';
     if (path === '/admin/account-credentials') return 'account_credentials';
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
-    const match = path.match(/^\/dashboard\/([^/]+)$/);
+    const match = path.match(/^\\/dashboard\\/([^/]+)$/);
     const slugToTab: Record<string, SaaSNavTab> = {
       'voice-receptionist': 'voice_receptionist',
       'missed-calls': 'missed_calls',
@@ -218,80 +219,74 @@ export default function App() {
     return match && slugToTab[match[1]] ? slugToTab[match[1]] : 'overview';
   };
 
-  const navigateTab = (tab: SaaSNavTab) => {
-    setActiveTab(tab);
-    if (typeof window !== 'undefined' && window.history) {
-      window.history.pushState({ agentDeskTab: tab }, '', tabPathMap[tab] || '/dashboard');
-    }
+  type AgentDeskHistoryState = {
+    agentDeskRoute?: boolean;
+    agentDeskView?: AppView;
+    agentDeskTab?: SaaSNavTab;
+    agentDeskScrollY?: number;
   };
 
-  // Mobile touch navigation. Chrome's system edge gesture remains browser-owned,
-  // but swipes inside the AgentDesk viewport behave like page-to-page navigation.
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-  const dashboardTabOrder: SaaSNavTab[] = [
-    'overview',
-    'voice_receptionist',
-    'missed_calls',
-    'leads',
-    'crm',
-    'followup',
-    'reengagement',
-    'reviews',
-    'appointments',
-    'estimates',
-    'outreach',
-    'knowledge',
-    'conversations',
-    'integrations',
-    'billing',
-    'localization',
-    'embed',
-    'account_credentials'
-  ];
+  const saveCurrentHistoryScroll = () => {
+    if (typeof window === 'undefined' || !window.history) return;
+    const currentState = (window.history.state || {}) as AgentDeskHistoryState;
+    window.history.replaceState(
+      { ...currentState, agentDeskScrollY: window.scrollY },
+      '',
+      window.location.href
+    );
+  };
 
+  const pushAgentDeskRoute = (path: string, state: AgentDeskHistoryState) => {
+    if (typeof window === 'undefined' || !window.history) return;
+    if (window.location.pathname === path && !window.location.search && !window.location.hash) return;
+
+    saveCurrentHistoryScroll();
+    window.history.pushState(
+      { ...state, agentDeskRoute: true, agentDeskScrollY: 0 },
+      '',
+      path
+    );
+
+    // New destinations start at the top, just like a normal page navigation.
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  };
+
+  const navigateTab = (tab: SaaSNavTab) => {
+    const path = tabPathMap[tab] || '/dashboard';
+    if (typeof window !== 'undefined' && window.location.pathname === path) {
+      setActiveTab(tab);
+      return;
+    }
+    setActiveTab(tab);
+    if (tab === 'admin') setAdminSubTab('workspaces');
+    pushAgentDeskRoute(path, { agentDeskView: 'dashboard', agentDeskTab: tab });
+  };
+
+  // Establish a state object for the entry the user originally loaded. This is
+  // what lets Back restore the initial SPA screen instead of losing its state.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const isMobile = () => window.matchMedia('(max-width: 1023px)').matches;
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = 'manual';
 
-    const onTouchStart = (event: TouchEvent) => {
-      if (!isMobile() || event.touches.length !== 1) return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, button, a, [data-no-swipe]')) {
-        touchStartRef.current = null;
-        return;
-      }
-      const touch = event.touches[0];
-      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-    };
+    const existingState = (window.history.state || {}) as AgentDeskHistoryState;
+    window.history.replaceState(
+      {
+        ...existingState,
+        agentDeskRoute: true,
+        agentDeskView: resolveAppRoute(window.location.pathname, window.location.hash),
+        agentDeskTab: getTabFromLocation(),
+        agentDeskScrollY: window.scrollY
+      },
+      '',
+      window.location.href
+    );
 
-    const onTouchEnd = (event: TouchEvent) => {
-      const start = touchStartRef.current;
-      touchStartRef.current = null;
-      if (!start || !isMobile() || event.changedTouches.length !== 1) return;
-
-      const touch = event.changedTouches[0];
-      const dx = touch.clientX - start.x;
-      const dy = touch.clientY - start.y;
-      if (Math.abs(dx) < 70 || Math.abs(dx) <= Math.abs(dy) * 1.35) return;
-      if (currentView !== 'dashboard') return;
-
-      const index = dashboardTabOrder.indexOf(activeTab);
-      if (index < 0) return;
-
-      // Swipe left = next section, swipe right = previous section.
-      const nextIndex = dx < 0 ? index + 1 : index - 1;
-      if (nextIndex >= 0 && nextIndex < dashboardTabOrder.length) {
-        navigateTab(dashboardTabOrder[nextIndex]);
-      }
-    };
-
-    document.addEventListener('touchstart', onTouchStart, { passive: true });
-    document.addEventListener('touchend', onTouchEnd, { passive: true });
     return () => {
-      document.removeEventListener('touchstart', onTouchStart);
-      document.removeEventListener('touchend', onTouchEnd);
+      window.history.scrollRestoration = previousScrollRestoration;
     };
-  }, [activeTab, currentView]);
+  }, []);
+
   const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs'>(getInitialAdminSubTab);
   
   // Active business workspace state
@@ -344,20 +339,30 @@ export default function App() {
   };
 
   useEffect(() => {
-    const handlePopState = () => {
+    const handlePopState = (event: PopStateEvent) => {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
       const resolvedView = resolveAppRoute(path, hash);
 
       if (resolvedView === 'dashboard') {
+        const nextTab = getTabFromLocation();
         setCurrentView('dashboard');
-        setActiveTab(getTabFromLocation());
+        setActiveTab(nextTab);
         if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
           setAdminSubTab('my_agent');
+        } else if (nextTab === 'admin') {
+          setAdminSubTab('workspaces');
         }
       } else {
         setCurrentView(resolvedView);
       }
+
+      // popstate means the browser moved to an existing history entry. Never
+      // push another entry here. Restore the entry's saved browsing position.
+      const state = (event.state || {}) as AgentDeskHistoryState;
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: state.agentDeskScrollY || 0, left: 0, behavior: 'auto' });
+      });
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -487,36 +492,37 @@ export default function App() {
     if (view === 'get-started' || view === 'signup') target = 'checkout';
 
     const validViews: AppView[] = ['landing', 'pricing', 'login', 'platform_login', 'onboarding', 'checkout', 'dashboard'];
-    if (validViews.includes(target as AppView)) {
-      if (target === 'dashboard' && !currentUser) {
-        setCurrentView('login');
-        if (typeof window !== 'undefined' && window.history?.pushState) {
-          window.history.pushState(null, '', '/login');
-        }
+    if (!validViews.includes(target as AppView)) return;
+
+    if (target === 'dashboard' && !currentUser) {
+      setCurrentView('login');
+      pushAgentDeskRoute('/login', { agentDeskView: 'login' });
+      return;
+    }
+
+    const pathMap: Record<AppView, string> = {
+      landing: '/',
+      pricing: '/pricing',
+      login: '/login',
+      platform_login: '/platform/login',
+      onboarding: '/get-started',
+      checkout: '/get-started',
+      dashboard: '/dashboard',
+      setup_account: '/setup-account',
+      reset_password: '/reset-password',
+      verify_email: '/verify-email'
+    };
+    const nextPath = pathMap[target as AppView] || '/';
+
+    setCurrentView(target as AppView);
+    if (target === 'dashboard') {
+      setActiveTab('overview');
+      if (typeof window !== 'undefined' && window.location.pathname === '/dashboard') {
         return;
       }
-
-      setCurrentView(target as AppView);
-      if (typeof window !== 'undefined' && window.history?.pushState) {
-        const pathMap: Record<AppView, string> = {
-          landing: '/',
-          pricing: '/pricing',
-          login: '/login',
-          platform_login: '/platform/login',
-          onboarding: '/get-started',
-          checkout: '/get-started',
-          dashboard: '/dashboard',
-          setup_account: '/setup-account',
-          reset_password: '/reset-password',
-          verify_email: '/verify-email'
-        };
-        const nextPath = pathMap[target as AppView] || '/';
-        window.history.pushState({ agentDeskView: target }, '', nextPath);
-      }
-      if (target === 'dashboard') {
-        setActiveTab('overview');
-      }
     }
+
+    pushAgentDeskRoute(nextPath, { agentDeskView: target as AppView, agentDeskTab: target === 'dashboard' ? 'overview' : undefined });
   };
 
   const handleSelectWorkspace = (bizId: string) => {
