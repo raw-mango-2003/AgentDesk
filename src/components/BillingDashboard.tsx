@@ -172,6 +172,8 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   const currentPlan = getPlanConfig(billingInfo.planId || business.plan);
   const planPricing = getPlanPricing(currentPlan, currency);
+  const displayedMonthlyFee = planPricing.monthlyPrice;
+  const displayedSetupFee = planPricing.setupPrice;
   const isINR = currency === 'INR';
 
   const usageStats = [
@@ -338,7 +340,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
               <div className="text-right">
                 <div className="text-2xl sm:text-3xl font-black text-white">
-                  {formatPrice(billingInfo.monthlyFee, currency)}
+                  {formatPrice(displayedMonthlyFee, currency)}
                 </div>
                 <div className="text-[11px] text-slate-400">per month (auto-renews)</div>
               </div>
@@ -351,7 +353,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
                 <div>
                   <div className="text-xs font-bold text-white">12-Step Architecture Setup Fee</div>
                   <div className="text-[10px] text-slate-400">
-                    {formatPrice(billingInfo.implementationFee, currency)} one-time implementation
+                    {formatPrice(displayedSetupFee, currency)} one-time implementation
                   </div>
                 </div>
               </div>
@@ -704,7 +706,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
         businessId={business.id}
         planId={currentPlan.id}
         planName={currentPlan.name}
-        amount={checkoutType === 'implementation_fee' ? billingInfo.implementationFee : billingInfo.monthlyFee}
+        amount={checkoutType === 'implementation_fee' ? displayedSetupFee : displayedMonthlyFee}
         currency={currency}
         type={checkoutType}
         onSuccess={async (res) => {
