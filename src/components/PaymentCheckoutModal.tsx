@@ -290,7 +290,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 ) : (
                   <>
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Pay {formatPrice(amount, currency)} with Razorpay</span>
+                    <span>Pay {formatPrice(amount, 'INR')} with Razorpay</span>
                   </>
                 )}
               </button>
@@ -341,7 +341,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 ) : (
                   <>
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Pay {formatPrice(amount, currency)} with Razorpay</span>
+                    <span>Pay {formatPrice(amount, 'INR')} with Razorpay</span>
                   </>
                 )}
               </button>
