@@ -131,6 +131,24 @@ export default function App() {
       if (path === '/billing' || hash === '#billing') return 'billing';
       if (path === '/embed' || hash === '#embed') return 'embed';
       if (path.startsWith('/admin') || hash.startsWith('#admin')) return 'admin';
+      const match = path.match(/^\/dashboard\/([^/]+)$/);
+      const slugToTab: Record<string, SaaSNavTab> = {
+        'voice-receptionist': 'voice_receptionist',
+        'missed-calls': 'missed_calls',
+        'leads': 'leads',
+        'crm': 'crm',
+        'followup': 'followup',
+        'reengagement': 'reengagement',
+        'reviews': 'reviews',
+        'appointments': 'appointments',
+        'estimates': 'estimates',
+        'outreach': 'outreach',
+        'knowledge': 'knowledge',
+        'conversations': 'conversations',
+        'integrations': 'integrations',
+        'localization': 'localization'
+      };
+      if (match && slugToTab[match[1]]) return slugToTab[match[1]];
     }
     return 'overview';
   };
@@ -148,6 +166,62 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
+
+  // Keep dashboard sections in browser history so mobile edge-swipe navigation
+  // behaves like a normal website and restores the exact previous section.
+  const tabPathMap: Record<SaaSNavTab, string> = {
+    overview: '/dashboard',
+    voice_receptionist: '/dashboard/voice-receptionist',
+    missed_calls: '/dashboard/missed-calls',
+    leads: '/dashboard/leads',
+    crm: '/dashboard/crm',
+    followup: '/dashboard/followup',
+    reengagement: '/dashboard/reengagement',
+    reviews: '/dashboard/reviews',
+    appointments: '/dashboard/appointments',
+    estimates: '/dashboard/estimates',
+    outreach: '/dashboard/outreach',
+    knowledge: '/dashboard/knowledge',
+    conversations: '/dashboard/conversations',
+    integrations: '/dashboard/integrations',
+    billing: '/billing',
+    localization: '/dashboard/localization',
+    embed: '/embed',
+    admin: '/admin',
+    account_credentials: '/admin/account-credentials'
+  };
+
+  const getTabFromLocation = (): SaaSNavTab => {
+    const path = window.location.pathname.toLowerCase();
+    if (path === '/billing') return 'billing';
+    if (path === '/embed') return 'embed';
+    if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
+    const match = path.match(/^\/dashboard\/([^/]+)$/);
+    const slugToTab: Record<string, SaaSNavTab> = {
+      'voice-receptionist': 'voice_receptionist',
+      'missed-calls': 'missed_calls',
+      'leads': 'leads',
+      'crm': 'crm',
+      'followup': 'followup',
+      'reengagement': 'reengagement',
+      'reviews': 'reviews',
+      'appointments': 'appointments',
+      'estimates': 'estimates',
+      'outreach': 'outreach',
+      'knowledge': 'knowledge',
+      'conversations': 'conversations',
+      'integrations': 'integrations',
+      'localization': 'localization'
+    };
+    return match && slugToTab[match[1]] ? slugToTab[match[1]] : 'overview';
+  };
+
+  const navigateTab = (tab: SaaSNavTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined' && window.history) {
+      window.history.pushState({ agentDeskTab: tab }, '', tabPathMap[tab] || '/dashboard');
+    }
+  };
   const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs'>(getInitialAdminSubTab);
   
   // Active business workspace state
@@ -207,13 +281,9 @@ export default function App() {
 
       if (resolvedView === 'dashboard') {
         setCurrentView('dashboard');
-        if (path === '/billing' || hash === '#billing') setActiveTab('billing');
-        else if (path === '/embed' || hash === '#embed') setActiveTab('embed');
-        else if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
-          setActiveTab('admin');
+        navigateTab(getTabFromLocation());
+        if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
           setAdminSubTab('my_agent');
-        } else if (path.startsWith('/admin') || hash.startsWith('#admin')) {
-          setActiveTab('admin');
         }
       } else {
         setCurrentView(resolvedView);
@@ -370,7 +440,11 @@ export default function App() {
           reset_password: '/reset-password',
           verify_email: '/verify-email'
         };
-        window.history.pushState(null, '', pathMap[target as AppView] || '/');
+        const nextPath = pathMap[target as AppView] || '/';
+        window.history.pushState({ agentDeskView: target }, '', nextPath);
+      }
+      if (target === 'dashboard') {
+        setActiveTab('overview');
       }
     }
   };
@@ -439,7 +513,7 @@ export default function App() {
         ) : currentView === 'platform_login' ? (
           <PlatformAdminLoginPage
             onLoginSuccess={() => {
-              setActiveTab('admin');
+              navigateTab('admin');
               setAdminSubTab('workspaces');
               handleNavigate('dashboard');
             }}
@@ -457,7 +531,7 @@ export default function App() {
               setAllBusinesses(list);
               setActiveBusinessId(provisioned.tenantId);
               setCurrentView('dashboard');
-              setActiveTab('overview');
+              navigateTab('overview');
             }}
           />
         ) : currentView === 'landing' ? (
@@ -479,7 +553,7 @@ export default function App() {
               setAllBusinesses(list);
               setActiveBusinessId(tenantId);
               setCurrentView('dashboard');
-              setActiveTab('overview');
+              navigateTab('overview');
             }}
           />
         ) : currentView === 'pricing' ? (
@@ -496,7 +570,7 @@ export default function App() {
               setAllBusinesses(list);
               setActiveBusinessId(tenantId);
               setCurrentView('dashboard');
-              setActiveTab('overview');
+              navigateTab('overview');
             }}
           />
         ) : !currentUser ? (
@@ -511,7 +585,7 @@ export default function App() {
             onSuccess={async () => {
               await refreshAuth();
               setCurrentView('dashboard');
-              setActiveTab('overview');
+              navigateTab('overview');
             }}
           />
         ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'admin' ? (
@@ -520,13 +594,13 @@ export default function App() {
             allBusinesses={allBusinesses}
             onSelectBusinessWorkspace={(bizId) => {
               setActiveBusinessId(bizId);
-              setActiveTab('overview');
+              navigateTab('overview');
             }}
             onSwitchToBusinessConsole={() => {
               if (allBusinesses.length > 0 && (!business || business.id === 'platform')) {
                 setActiveBusinessId(allBusinesses[0].id);
               }
-              setActiveTab('overview');
+              navigateTab('overview');
             }}
             onTenantUpdated={(updatedBiz) => {
               if (activeBusinessId === updatedBiz.id) {
@@ -636,7 +710,7 @@ export default function App() {
 
                       <button
                         onClick={() => {
-                          setActiveTab('admin');
+                          navigateTab('admin');
                           setShowWorkspaceDropdown(false);
                         }}
                         className="w-full text-left px-3 py-2.5 mt-1 rounded-xl bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 font-bold flex items-center gap-2 border border-purple-500/30 cursor-pointer"
@@ -653,7 +727,7 @@ export default function App() {
                   {currentUser?.role === 'PLATFORM_ADMIN' && (
                     <button
                       onClick={() => {
-                        setActiveTab('admin');
+                        navigateTab('admin');
                         setAdminSubTab('my_agent');
                       }}
                       className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
@@ -690,7 +764,7 @@ export default function App() {
               <div className="hidden xl:flex items-center gap-1.5 pt-4 overflow-x-auto pb-1 text-xs">
                 {/* 1. Overview */}
                 <button
-                  onClick={() => setActiveTab('overview')}
+                  onClick={() => navigateTab('overview')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'overview'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -703,7 +777,7 @@ export default function App() {
 
                 {/* 2. Voice Receptionist */}
                 <button
-                  onClick={() => setActiveTab('voice_receptionist')}
+                  onClick={() => navigateTab('voice_receptionist')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'voice_receptionist'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -716,7 +790,7 @@ export default function App() {
 
                 {/* 3. Missed Call Text Back */}
                 <button
-                  onClick={() => setActiveTab('missed_calls')}
+                  onClick={() => navigateTab('missed_calls')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'missed_calls'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -729,7 +803,7 @@ export default function App() {
 
                 {/* 4. Leads Intelligence */}
                 <button
-                  onClick={() => setActiveTab('leads')}
+                  onClick={() => navigateTab('leads')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'leads'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -742,7 +816,7 @@ export default function App() {
 
                 {/* 5. CRM & Deals */}
                 <button
-                  onClick={() => setActiveTab('crm')}
+                  onClick={() => navigateTab('crm')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'crm'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -755,7 +829,7 @@ export default function App() {
 
                 {/* 6. Lead Follow-Up */}
                 <button
-                  onClick={() => setActiveTab('followup')}
+                  onClick={() => navigateTab('followup')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'followup'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -768,7 +842,7 @@ export default function App() {
 
                 {/* 7. Re-Engagement */}
                 <button
-                  onClick={() => setActiveTab('reengagement')}
+                  onClick={() => navigateTab('reengagement')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'reengagement'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -781,7 +855,7 @@ export default function App() {
 
                 {/* 8. Reviews */}
                 <button
-                  onClick={() => setActiveTab('reviews')}
+                  onClick={() => navigateTab('reviews')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'reviews'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -794,7 +868,7 @@ export default function App() {
 
                 {/* 9. Appointments */}
                 <button
-                  onClick={() => setActiveTab('appointments')}
+                  onClick={() => navigateTab('appointments')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'appointments'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -807,7 +881,7 @@ export default function App() {
 
                 {/* 10. Estimates */}
                 <button
-                  onClick={() => setActiveTab('estimates')}
+                  onClick={() => navigateTab('estimates')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'estimates'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -820,7 +894,7 @@ export default function App() {
 
                 {/* 11. Cold Outreach */}
                 <button
-                  onClick={() => setActiveTab('outreach')}
+                  onClick={() => navigateTab('outreach')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'outreach'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -833,7 +907,7 @@ export default function App() {
 
                 {/* 12. Knowledge Base */}
                 <button
-                  onClick={() => setActiveTab('knowledge')}
+                  onClick={() => navigateTab('knowledge')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'knowledge'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -846,7 +920,7 @@ export default function App() {
 
                 {/* 13. Transcripts */}
                 <button
-                  onClick={() => setActiveTab('conversations')}
+                  onClick={() => navigateTab('conversations')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'conversations'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -859,7 +933,7 @@ export default function App() {
 
                 {/* 14. Integrations */}
                 <button
-                  onClick={() => setActiveTab('integrations')}
+                  onClick={() => navigateTab('integrations')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'integrations'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -872,7 +946,7 @@ export default function App() {
 
                 {/* 15. Billing & Limits */}
                 <button
-                  onClick={() => setActiveTab('billing')}
+                  onClick={() => navigateTab('billing')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'billing'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -885,7 +959,7 @@ export default function App() {
 
                 {/* 16. Localization & Market Settings */}
                 <button
-                  onClick={() => setActiveTab('localization')}
+                  onClick={() => navigateTab('localization')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'localization'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -898,7 +972,7 @@ export default function App() {
 
                 {/* 17. Deploy & Embed Widget */}
                 <button
-                  onClick={() => setActiveTab('embed')}
+                  onClick={() => navigateTab('embed')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'embed'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -911,7 +985,7 @@ export default function App() {
 
                 {/* 18. Account & Credentials (Business Owner Self-Service) */}
                 <button
-                  onClick={() => setActiveTab('account_credentials')}
+                  onClick={() => navigateTab('account_credentials')}
                   className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                     activeTab === 'account_credentials'
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -926,7 +1000,7 @@ export default function App() {
                 {currentUser?.role === 'PLATFORM_ADMIN' && (
                   <button
                     onClick={() => {
-                      setActiveTab('admin');
+                      navigateTab('admin');
                       setAdminSubTab('workspaces');
                     }}
                     className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
@@ -1019,7 +1093,7 @@ export default function App() {
                           <button
                             key={item.id}
                             onClick={() => {
-                              setActiveTab(item.id as SaaSNavTab);
+                              navigateTab(item.id as SaaSNavTab);
                               setMobileDashboardDrawerOpen(false);
                             }}
                             className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
@@ -1056,7 +1130,7 @@ export default function App() {
                           <button
                             key={item.id}
                             onClick={() => {
-                              setActiveTab(item.id as SaaSNavTab);
+                              navigateTab(item.id as SaaSNavTab);
                               setMobileDashboardDrawerOpen(false);
                             }}
                             className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
@@ -1089,7 +1163,7 @@ export default function App() {
                           <button
                             key={item.id}
                             onClick={() => {
-                              setActiveTab(item.id as SaaSNavTab);
+                              navigateTab(item.id as SaaSNavTab);
                               setMobileDashboardDrawerOpen(false);
                             }}
                             className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
@@ -1126,7 +1200,7 @@ export default function App() {
                           <button
                             key={item.id}
                             onClick={() => {
-                              setActiveTab(item.id as SaaSNavTab);
+                              navigateTab(item.id as SaaSNavTab);
                               setMobileDashboardDrawerOpen(false);
                             }}
                             className={`w-full min-h-[44px] px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer text-left ${
@@ -1173,7 +1247,7 @@ export default function App() {
                   The Platform Multi-Tenant Control Plane is restricted exclusively to authenticated Platform Administrators. Your account role ({currentUser?.role}) is not authorized.
                 </p>
                 <button
-                  onClick={() => setActiveTab('overview')}
+                  onClick={() => navigateTab('overview')}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer"
                 >
                   Return to Business Console
@@ -1189,7 +1263,7 @@ export default function App() {
                 {activeTab === 'overview' && (
                   <DashboardOverview
                     business={business}
-                    onNavigateTab={(tab) => setActiveTab(tab as SaaSNavTab)}
+                    onNavigateTab={(tab) => navigateTab(tab as SaaSNavTab)}
                     onOpenDemoWidget={() => setShowDemoWidget(true)}
                   />
                 )}
@@ -1354,7 +1428,7 @@ export default function App() {
           business={business}
           isOpen={showCopilot}
           onClose={() => setShowCopilot(false)}
-          onNavigateTab={(tabId) => setActiveTab(tabId as SaaSNavTab)}
+          onNavigateTab={(tabId) => navigateTab(tabId as SaaSNavTab)}
         />
       )}
 
@@ -1366,7 +1440,7 @@ export default function App() {
           isOpen={showNotifications}
           onClose={() => setShowNotifications(false)}
           onMarkAllRead={handleMarkAllRead}
-          onNavigateTab={(tabId) => setActiveTab(tabId as SaaSNavTab)}
+          onNavigateTab={(tabId) => navigateTab(tabId as SaaSNavTab)}
         />
       )}
 
