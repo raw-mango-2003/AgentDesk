@@ -27,7 +27,10 @@ export class EmailService implements IEmailService {
   }
 
   public isConfigured(): boolean {
-    return this.gmailService.isConfigured();
+    return Boolean(
+      (process.env.BREVO_API_KEY || '').trim() ||
+      (process.env.RESEND_API_KEY || '').trim()
+    );
   }
 
   /**
@@ -80,107 +83,117 @@ export class EmailService implements IEmailService {
       this.deliveryLogs.pop();
     }
 
-    // 1. Check if Gmail API is configured
-    if (!this.gmailService.isConfigured()) {
-      // Check optional legacy Resend if configured
-      const resendApiKey = (process.env.RESEND_API_KEY || '').trim();
-      if (resendApiKey && resendApiKey.length > 5) {
-        return this.sendViaResendFallback(record, options, resendApiKey);
-      }
-
-      // No fake delivery: accurately record NOT_CONFIGURED
-      const errorMsg = 'Gmail OAuth 2.0 is not configured. Connect Gmail in Platform Admin -> Integrations.';
-      record.status = 'NOT_CONFIGURED';
-      await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: 'NOT_CONFIGURED', provider: record.provider, retryCount: 0, payload: { subject: options.subject, html: options.html, text: options.text, replyTo: options.replyTo } });
-      record.failedAt = new Date().toISOString();
-      record.error = errorMsg;
-      console.warn(`[EmailService:NotConfigured] Cannot dispatch email to ${options.to}: ${errorMsg}`);
-      return { success: false, status: 'NOT_CONFIGURED', error: errorMsg };
+    // 1. Prefer Brevo SMTP API. This is the primary AgentDesk email transport
+    // and does not require Google OAuth or a custom domain.
+    const brevoApiKey = (process.env.BREVO_API_KEY || '').trim();
+    if (brevoApiKey) {
+      return this.sendViaBrevo(record, options, brevoApiKey);
     }
 
-    // 2. Dispatch via Gmail API OAuth 2.0
-    const sendResult = await this.gmailService.sendEmail({
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
-      replyTo: options.replyTo || this.gmailService.defaultReplyTo
+    // 2. Optional Resend fallback for deployments that already have it configured.
+    const resendApiKey = (process.env.RESEND_API_KEY || '').trim();
+    if (resendApiKey) {
+      return this.sendViaResendFallback(record, options, resendApiKey);
+    }
+
+    const errorMsg = 'No transactional email provider is configured. Set BREVO_API_KEY in the environment.';
+    record.status = 'NOT_CONFIGURED';
+    await deliveryLogService.record({
+      id: recordId,
+      tenantId: options.tenantId,
+      channel: 'email',
+      recipient: options.to,
+      eventType,
+      status: 'NOT_CONFIGURED',
+      provider: 'brevo',
+      retryCount: 0,
+      payload: { subject: options.subject, html: options.html, text: options.text, replyTo: options.replyTo }
     });
-
-    if (sendResult.success && sendResult.status === 'SENT') {
-      record.status = 'SENT';
-      await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: 'SENT', provider: record.provider, providerId: sendResult.messageId, retryCount: 0, payload: { subject: options.subject } });
-      record.sentAt = sendResult.timestamp;
-      record.providerMessageId = sendResult.messageId;
-      record.error = undefined;
-      return { success: true, status: 'SENT', messageId: sendResult.messageId };
-    }
-
-    // Gmail send failure or disconnected token
-    record.status = sendResult.status === 'NOT_CONFIGURED' ? 'NOT_CONFIGURED' : 'FAILED';
-    await deliveryLogService.record({ id: recordId, tenantId: options.tenantId, channel: 'email', recipient: options.to, eventType, status: record.status, provider: record.provider, retryCount: 0, error: sendResult.error, payload: { subject: options.subject } });
-    record.failedAt = sendResult.timestamp;
-    record.error = sendResult.error || 'Gmail delivery failed';
-    return { 
-      success: false, 
-      status: record.status, 
-      error: record.error 
-    };
+    record.failedAt = new Date().toISOString();
+    record.error = errorMsg;
+    console.warn(`[EmailService:NotConfigured] Cannot dispatch email to ${options.to}: ${errorMsg}`);
+    return { success: false, status: 'NOT_CONFIGURED', error: errorMsg };
   }
 
   /**
-   * Optional fallback to Resend if Gmail is unconfigured but Resend key exists
+   * Send transactional email through Brevo's HTTP API.
+   * The sender defaults to hello.agentdesktech@gmail.com and can be overridden
+   * with EMAIL_FROM after the address has been verified in Brevo.
    */
-  private async sendViaResendFallback(
-    record: EmailDeliveryRecord, 
-    options: SendEmailOptions, 
+  private async sendViaBrevo(
+    record: EmailDeliveryRecord,
+    options: SendEmailOptions,
     apiKey: string
-  ): Promise<{ 
-    success: boolean; 
-    status: 'SENT' | 'FAILED' | 'QUEUED' | 'RETRYING' | 'NOT_CONFIGURED'; 
-    messageId?: string; 
-    error?: string 
+  ): Promise<{
+    success: boolean;
+    status: 'SENT' | 'FAILED' | 'QUEUED' | 'RETRYING' | 'NOT_CONFIGURED';
+    messageId?: string;
+    error?: string
   }> {
-    record.provider = 'resend';
+    record.provider = 'brevo';
+    const fromEmail = (process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com').trim();
+    const fromName = (process.env.EMAIL_FROM_NAME || 'AgentDesk').trim();
+    const replyTo = (options.replyTo || process.env.EMAIL_REPLY_TO || fromEmail).trim();
+
     try {
-      const fromHeader = `AgentDesk <hello.agentdesktech@gmail.com>`;
-      const response = await fetch('https://api.resend.com/emails', {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
+          'accept': 'application/json',
+          'api-key': apiKey,
+          'content-type': 'application/json'
         },
         body: JSON.stringify({
-          from: fromHeader,
-          to: [options.to],
-          reply_to: options.replyTo || 'hello.agentdesktech@gmail.com',
+          sender: { name: fromName, email: fromEmail },
+          to: [{ email: options.to }],
+          replyTo: { email: replyTo },
           subject: options.subject,
-          html: options.html,
-          text: options.text || undefined
+          htmlContent: options.html,
+          textContent: options.text || undefined
         })
       });
 
-      const responseData = await response.json() as any;
+      const responseData = await response.json().catch(() => ({})) as any;
 
       if (!response.ok) {
-        const errMsg = responseData.message || responseData.error || `Resend HTTP error ${response.status}`;
+        const errMsg = responseData.message || responseData.code || `Brevo HTTP error ${response.status}`;
         record.status = 'FAILED';
-        await deliveryLogService.update(record.id, { status: 'FAILED', provider: record.provider, retryCount: record.attemptCount, error: errMsg });
+        await deliveryLogService.update(record.id, {
+          status: 'FAILED',
+          provider: record.provider,
+          retryCount: record.attemptCount,
+          error: errMsg
+        });
         record.failedAt = new Date().toISOString();
         record.error = errMsg;
         return { success: false, status: 'FAILED', error: errMsg };
       }
 
+      const messageId = responseData.messageId;
       record.status = 'SENT';
-      await deliveryLogService.update(record.id, { status: 'SENT', provider: record.provider, providerId: responseData.id, retryCount: record.attemptCount });
+      await deliveryLogService.update(record.id, {
+        status: 'SENT',
+        provider: record.provider,
+        providerId: messageId,
+        retryCount: record.attemptCount
+      });
       record.sentAt = new Date().toISOString();
-      record.providerMessageId = responseData.id;
-      return { success: true, status: 'SENT', messageId: responseData.id };
+      record.providerMessageId = messageId;
+      record.error = undefined;
+
+      return { success: true, status: 'SENT', messageId };
     } catch (err: any) {
+      const errMsg = err.message || 'Brevo network error';
       record.status = 'FAILED';
       record.failedAt = new Date().toISOString();
-      record.error = err.message || 'Resend network error';
-      return { success: false, status: 'FAILED', error: err.message };
+      record.error = errMsg;
+      await deliveryLogService.update(record.id, {
+        status: 'FAILED',
+        provider: record.provider,
+        retryCount: record.attemptCount,
+        error: errMsg
+      });
+      return { success: false, status: 'FAILED', error: errMsg };
     }
   }
 
