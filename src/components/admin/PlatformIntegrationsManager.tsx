@@ -129,7 +129,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
         body: JSON.stringify({ to: cleanRecipient })
       });
 
-      if (data.success && data.status === 'SUCCESS') {
+      if (data.success) {
         setBrevoTestResult({
           status: 'SUCCESS',
           messageId: data.messageId,
