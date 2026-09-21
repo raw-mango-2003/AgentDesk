@@ -1755,6 +1755,27 @@ export class BillingService {
     const paymentRecord = (orderId ? this.paymentRecordsStore.get(orderId) : undefined) ||
       Array.from(this.paymentRecordsStore.values()).find(p => p.razorpayOrderId === orderId || p.tenantId === norm);
 
+    // For paid checkout, the amount is server-authoritative. Never trust the
+    // amount echoed by the browser; it must match the amount used to create
+    // the stored Razorpay order.
+    if (type === 'initial_checkout') {
+      if (!orderId || !pendingSignup) {
+        throw new Error('Payment order could not be matched to a server-side checkout.');
+      }
+      const expectedAmount = pendingSignup.totalDueToday;
+      if (typeof expectedAmount !== 'number' || expectedAmount <= 0) {
+        throw new Error('Invalid server-side payment amount.');
+      }
+      if (typeof amount === 'number' && Number.isFinite(amount) && Math.abs(amount - expectedAmount) > 0.001) {
+        throw new Error('Payment amount does not match the server-authorized order.');
+      }
+      params.amount = expectedAmount;
+    }
+
+    const authoritativePaymentAmount = (type === 'initial_checkout' && pendingSignup)
+      ? pendingSignup.totalDueToday
+      : amount;
+
     const provider = this.getProvider(providerName);
     if (!provider.isConfigured()) {
       throw new Error('Online payments are temporarily unavailable. Please contact sales.');
@@ -1767,7 +1788,7 @@ export class BillingService {
       signature,
       provider: providerName,
       currency,
-      amount
+      amount: authoritativePaymentAmount
     });
 
     if (!verification.verified) {
@@ -1805,7 +1826,7 @@ export class BillingService {
       provider: providerName,
       providerOrderId: orderId,
       providerPaymentId: paymentId,
-      amount,
+      amount: authoritativePaymentAmount,
       currency,
       status: 'PAID',
       method: paymentMethodData?.brand || verification.method || 'online'
@@ -1966,7 +1987,9 @@ export class BillingService {
 
     if (type === 'initial_checkout') {
       currentBilling.implementationFeePaid = true;
-      currentBilling.providerSubscriptionId = subscriptionId || `sub_rzp_${Date.now().toString().slice(-8)}`;
+      if (subscriptionId) {
+        currentBilling.providerSubscriptionId = subscriptionId;
+      }
     } else if (type === 'implementation_fee') {
       currentBilling.implementationFeePaid = true;
     } else {
@@ -1983,7 +2006,7 @@ export class BillingService {
       id: `tx_${Date.now()}`,
       businessId: norm,
       date: new Date().toISOString().split('T')[0],
-      amount,
+      amount: authoritativePaymentAmount,
       currency,
       provider: providerName,
       status: 'paid',
@@ -2160,7 +2183,7 @@ export class BillingService {
       nextBillingDate: nextBillingDateFormatted,
       monthlyFee: monthlyPrice,
       setupFee: setupPrice,
-      amount,
+      amount: authoritativePaymentAmount,
       currency,
       displayCurrency: displayCurrency || pendingSignup?.display_currency || currency,
       displayAmount: displayAmount !== undefined ? displayAmount : (pendingSignup?.display_amount !== undefined ? pendingSignup.display_amount : amount),
