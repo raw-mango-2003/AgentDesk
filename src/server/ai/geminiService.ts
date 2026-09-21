@@ -1,10 +1,12 @@
 import { GoogleGenAI } from '@google/genai';
 import type { KnowledgeItem } from '../../lib/conversationEngine.js';
+import { integrationStore } from '../integrations/integrationStore.js';
 
 let aiClient: GoogleGenAI | null = null;
 
 function getGeminiClient(): GoogleGenAI | null {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const configured = integrationStore.getPlatformConfig('gemini_ai');
+  const apiKey = configured.apiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
   if (!aiClient) {
@@ -32,7 +34,7 @@ export async function generateGroundedGeminiResponse(
   currentTopic: string | null
 ): Promise<string | null> {
   const ai = getGeminiClient();
-  if (!ai || !process.env.GEMINI_API_KEY || targetedKnowledge.length === 0) {
+  if (!ai || targetedKnowledge.length === 0) {
     return null;
   }
 
@@ -97,7 +99,8 @@ Provide a concise, helpful, and natural receptionist response:`;
     }
   };
 
-  const primaryResult = await attemptModelCall('gemini-3.7-flash');
+  const configuredModel = integrationStore.getPlatformConfig('gemini_ai').model;
+  const primaryResult = await attemptModelCall(configuredModel || 'gemini-3.7-flash');
   if (primaryResult) return primaryResult;
 
   const fallbackResult = await attemptModelCall('gemini-3.1-flash-lite');
