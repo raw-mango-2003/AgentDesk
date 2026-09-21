@@ -367,7 +367,7 @@ export default function App() {
         if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
           setAdminSubTab('my_agent');
         } else if (nextTab === 'admin') {
-          setAdminSubTab('workspaces');
+          setAdminSubTab(getInitialAdminSubTab());
         }
       } else {
         setCurrentView(resolvedView);
