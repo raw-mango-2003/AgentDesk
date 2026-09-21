@@ -129,9 +129,10 @@ export class EmailService implements IEmailService {
     error?: string
   }> {
     record.provider = 'resend';
-    const fromEmail = (process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com').trim();
-    const fromName = (process.env.EMAIL_FROM_NAME || 'AgentDesk').trim();
-    const replyTo = (options.replyTo || process.env.EMAIL_REPLY_TO || fromEmail).trim();
+    const config = integrationStore.getPlatformConfig('email_delivery');
+    const fromEmail = (config.fromEmail || process.env.EMAIL_FROM || 'hello.agentdesktech@gmail.com').trim();
+    const fromName = (config.fromName || process.env.EMAIL_FROM_NAME || 'AgentDesk').trim();
+    const replyTo = (options.replyTo || config.replyTo || process.env.EMAIL_REPLY_TO || fromEmail).trim();
 
     try {
       const response = await fetch('https://api.resend.com/emails', {
