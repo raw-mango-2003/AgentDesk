@@ -14,8 +14,18 @@ export class SMSService implements ISMSService {
     this.fromNumber = (config.phoneNumber || process.env.TWILIO_PHONE_NUMBER || '').trim();
   }
 
+  private getRuntimeConfig() {
+    const config = integrationStore.getPlatformConfig('twilio');
+    return {
+      accountSid: (config.accountSid || process.env.TWILIO_ACCOUNT_SID || this.accountSid || '').trim(),
+      authToken: (config.authToken || process.env.TWILIO_AUTH_TOKEN || this.authToken || '').trim(),
+      fromNumber: (config.phoneNumber || process.env.TWILIO_PHONE_NUMBER || this.fromNumber || '').trim()
+    };
+  }
+
   public isConfigured(): boolean {
-    return !!(this.accountSid && this.authToken && this.fromNumber);
+    const config = this.getRuntimeConfig();
+    return !!(config.accountSid && config.authToken && config.fromNumber);
   }
 
   public verifyPhone(phone: string): boolean {
@@ -31,7 +41,8 @@ export class SMSService implements ISMSService {
       return { success: false, error: 'Invalid international phone format. E.164 required (e.g. +1234567890).' };
     }
 
-    if (!this.isConfigured()) {
+    const runtime = this.getRuntimeConfig();
+    if (!(runtime.accountSid && runtime.authToken && runtime.fromNumber)) {
       await deliveryLogService.update(logId, { status: 'NOT_CONFIGURED', error: 'Twilio SMS service is NOT_CONFIGURED. SMS delivery is disabled.' });
       return {
         success: false,
@@ -40,13 +51,13 @@ export class SMSService implements ISMSService {
     }
 
     try {
-      const authHeader = 'Basic ' + Buffer.from(`${this.accountSid}:${this.authToken}`).toString('base64');
+      const authHeader = 'Basic ' + Buffer.from(`${runtime.accountSid}:${runtime.authToken}`).toString('base64');
       const params = new URLSearchParams();
       params.append('To', to);
-      params.append('From', this.fromNumber);
+      params.append('From', runtime.fromNumber);
       params.append('Body', message);
 
-      const url = `https://api.twilio.com/2010-04-01/Accounts/${this.accountSid}/Messages.json`;
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${runtime.accountSid}/Messages.json`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
