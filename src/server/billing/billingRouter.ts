@@ -330,6 +330,45 @@ billingRouter.put('/tax-settings', requirePlatformAdmin, (req: Request, res: Res
   }
 });
 
+// 2.9. Zero-value promotional activation. This path intentionally bypasses Razorpay.
+billingRouter.post('/activate-promotional-checkout', paymentRateLimiter, async (req: Request, res: Response) => {
+  try {
+    const {
+      businessId, businessName, planId, currency, couponCode,
+      customerEmail, customerName, customerPhone, billingAddress,
+      displayCurrency, displayAmount
+    } = req.body;
+
+    if (!businessId || !businessName || !planId || !currency || !couponCode || !customerEmail || !customerName) {
+      return res.status(400).json({ success: false, error: 'Required promotional activation details are missing.' });
+    }
+
+    const result = await billingService.activatePromotionalCheckout({
+      businessId, businessName, planId, currency, couponCode,
+      customerEmail, customerName, customerPhone, billingAddress,
+      displayCurrency, displayAmount
+    });
+
+    if (result.sessionToken) {
+      res.cookie('agentdesk_session', result.sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+    }
+
+    return res.json(result);
+  } catch (err: any) {
+    logBillingError('Promotional activation failed', err);
+    return res.status(400).json({
+      success: false,
+      error: safePaymentError(err, 'Promotional activation could not be completed. Please try again.')
+    });
+  }
+});
+
 // 3. Create Checkout Session (Implementation Fee, Monthly Subscription, or Bundled Initial Checkout)
 billingRouter.post('/create-checkout-session', paymentRateLimiter, async (req: Request, res: Response) => {
   try {
