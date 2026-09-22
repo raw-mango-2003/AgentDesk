@@ -205,6 +205,8 @@ integrationsRouter.get(
       const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
       if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required.' });
 
+      await integrationStore.syncWithPostgres();
+      await integrationStore.syncWithPostgres();
       const { getTenant } = await import('./tenantRegistry.js');
       const tenant = getTenant(tenantId);
       if (!tenant) return res.status(404).json({ success: false, error: 'Tenant not found.' });
