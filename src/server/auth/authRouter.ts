@@ -1618,7 +1618,29 @@ tenantRouter.put('/tenants/:tenantId', requireAuth, async (req: Request, res: Re
       return res.status(403).json({ success: false, error: 'Access denied: cannot modify other tenants' });
     }
 
-    const updated = setTenant(norm, req.body);
+    // Business admins may edit operational profile fields only. Billing, status,
+    // ownership, quotas, plan, and tenant identity remain platform-controlled.
+    const platformControlledFields = new Set([
+      'id', 'tenantId', 'ownerId', 'owner_id', 'plan', 'planId', 'plan_id',
+      'status', 'subscriptionState', 'planStatus', 'billing', 'billingStatus',
+      'paymentStatus', 'implementationFeePaid', 'providerSubscriptionId'
+    ]);
+    const safeUpdates: Record<string, any> = {};
+    if (user.role === 'PLATFORM_ADMIN') {
+      Object.assign(safeUpdates, req.body || {});
+    } else {
+      for (const [key, value] of Object.entries(req.body || {})) {
+        if (!platformControlledFields.has(key)) {
+          safeUpdates[key] = value;
+        }
+      }
+    }
+
+    delete safeUpdates.id;
+    delete safeUpdates.tenantId;
+    delete safeUpdates.businessId;
+
+    const updated = setTenant(norm, safeUpdates);
     return res.json({ success: true, tenant: updated });
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
