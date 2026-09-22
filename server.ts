@@ -239,7 +239,9 @@ function isCsrfExempt(req: Request): boolean {
     '/api/auth/csrf',
     '/auth/csrf',
     '/api/voice/process',
-    '/voice/process'
+    '/voice/process',
+    '/api/public/deployment-request',
+    '/public/deployment-request'
   ]);
 
   if (exemptExact.has(fullPath) || exemptExact.has(subPath)) return true;
@@ -330,6 +332,180 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
     return res.send(file.dataBuffer);
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Public enterprise deployment request email workflow.
+// Provider credentials stay server-side and the form only succeeds after both
+// admin and customer notifications are accepted by a transactional email provider.
+function escapeEmailHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function isValidEmailAddress(value: string): boolean {
+  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);
+}
+
+async function sendAgentDeskTransactionalEmail(params: {
+  to: string;
+  toName?: string;
+  subject: string;
+  htmlContent: string;
+  textContent: string;
+  replyTo?: string;
+}): Promise<{ provider: 'brevo' | 'resend'; messageId?: string }> {
+  const senderEmail = (process.env.EMAIL_FROM || '').trim();
+  const senderName = (process.env.EMAIL_FROM_NAME || 'AgentDesk').trim();
+  const replyTo = (params.replyTo || process.env.EMAIL_REPLY_TO || senderEmail).trim();
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+
+  if (!senderEmail || !isValidEmailAddress(senderEmail)) {
+    throw new Error('Transactional email sender is not configured. Set EMAIL_FROM to a verified sender address.');
+  }
+  if (!brevoKey && !resendKey) {
+    throw new Error('Transactional email is not configured. Set BREVO_API_KEY or RESEND_API_KEY in the deployment environment.');
+  }
+
+  const providerErrors: string[] = [];
+
+  if (brevoKey) {
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: { accept: 'application/json', 'api-key': brevoKey, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email: params.to, ...(params.toName ? { name: params.toName } : {}) }],
+          ...(replyTo && isValidEmailAddress(replyTo) ? { replyTo: { email: replyTo } } : {}),
+          subject: params.subject,
+          htmlContent: params.htmlContent,
+          textContent: params.textContent
+        })
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { provider: 'brevo', messageId: typeof data?.messageId === 'string' ? data.messageId : undefined };
+      }
+      const body = await response.text().catch(() => '');
+      providerErrors.push('Brevo ' + response.status + ': ' + body.slice(0, 300));
+    } catch (error: any) {
+      providerErrors.push('Brevo request failed: ' + (error?.message || 'unknown error'));
+    }
+  }
+
+  if (resendKey) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + resendKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: senderName ? senderName + ' <' + senderEmail + '>' : senderEmail,
+          to: [params.to],
+          ...(replyTo && isValidEmailAddress(replyTo) ? { reply_to: replyTo } : {}),
+          subject: params.subject,
+          html: params.htmlContent,
+          text: params.textContent
+        })
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { provider: 'resend', messageId: typeof data?.id === 'string' ? data.id : undefined };
+      }
+      const body = await response.text().catch(() => '');
+      providerErrors.push('Resend ' + response.status + ': ' + body.slice(0, 300));
+    } catch (error: any) {
+      providerErrors.push('Resend request failed: ' + (error?.message || 'unknown error'));
+    }
+  }
+
+  throw new Error(providerErrors.join(' | ') || 'No transactional email provider accepted the message.');
+}
+
+app.post('/api/public/deployment-request', async (req: Request, res: Response) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const name = typeof body.name === 'string' ? body.name.trim().slice(0, 120) : '';
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase().slice(0, 254) : '';
+    const phone = typeof body.phone === 'string' ? body.phone.trim().slice(0, 50) : '';
+    const company = typeof body.company === 'string' ? body.company.trim().slice(0, 160) : '';
+    const locationsCount = typeof body.locationsCount === 'string' ? body.locationsCount.trim().slice(0, 40) : '1';
+    const callVolume = typeof body.callVolume === 'string' ? body.callVolume.trim().slice(0, 80) : '';
+    const requirements = typeof body.requirements === 'string' ? body.requirements.trim().slice(0, 4000) : '';
+    const planName = typeof body.planName === 'string' ? body.planName.trim().slice(0, 120) : 'Enterprise';
+
+    if (!name || !email || !isValidEmailAddress(email)) {
+      return res.status(400).json({ success: false, error: 'A valid name and email address are required.' });
+    }
+
+    const adminEmail = (process.env.PLATFORM_ADMIN_EMAIL || process.env.EMAIL_REPLY_TO || '').trim().toLowerCase();
+    if (!adminEmail || !isValidEmailAddress(adminEmail)) {
+      console.error('[Deployment Request] PLATFORM_ADMIN_EMAIL/EMAIL_REPLY_TO is not configured.');
+      return res.status(503).json({ success: false, error: 'Deployment request email routing is not configured.' });
+    }
+
+    const requestId = 'DEP-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    const safe = {
+      requestId: escapeEmailHtml(requestId), name: escapeEmailHtml(name), email: escapeEmailHtml(email),
+      phone: escapeEmailHtml(phone || 'Not provided'), company: escapeEmailHtml(company || 'Not provided'),
+      locationsCount: escapeEmailHtml(locationsCount), callVolume: escapeEmailHtml(callVolume || 'Not provided'),
+      requirements: escapeEmailHtml(requirements || 'None provided').replace(/\\n/g, '<br />'), planName: escapeEmailHtml(planName)
+    };
+
+    const adminHtml = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.6">' +
+      '<h2>New AgentDesk Deployment Request</h2><p>A new enterprise deployment request was submitted from the AgentDesk website.</p>' +
+      '<table cellpadding="8" cellspacing="0" style="border-collapse:collapse">' +
+      '<tr><td><strong>Request ID</strong></td><td>' + safe.requestId + '</td></tr>' +
+      '<tr><td><strong>Plan</strong></td><td>' + safe.planName + '</td></tr>' +
+      '<tr><td><strong>Name</strong></td><td>' + safe.name + '</td></tr>' +
+      '<tr><td><strong>Email</strong></td><td>' + safe.email + '</td></tr>' +
+      '<tr><td><strong>Phone</strong></td><td>' + safe.phone + '</td></tr>' +
+      '<tr><td><strong>Company</strong></td><td>' + safe.company + '</td></tr>' +
+      '<tr><td><strong>Locations</strong></td><td>' + safe.locationsCount + '</td></tr>' +
+      '<tr><td><strong>Call volume</strong></td><td>' + safe.callVolume + '</td></tr></table>' +
+      '<h3>Requirements</h3><p>' + safe.requirements + '</p><p><a href="mailto:' + safe.email + '">Reply to the customer</a></p>' +
+      '</body></html>';
+
+    const adminText = [
+      'New AgentDesk Deployment Request', 'Request ID: ' + requestId, 'Plan: ' + planName, 'Name: ' + name,
+      'Email: ' + email, 'Phone: ' + (phone || 'Not provided'), 'Company: ' + (company || 'Not provided'),
+      'Locations: ' + locationsCount, 'Call volume: ' + (callVolume || 'Not provided'),
+      'Requirements: ' + (requirements || 'None provided')
+    ].join('\\n');
+
+    const customerHtml = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.6">' +
+      '<h2>AgentDesk Deployment Request Received</h2><p>Hi ' + safe.name + ',</p>' +
+      '<p>We received your AgentDesk deployment request. Our team will review the requested scope and contact you using the details below.</p>' +
+      '<p><strong>Request ID:</strong> ' + safe.requestId + '<br /><strong>Selected system:</strong> ' + safe.planName + '</p>' +
+      '<p>We will follow up with implementation scope and next steps.</p><p>Regards,<br />AgentDesk Technologies</p>' +
+      '</body></html>';
+
+    const customerText = [
+      'AgentDesk Deployment Request Received', 'Hi ' + name + ',', 'We received your deployment request.',
+      'Request ID: ' + requestId, 'Selected system: ' + planName,
+      'Our team will review the scope and follow up with implementation details and next steps.', 'AgentDesk Technologies'
+    ].join('\\n');
+
+    const [adminDelivery, customerDelivery] = await Promise.all([
+      sendAgentDeskTransactionalEmail({
+        to: adminEmail, toName: 'AgentDesk Admin',
+        subject: 'New AgentDesk Deployment Request: ' + planName + ' - ' + name,
+        htmlContent: adminHtml, textContent: adminText, replyTo: email
+      }),
+      sendAgentDeskTransactionalEmail({
+        to: email, toName: name, subject: 'AgentDesk Deployment Request Received',
+        htmlContent: customerHtml, textContent: customerText,
+        replyTo: process.env.EMAIL_REPLY_TO || adminEmail
+      })
+    ]);
+
+    console.log('[Deployment Request] Email notifications accepted by provider', {
+      requestId, adminProvider: adminDelivery.provider, customerProvider: customerDelivery.provider
+    });
+    return res.status(201).json({ success: true, requestId, message: 'Deployment request submitted and email notifications sent.' });
+  } catch (error: any) {
+    console.error('[Deployment Request] Email delivery failed:', error?.message || error);
+    return res.status(502).json({ success: false, error: 'We could not deliver the deployment request email. Please try again or contact AgentDesk support.' });
   }
 });
 
