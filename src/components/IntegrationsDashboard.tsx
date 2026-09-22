@@ -15,10 +15,13 @@ import {
   Sliders, 
   Activity,
   Trash2,
-  Lock
+  Lock,
+  Plus,
+  Save,
+  Unplug
 } from 'lucide-react';
-import { Business, AuditLog } from '../types';
-import { getAuditLogs, getBusinesses, saveBusiness, resetDatabaseToSeed, addNotification } from '../lib/dbService';
+import { Business, AuditLog, IntegrationStatus, IntegrationProvider } from '../types';
+import { getAuditLogs, getBusinesses, getAllBusinesses, getIntegrations, saveIntegrations, saveBusiness, resetDatabaseToSeed, addNotification } from '../lib/dbService';
 import { formatDateTime } from '../lib/localization';
 
 interface IntegrationsDashboardProps {
@@ -30,6 +33,86 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'integrations' | 'localization' | 'audit'>('integrations');
   const [isResetting, setIsResetting] = useState(false);
+  const [tenantOptions, setTenantOptions] = useState<Business[]>([]);
+  const [managedBusiness, setManagedBusiness] = useState<Business>(business);
+  const [integrationRecords, setIntegrationRecords] = useState<IntegrationStatus[]>([]);
+  const [configuringProvider, setConfiguringProvider] = useState<IntegrationProvider | null>(null);
+  const [configFields, setConfigFields] = useState<Record<string, string>>({});
+  const [isSavingIntegration, setIsSavingIntegration] = useState(false);
+
+  const integrationCatalog: Array<{ id: IntegrationProvider; name: string; category: IntegrationStatus['category']; description: string; fields: string[] }> = [
+    { id: 'google_calendar', name: 'Google Calendar', category: 'Calendar', description: 'Two-way appointment availability and conflict sync.', fields: ['client_id', 'client_secret', 'refresh_token'] },
+    { id: 'twilio_voice', name: 'Twilio Voice', category: 'Voice', description: 'Inbound calls, routing, recording and transcription.', fields: ['account_sid', 'auth_token', 'phone_number'] },
+    { id: 'twilio_sms', name: 'Twilio SMS', category: 'SMS', description: 'Missed-call text-back and SMS notifications.', fields: ['account_sid', 'auth_token', 'phone_number'] },
+    { id: 'whatsapp_business', name: 'Meta WhatsApp Cloud', category: 'WhatsApp', description: 'WhatsApp Business messaging for customer conversations.', fields: ['phone_number_id', 'business_account_id', 'access_token'] },
+    { id: 'resend_email', name: 'Resend Email API', category: 'Email', description: 'Transactional and follow-up email delivery.', fields: ['api_key', 'from_email'] },
+    { id: 'gemini_ai', name: 'Google Gemini', category: 'AI', description: 'AI reasoning, RAG and conversation intelligence.', fields: ['api_key', 'model'] },
+    { id: 'hubspot_crm', name: 'HubSpot CRM', category: 'CRM', description: 'Contact and deal synchronization.', fields: ['access_token', 'portal_id'] },
+    { id: 'salesforce_crm', name: 'Salesforce CRM', category: 'CRM', description: 'Contact and opportunity synchronization.', fields: ['client_id', 'client_secret', 'refresh_token'] },
+    { id: 'custom_webhook', name: 'Custom Webhook', category: 'Webhooks', description: 'Inbound or outbound JSON event delivery.', fields: ['webhook_url', 'signing_secret'] }
+  ];
+
+  const getIntegrationFor = (provider: IntegrationProvider, tenantId: string) =>
+    integrationRecords.find(item => item.id === provider && (item.tenantId || item.businessId) === tenantId);
+
+  const loadIntegrationWorkspace = async (tenant: Business) => {
+    setManagedBusiness(tenant);
+    const records = await getIntegrations(tenant.id);
+    setIntegrationRecords(records);
+  };
+
+  const openIntegrationConfig = (provider: IntegrationProvider) => {
+    const existing = getIntegrationFor(provider, managedBusiness.id);
+    setConfiguringProvider(provider);
+    setConfigFields(existing?.config || {});
+  };
+
+  const saveIntegrationConfig = async () => {
+    if (!configuringProvider) return;
+    const catalogItem = integrationCatalog.find(item => item.id === configuringProvider);
+    if (!catalogItem) return;
+    setIsSavingIntegration(true);
+    try {
+      const next: IntegrationStatus = {
+        id: configuringProvider,
+        name: catalogItem.name,
+        category: catalogItem.category,
+        description: catalogItem.description,
+        status: 'CONNECTED',
+        lastSync: new Date().toISOString(),
+        tenantId: managedBusiness.id,
+        businessId: managedBusiness.id,
+        config: configFields
+      };
+      const nextRecords = integrationRecords.some(item => item.id === configuringProvider)
+        ? integrationRecords.map(item => item.id === configuringProvider ? next : item)
+        : [...integrationRecords, next];
+      await saveIntegrations(nextRecords);
+      setIntegrationRecords(nextRecords);
+      setConfiguringProvider(null);
+      setConfigFields({});
+    } finally {
+      setIsSavingIntegration(false);
+    }
+  };
+
+  const disconnectIntegration = async (provider: IntegrationProvider) => {
+    await saveIntegrations(integrationRecords.filter(item => item.id !== provider));
+    setIntegrationRecords(prev => prev.filter(item => item.id !== provider));
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const tenants = await getAllBusinesses();
+      if (!mounted) return;
+      const selectable = tenants.filter(item => item.id !== 'platform');
+      setTenantOptions(selectable);
+      const initial = selectable.find(item => item.id === business.id) || business;
+      await loadIntegrationWorkspace(initial);
+    })();
+    return () => { mounted = false; };
+  }, [business.id]);
 
   // Editable business settings
   const [agentName, setAgentName] = useState(business.agentSettings.agentName);
@@ -132,154 +215,94 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
 
       {/* SUBTAB 1: INTEGRATIONS GATEWAYS */}
       {activeSubTab === 'integrations' && (
-        <div>
-          <div className="mb-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3 text-[11px] text-slate-300">
-            <span className="font-semibold text-blue-300">Integration availability:</span> The gateways below are available capabilities. A gateway is only active after its required credentials are configured and verified.
+        <div className="space-y-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-white">Tenant Integration Manager</h3>
+                <p className="text-xs text-slate-400 mt-1">Choose a tenant first, then connect, edit, or disconnect integrations for that tenant.</p>
+              </div>
+              <select value={managedBusiness.id} onChange={async e => {
+                const selected = tenantOptions.find(item => item.id === e.target.value);
+                if (selected) await loadIntegrationWorkspace(selected);
+              }} className="w-full lg:w-96 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
+                {tenantOptions.map(tenant => (
+                  <option key={tenant.id} value={tenant.id}>{tenant.name} • {tenant.id} {tenant.isDemo ? '• DEMO' : '• CUSTOMER'}</option>
+                ))}
+                {tenantOptions.length === 0 && <option value={managedBusiness.id}>{managedBusiness.name} • {managedBusiness.id}</option>}
+              </select>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+              <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">Platform Admin</span>
+              <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/20">Managing: {managedBusiness.name}</span>
+              <span className="px-2 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">Tenant ID: {managedBusiness.id}</span>
+            </div>
           </div>
+
+          <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3 text-[11px] text-slate-300">
+            <span className="font-semibold text-blue-300">Tenant-scoped integrations:</span> these cards are real controls. Select a tenant, then add or edit the integration credentials for that tenant only.
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Gemini AI */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-blue-600/20 text-blue-400 flex items-center justify-center font-black">
-                  <Cpu className="w-5 h-5" />
+            {integrationCatalog.map(item => {
+              const existing = getIntegrationFor(item.id, managedBusiness.id);
+              const connected = existing?.status === 'CONNECTED';
+              return (
+                <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{item.name}</h4>
+                      <p className="text-[10px] text-slate-400">{item.category}</p>
+                    </div>
+                    <span className={\`px-2 py-0.5 rounded-full text-[9px] font-extrabold border \${connected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}\`}>
+                      {connected ? 'CONNECTED' : 'NOT CONNECTED'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed min-h-[42px]">{item.description}</p>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => openIntegrationConfig(item.id)} className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                      {connected ? <Sliders className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                      <span>{connected ? 'Edit Integration' : 'Add Integration'}</span>
+                    </button>
+                    {connected && (
+                      <button onClick={() => disconnectIntegration(item.id)} className="px-3 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 cursor-pointer" title="Disconnect integration">
+                        <Unplug className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Google Gemini 2.5</h4>
-                  <p className="text-[10px] text-slate-400">Autonomous Reasoning & RAG</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                AVAILABLE
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Provides AI conversation intelligence and knowledge retrieval when a Gemini API key is configured.
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Requires: Gemini API key • Model: gemini-2.5-flash
-            </div>
+              );
+            })}
           </div>
 
-          {/* Twilio Telephony (US) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-rose-600/20 text-rose-400 flex items-center justify-center font-black">
-                  <Phone className="w-5 h-5" />
+          {configuringProvider && (
+            <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h3 className="text-base font-bold text-white">{integrationCatalog.find(item => item.id === configuringProvider)?.name}</h3>
+                    <p className="text-xs text-slate-400 mt-1">Configure for <span className="text-blue-300 font-semibold">{managedBusiness.name}</span> ({managedBusiness.id})</p>
+                  </div>
+                  <button onClick={() => setConfiguringProvider(null)} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"><X className="w-5 h-5" /></button>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Twilio Voice & SMS</h4>
-                  <p className="text-[10px] text-slate-400">US Telephony & 10DLC</p>
+                <div className="space-y-3">
+                  {integrationCatalog.find(item => item.id === configuringProvider)?.fields.map(field => (
+                    <div key={field}>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1 capitalize">{field.replace(/_/g, ' ')}</label>
+                      <input type={field.includes('secret') || field.includes('token') || field.includes('key') ? 'password' : 'text'} value={configFields[field] || ''} onChange={e => setConfigFields(prev => ({ ...prev, [field]: e.target.value }))} placeholder={\`Enter \${field.replace(/_/g, ' ')}\`} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500" />
+                    </div>
+                  ))}
                 </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                CONFIGURE TO ACTIVATE
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Supports inbound voice, missed-call recovery, and SMS when Twilio credentials are configured.
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Requires: Twilio account SID, auth token, and phone number
-            </div>
-          </div>
-
-          {/* WhatsApp Cloud API (India & Global) */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-600/20 text-emerald-400 flex items-center justify-center font-black">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Meta WhatsApp Cloud</h4>
-                  <p className="text-[10px] text-slate-400">Verified Business API</p>
+                <div className="mt-5 flex items-center justify-end gap-2">
+                  <button onClick={() => setConfiguringProvider(null)} className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 cursor-pointer">Cancel</button>
+                  <button onClick={saveIntegrationConfig} disabled={isSavingIntegration} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 disabled:opacity-50 cursor-pointer">
+                    <Save className="w-3.5 h-3.5" />
+                    <span>{isSavingIntegration ? 'Saving...' : 'Save Integration'}</span>
+                  </button>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CONFIGURE TO ACTIVATE</span>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Supports WhatsApp customer messaging and interactive messages when Meta WhatsApp credentials are configured.
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Requires: WhatsApp phone number ID and access token
-            </div>
-          </div>
-
-          {/* Google Calendar */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-600/20 text-amber-400 flex items-center justify-center font-black">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Google Calendar</h4>
-                  <p className="text-[10px] text-slate-400">2-Way Appointment Sync</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CONFIGURE TO ACTIVATE</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Supports appointment synchronization when Google Calendar credentials are configured.
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Requires: Google Calendar authorization • Target: primary calendar
-            </div>
-          </div>
-
-          {/* Resend / Transactional Email */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-purple-600/20 text-purple-400 flex items-center justify-center font-black">
-                  <Mail className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Resend Email API</h4>
-                  <p className="text-[10px] text-slate-400">Transactional Proposals</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">CONFIGURE TO ACTIVATE</span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Supports transactional email when a Resend API key is configured.
-            </p>
-            <div className="text-[10px] text-slate-500 font-mono bg-slate-950 p-2 rounded-xl border border-slate-800">
-              Requires: Resend API key • Delivery domain verification is provider-dependent
-            </div>
-          </div>
-
-          {/* Local / Cloud Persistence */}
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-black">
-                  <Database className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-white">Database Engine</h4>
-                  <p className="text-[10px] text-slate-400">Multi-Tenant Isolation</p>
-                </div>
-              </div>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                AVAILABLE
-              </span>
-            </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Provides local demo persistence with tenant data partitioned by <code>businessId</code>.
-            </p>
-            <button
-              onClick={handleResetData}
-              disabled={isResetting}
-              className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-rose-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>{isResetting ? 'Resetting...' : 'Re-seed Demo Database'}</span>
-            </button>
-          </div>
-          </div>
+          )}
         </div>
       )}
 
