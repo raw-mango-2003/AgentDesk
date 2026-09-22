@@ -65,7 +65,7 @@ export const AccountSetupPage: React.FC<AccountSetupPageProps> = ({
     setVerifying(true);
     setVerificationError(null);
     try {
-      const res = await fetch(`/api/setup-account/verify?token=${encodeURIComponent(tok)}`);
+      const res = await fetch(`/api/auth/setup-account/verify?token=${encodeURIComponent(tok)}`);
       const data = await res.json();
       if (data.success && data.valid) {
         setAccountInfo({
@@ -101,7 +101,7 @@ export const AccountSetupPage: React.FC<AccountSetupPageProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/setup-account', {
+      const res = await fetch('/api/auth/setup-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
