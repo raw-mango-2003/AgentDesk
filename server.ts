@@ -948,7 +948,7 @@ app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
 });
 
 // GET Automated Conversation Intelligence Test Suite Results
-app.get('/api/test/conversation-suite', (req: Request, res: Response) => {
+app.get('/api/test/conversation-suite', requirePlatformAdmin, (req: Request, res: Response) => {
   const clientIp = req.ip || '127.0.0.1';
   if (!checkRateLimit(clientIp, 30)) {
     return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
@@ -973,7 +973,7 @@ app.get('/api/test/conversation-suite', (req: Request, res: Response) => {
 });
 
 // POST Website Knowledge Smart Ingestion Endpoint
-app.post('/api/knowledge/ingest-website', async (req: Request, res: Response) => {
+app.post('/api/knowledge/ingest-website', requireTenantAccess, async (req: Request, res: Response) => {
   const clientIp = req.ip || '127.0.0.1';
   if (!checkRateLimit(clientIp, 10)) {
     return res.status(429).json({ error: 'Website ingestion rate limit exceeded. Please wait a minute.' });
@@ -1007,7 +1007,7 @@ app.post('/api/knowledge/ingest-website', async (req: Request, res: Response) =>
 });
 
 // POST Knowledge Conflict Detection Endpoint
-app.post('/api/knowledge/detect-conflicts', async (req: Request, res: Response) => {
+app.post('/api/knowledge/detect-conflicts', requireTenantAccess, async (req: Request, res: Response) => {
   const { businessId, knowledgeItems = [] } = req.body;
   const conflicts: any[] = [];
   const targetBizId = businessId || (process.env.NODE_ENV !== 'production' ? DEMO_BUSINESS_ID : null);
@@ -1742,16 +1742,47 @@ app.get('/api/agent/:agentId/widget-config', (req: Request, res: Response) => {
 
   return res.json({
     success: true,
-    agentId,
-    agent,
-    business,
+    agentId: agent.id,
+    tenantId: business.id,
+    agent: {
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      avatar: agent.avatar,
+      welcomeMessage: agent.welcomeMessage,
+      primaryColor: agent.primaryColor || business.primaryColor || '#2563eb',
+      secondaryColor: agent.secondaryColor || '#64748b',
+      tone: agent.tone || 'Professional & Warm',
+      voice: agent.voice || business.voice || 'Puck',
+      voiceGreeting: business.voiceGreeting || agent.welcomeMessage,
+      suggestedQuestions: Array.isArray(agent.suggestedQuestions) && agent.suggestedQuestions.length > 0
+        ? agent.suggestedQuestions
+        : [
+            'Tell me about ' + business.name,
+            'What services do you offer?',
+            'What is your pricing?',
+            'How can I get started?'
+          ],
+      leadCaptureEnabled: true,
+      humanHandoffEnabled: true
+    },
+    business: {
+      id: business.id,
+      name: business.name,
+      industry: business.industry,
+      website: business.website,
+      supportEmail: business.supportEmail,
+      phone: business.phone,
+      logo: business.logo,
+      primaryColor: business.primaryColor
+    },
     knowledgeCount: knowledge.length
   });
 });
 
 
 // GET Business Resolution Fail-Closed Regression Tests
-app.get('/api/test/business-resolution', (_req: Request, res: Response) => {
+app.get('/api/test/business-resolution', requirePlatformAdmin, (_req: Request, res: Response) => {
   const results = runBusinessResolutionSafetyTests(resolveBusinessAndKnowledge);
   const allPassed = results.every(r => r.passed);
   return res.status(allPassed ? 200 : 500).json({
@@ -1763,7 +1794,7 @@ app.get('/api/test/business-resolution', (_req: Request, res: Response) => {
 });
 
 // GET Strict Multi-Tenant Isolation Test Results
-app.get('/api/test/tenant-isolation', (_req: Request, res: Response) => {
+app.get('/api/test/tenant-isolation', requirePlatformAdmin, (_req: Request, res: Response) => {
   const isolationResults = runMultiTenantIsolationTestSuite();
   const firestoreAudit = verifyTenantFilterSecurity();
   const allPassed = isolationResults.every(r => r.passed) && firestoreAudit.allTestsPassed;
@@ -1778,7 +1809,7 @@ app.get('/api/test/tenant-isolation', (_req: Request, res: Response) => {
 });
 
 // GET Dedicated Firestore Tenant Filter & Middleware Verification
-app.get('/api/test/firestore-tenant-filter', (_req: Request, res: Response) => {
+app.get('/api/test/firestore-tenant-filter', requirePlatformAdmin, (_req: Request, res: Response) => {
   const audit = verifyTenantFilterSecurity();
   return res.json({
     success: true,
@@ -1789,7 +1820,7 @@ app.get('/api/test/firestore-tenant-filter', (_req: Request, res: Response) => {
 });
 
 // GET Automated Production Smoke Test Suite (PostgreSQL, Hashed Sessions, Integrations, Conversations, CSRF)
-app.get(['/api/test/production-smoke-tests', '/api/test/smoke-tests'], async (_req: Request, res: Response) => {
+app.get(['/api/test/production-smoke-tests', '/api/test/smoke-tests'], requirePlatformAdmin, async (_req: Request, res: Response) => {
   try {
     const results = await runProductionSmokeTests();
     return res.status(results.allPassed ? 200 : 500).json({
@@ -1809,7 +1840,43 @@ app.get('/api/business/:businessId/widget-config', (req: Request, res: Response)
   const { businessId } = req.params;
   const { business, agent } = resolveBusinessAndKnowledge(businessId);
   if (!business || !agent) return res.status(404).json({ success: false, error: 'Business not found.' });
-  return res.json({ success: true, business, agent });
+  return res.json({
+    success: true,
+    agentId: agent.id,
+    tenantId: business.id,
+    business: {
+      id: business.id,
+      name: business.name,
+      industry: business.industry,
+      website: business.website,
+      supportEmail: business.supportEmail,
+      phone: business.phone,
+      logo: business.logo,
+      primaryColor: business.primaryColor
+    },
+    agent: {
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      avatar: agent.avatar,
+      welcomeMessage: agent.welcomeMessage,
+      primaryColor: agent.primaryColor || business.primaryColor || '#2563eb',
+      secondaryColor: agent.secondaryColor || '#64748b',
+      tone: agent.tone || 'Professional & Warm',
+      voice: agent.voice || business.voice || 'Puck',
+      voiceGreeting: business.voiceGreeting || agent.welcomeMessage,
+      suggestedQuestions: Array.isArray(agent.suggestedQuestions) && agent.suggestedQuestions.length > 0
+        ? agent.suggestedQuestions
+        : [
+            'Tell me about ' + business.name,
+            'What services do you offer?',
+            'What is your pricing?',
+            'How can I get started?'
+          ],
+      leadCaptureEnabled: true,
+      humanHandoffEnabled: true
+    }
+  });
 });
 
 // Server-side Conversation Intelligence Engine Chat Endpoint
