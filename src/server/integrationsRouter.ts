@@ -279,6 +279,7 @@ integrationsRouter.delete(
       const provider = String(req.params.provider || '').trim().toLowerCase();
       if (!TENANT_INTEGRATION_FIELDS[provider]) return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
 
+      await integrationStore.syncWithPostgres();
       const deleted = integrationStore.deleteTenantIntegration(tenantId, provider);
       return res.json({ success: true, tenantId, provider, disconnected: deleted });
     } catch (err: any) {
