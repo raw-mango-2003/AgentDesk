@@ -63,8 +63,8 @@ interface TestResult {
 export const PlatformAutomationsDashboard: React.FC = () => {
   const [automations, setAutomations] = useState<AutomationRule[]>([]);
   const [stats, setStats] = useState<AutomationStats>({
-    totalAutomations: 28,
-    activeAutomations: 28,
+    totalAutomations: 0,
+    activeAutomations: 0,
     pausedAutomations: 0,
     emailsSentToday: 0,
     failureRate: 0.0
@@ -242,7 +242,7 @@ export const PlatformAutomationsDashboard: React.FC = () => {
           </div>
           <h2 className="text-xl font-bold mt-2 text-white">Platform Automation & Notification Engine</h2>
           <p className="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-            28 central automation workflows executing seamlessly via official Gmail API (hello.agentdesktech@gmail.com). Event deduplication, SHA-256 token security, and in-memory delivery audit logging.
+            Live automation workflows managed by the platform engine. Event deduplication, token security, retry handling, and delivery audit logging are reported from the active backend state.
           </p>
         </div>
 
