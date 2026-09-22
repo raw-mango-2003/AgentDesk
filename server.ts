@@ -95,7 +95,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   // Allow embedding within AI Studio and Google preview environments
   res.setHeader(
     'Content-Security-Policy',
-    "frame-ancestors 'self' https://*.ai.studio https://ai.studio https://*.google.com https://*.run.app;"
+    "frame-ancestors 'self' https://agentdesk.ai.studio https://ai.studio https://aistudio.google.com;"
   );
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
