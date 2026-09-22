@@ -199,10 +199,14 @@ export function setSessionCookie(res: Response, token: string, req?: Request) {
 
 export function clearSessionCookies(res: Response, req?: Request) {
   const isHttps = isRequestSecure(req);
-  const secure = isHttps ? '; Secure' : '';
+  const sessionAttributes = isHttps ? 'SameSite=None; Secure; Partitioned' : 'SameSite=Lax';
+  const csrfAttributes = isHttps ? 'SameSite=Lax; Secure' : 'SameSite=Lax';
+
+  // Deletion attributes mirror the cookies created by setSessionCookie so
+  // partitioned production sessions are actually removed on logout.
   res.setHeader('Set-Cookie', [
-    `agentdesk_session=; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-    `agentdesk_csrf=; Path=/; SameSite=Lax${secure}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    `agentdesk_session=; Path=/; HttpOnly; ${sessionAttributes}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+    `agentdesk_csrf=; Path=/; ${csrfAttributes}; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`
   ]);
 }
 
