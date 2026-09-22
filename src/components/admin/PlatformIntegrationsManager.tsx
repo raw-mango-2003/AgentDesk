@@ -282,15 +282,15 @@ export const PlatformIntegrationsManager: React.FC = () => {
     }
   };
 
-  const disconnectTenantIntegration = async (provider: string) => {
+  const deleteTenantIntegration = async (provider: string, name: string) => {
     if (!selectedTenantId) return;
-    if (!confirm('Disconnect this integration for the selected tenant?')) return;
+    if (!confirm(`Delete "${name}" for this tenant? This removes the stored integration configuration and credentials.`)) return;
     const data = await safeFetchJson(
       `/api/platform/tenant-integrations/${encodeURIComponent(selectedTenantId)}/${encodeURIComponent(provider)}`,
       { method: 'DELETE' }
     );
     if (!data.success) {
-      alert(data.error || 'Failed to disconnect integration.');
+      alert(data.error || 'Failed to delete integration.');
       return;
     }
     await loadTenantIntegrations(selectedTenantId);
@@ -838,7 +838,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                       <p className="text-xs text-slate-400 mt-4 min-h-8">{item.provider === 'gemini_ai' ? 'Optional built-in AI connector. You can also use any client-owned or custom AI API below.' : 'Configure this connector for the selected customer workspace.'}</p>
                       <div className="mt-4 flex gap-2">
                         <button onClick={() => openTenantIntegration(item.provider)} className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">{item.configured ? 'Configure' : 'Connect'}</button>
-                        {item.configured && <button onClick={() => disconnectTenantIntegration(item.provider)} className="px-3 rounded-xl bg-slate-950 text-slate-300 border border-slate-800 hover:border-rose-700" title="Disconnect"><Unplug className="w-3.5 h-3.5" /></button>}
+                        {item.configured && <button onClick={() => deleteTenantIntegration(item.provider, labels[item.provider] || item.provider)} className="px-3 rounded-xl bg-rose-950/30 text-rose-300 border border-rose-900/50 hover:border-rose-700" title="Delete integration"><Trash2 className="w-3.5 h-3.5" /></button>}
                       </div>
                     </div>
                   );
