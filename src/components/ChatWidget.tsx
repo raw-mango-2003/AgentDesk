@@ -24,7 +24,12 @@ import {
   PUBLIC_DEMO_TENANT_ID,
   PUBLIC_DEMO_AGENT_ID 
 } from '../data/demoBusiness';
-import { addLead, saveConversation, getKnowledgeItems, resolveAgentAndTenant, getAgentById } from '../lib/dbService';
+const loadDbService = () => import('../lib/dbService');
+const addLead = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['addLead']>) => loadDbService().then(module => module.addLead(...args));
+const saveConversation = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['saveConversation']>) => loadDbService().then(module => module.saveConversation(...args));
+const getKnowledgeItems = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['getKnowledgeItems']>) => loadDbService().then(module => module.getKnowledgeItems(...args));
+const resolveAgentAndTenant = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['resolveAgentAndTenant']>) => loadDbService().then(module => module.resolveAgentAndTenant(...args));
+const getAgentById = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['getAgentById']>) => loadDbService().then(module => module.getAgentById(...args));
 
 interface ChatWidgetProps {
   business?: Business;
