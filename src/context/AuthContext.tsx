@@ -318,14 +318,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    try {
-      await safeFetchJson('/api/auth/logout', { method: 'POST' });
-    } catch (e) {}
-    localStorage.removeItem('agentdesk_auth_user');
-    localStorage.removeItem('agentdesk_active_tenant_id');
+    // Clear the client session immediately so a slow or unavailable logout
+    // endpoint can never leave the UI stuck in the authenticated state.
     setCurrentUser(null);
     setCurrentTenant(null);
     setActiveBusinessIdState('');
+    localStorage.removeItem('agentdesk_auth_user');
+    localStorage.removeItem('agentdesk_active_tenant_id');
+
+    // Revoke the server-side HttpOnly session as well, but do not block the UI
+    // indefinitely if the API is unavailable.
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      await safeFetchJson('/api/auth/logout', {
+        method: 'POST',
+        signal: controller.signal
+      });
+      window.clearTimeout(timeoutId);
+    } catch (e) {
+      // The local auth state is already cleared. A later auth refresh will
+      // re-establish the authoritative state if the server session remains.
+    }
   };
 
   const isAuthenticated = !!currentUser;
