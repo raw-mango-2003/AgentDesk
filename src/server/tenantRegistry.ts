@@ -169,10 +169,10 @@ export async function persistAgentToPostgres(agent: any): Promise<void> {
   }
 }
 
-export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<void> {
+export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<boolean> {
   try {
     const isReady = await postgresClient.initialize();
-    if (!isReady) return;
+    if (!isReady) return false;
     const now = new Date().toISOString();
     await postgresClient.query(`
       INSERT INTO agentdesk_knowledge (id, tenant_id, business_id, title, content, type, category, status, active, metadata, created_at, updated_at)
@@ -200,8 +200,10 @@ export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<v
       item.createdAt || now,
       now
     ]);
+    return true;
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresPersistKnowledgeWarning]', err.message);
+    return false;
   }
 }
 
