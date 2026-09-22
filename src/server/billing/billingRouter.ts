@@ -163,7 +163,7 @@ billingRouter.get('/admin/payment-audit-logs', requirePlatformAdmin, (req: Reque
   }
 });
 
-billingRouter.post('/record-audit-event', (req: Request, res: Response) => {
+billingRouter.post('/record-audit-event', requirePlatformAdmin, (req: Request, res: Response) => {
   try {
     const { action, tenantId, customerEmail, provider, providerOrderId, providerPaymentId, amount, currency, status, method, details } = req.body;
     if (!action || !tenantId) {
