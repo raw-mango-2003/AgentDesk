@@ -916,6 +916,16 @@ app.get('/api/tenants/:tenantId', async (req: Request, res: Response) => {
   }
 });
 
+// Shallow liveness probe for platform load balancers. Keep this independent of external dependencies.
+app.get('/healthz', (_req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    service: 'AgentDesk',
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get(['/api/health', '/health'], (_req: Request, res: Response) => {
   const dbStatus = postgresClient.getStatus();
   const healthy = dbStatus.isConnected;
