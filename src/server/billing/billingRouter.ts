@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { billingService } from './billingService.js';
 import { CurrencyCode } from '../../types.js';
-import { requirePlatformAdmin, requireTenantAccess } from '../auth/authRouter.js';
+import { requirePlatformAdmin, requireTenantAccess, setSessionCookie } from '../auth/authRouter.js';
 import { paymentRateLimiter } from '../integrations/rateLimiter.js';
 import { serverBusinessesStore } from '../tenantRegistry.js';
 
@@ -350,13 +350,7 @@ billingRouter.post('/activate-promotional-checkout', paymentRateLimiter, async (
     });
 
     if (result.sessionToken) {
-      res.cookie('agentdesk_session', result.sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 7 * 24 * 60 * 60 * 1000
-      });
+      setSessionCookie(res, result.sessionToken, req);
     }
 
     return res.json(result);
