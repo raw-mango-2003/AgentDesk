@@ -1455,11 +1455,43 @@ export async function deleteKnowledgeDoc(arg1: string, arg2?: string): Promise<v
 
 export async function getIntegrations(businessId?: string): Promise<IntegrationStatus[]> {
   initializeDatabaseIfNeeded();
-  return getItem<IntegrationStatus[]>('integrations', SEED_INTEGRATIONS);
+  const all = getItem<IntegrationStatus[]>('integrations', SEED_INTEGRATIONS);
+  if (!businessId) return all;
+
+  const validTenant = normalizeTenantId(businessId);
+  return all.filter(integration => {
+    const owner = normalizeTenantId(integration.tenantId || integration.businessId || '');
+    // Legacy seed integrations without an owner are available as templates,
+    // but are not treated as configured for any tenant.
+    return owner === validTenant;
+  });
 }
 
 export async function saveIntegrations(list: IntegrationStatus[]): Promise<void> {
-  setItem('integrations', list);
+  const all = getItem<IntegrationStatus[]>('integrations', SEED_INTEGRATIONS);
+  for (const integration of list) {
+    const owner = normalizeTenantId(integration.tenantId || integration.businessId || '');
+    if (!owner) continue;
+
+    const record = {
+      ...integration,
+      tenantId: owner,
+      businessId: owner
+    };
+
+    const index = all.findIndex(existing =>
+      existing.id === record.id &&
+      normalizeTenantId(existing.tenantId || existing.businessId || '') === owner
+    );
+
+    if (index >= 0) {
+      all[index] = record;
+    } else {
+      all.push(record);
+    }
+  }
+  setItem('integrations', all);
+  notifyDataChanged('integrations');
 }
 
 export async function getDashboardWidgets(businessId?: string): Promise<DashboardWidgetConfig[]> {
