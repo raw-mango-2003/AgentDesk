@@ -63,7 +63,10 @@ import {
   getTenant, 
   getAllTenants,
   provisionCustomerTenant,
-  resetTenantQuota 
+  resetTenantQuota,
+  persistKnowledgeToPostgres,
+  deleteKnowledgeFromPostgres,
+  setTenant
 } from './src/server/tenantRegistry.js';
 
 // Safe environment directory resolver for both dev (tsx/ESM) and prod (esbuild/CJS)
@@ -1124,6 +1127,9 @@ app.post('/api/knowledge', requireTenantAccess, (req: Request, res: Response) =>
     list.unshift(newItem);
   }
   serverKnowledgeStore.set(normTenantId, list);
+  persistKnowledgeToPostgres(newItem).catch((error) => {
+    console.warn('[Knowledge Engine] PostgreSQL persistence failed:', error?.message || error);
+  });
 
   console.log(`[Knowledge Engine] Saved item (${newItem.id}) for tenant. Total items: ${list.length}`);
 
@@ -1167,6 +1173,9 @@ app.put('/api/knowledge/:id', requireTenantAccess, (req: Request, res: Response)
 
   list[idx] = updatedItem;
   serverKnowledgeStore.set(normTenantId, list);
+  persistKnowledgeToPostgres(updatedItem).catch((error) => {
+    console.warn('[Knowledge Engine] PostgreSQL persistence failed:', error?.message || error);
+  });
 
   console.log(`[Knowledge Engine] Updated knowledge item (${id}) for tenant.`);
 
@@ -1195,6 +1204,9 @@ app.delete(['/api/knowledge/:tenantId/:id', '/api/knowledge/:id'], requireTenant
   }
 
   serverKnowledgeStore.set(normTenantId, filtered);
+  deleteKnowledgeFromPostgres(id).catch((error) => {
+    console.warn('[Knowledge Engine] PostgreSQL deletion failed:', error?.message || error);
+  });
   console.log(`[Knowledge Engine] Deleted knowledge item (${id}) for tenant. Remaining: ${filtered.length}`);
 
   return res.json({
@@ -1221,8 +1233,7 @@ app.post('/api/admin/businesses', requirePlatformAdmin, (req: Request, res: Resp
   }
   const normId = (businessData.id || '').trim().toLowerCase();
   const existing = serverBusinessesStore.get(normId) || {};
-  const merged = { ...existing, ...businessData, id: normId };
-  serverBusinessesStore.set(normId, merged);
+  const merged = setTenant(normId, { ...businessData, id: normId });
   console.log(`[Admin Tenant Registry] Synced business (${normId})`);
   return res.json({
     success: true,
