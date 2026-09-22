@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { 
   EventTrigger, 
   AutomationRule, 
@@ -313,9 +314,23 @@ export class AutomationEngine implements IAutomationEngine {
   public async emit(event: EventTrigger, payload: Record<string, any>): Promise<AutomationDispatchResult> {
     const eventId = payload.eventId || `evt_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const recipient = payload.email || payload.to || payload.userId || 'system';
-    
-    // Idempotency check: eventId + notificationType + recipient
-    const idempotencyKey = `${eventId}_${event}_${recipient}`;
+
+    // Idempotency is caller-controlled when possible. For legacy callers that do not
+    // provide an event ID, derive a stable fingerprint from the event, recipient and
+    // payload so an identical event is still deduplicated within the TTL window.
+    const canonicalPayload = Object.keys(payload)
+      .filter(key => key !== 'eventId' && key !== 'idempotencyKey')
+      .sort()
+      .reduce<Record<string, any>>((acc, key) => {
+        acc[key] = payload[key];
+        return acc;
+      }, {});
+    const idempotencySource = payload.idempotencyKey || payload.eventId || JSON.stringify({
+      event,
+      recipient,
+      payload: canonicalPayload
+    });
+    const idempotencyKey = `auto_${crypto.createHash('sha256').update(String(idempotencySource)).digest('hex')}`;
 
     if (this.idempotencyCache.has(idempotencyKey)) {
       console.log(`[AutomationEngine:Idempotency] Skipped duplicate event execution: ${idempotencyKey}`);
