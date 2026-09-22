@@ -567,9 +567,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span>AgentDesk</span>
             <span className="text-[10px] text-slate-500 font-normal">by AgentDesk Technologies • © {new Date().getFullYear()}</span>
           </div>
-          <div className="flex items-center gap-6 text-[11px] text-slate-400">
-            <span>Security controls documented</span>
-            <span>Privacy & messaging compliance controls</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-2 text-[11px] text-slate-400">
+            <a href="/terms" className="hover:text-white underline underline-offset-4">Terms of Use</a>
+            <a href="/privacy" className="hover:text-white underline underline-offset-4">Privacy Policy</a>
+            <a href="/refund-policy" className="hover:text-white underline underline-offset-4">Refund & Cancellation</a>
+            <a href="/acceptable-use" className="hover:text-white underline underline-offset-4">Acceptable Use</a>
+            <a href="/cookie-policy" className="hover:text-white underline underline-offset-4">Cookie Policy</a>
             {onNavigatePlatformLogin && (
               <button
                 onClick={onNavigatePlatformLogin}
