@@ -58,7 +58,9 @@ export type EmailTemplateName =
   | 'api_key_created'
   | 'api_key_revoked'
   | 'new_device_login'
-  | 'admin_credential_changed';
+  | 'admin_credential_changed'
+  // Lead notifications
+  | 'new_lead_received';
 
 export interface EmailDeliveryRecord {
   id: string;
