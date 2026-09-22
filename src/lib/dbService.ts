@@ -586,6 +586,17 @@ export async function createCustomerTenant(params: {
 export async function getLeads(businessId: string): Promise<Lead[]> {
   initializeDatabaseIfNeeded();
   const validTenant = validateTenantContext(businessId, 'leads', 'GET_LEADS');
+
+  // Production dashboard reads the server PostgreSQL source of truth.
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    try {
+      const data = await safeFetchJson('/api/leads', { headers: { 'Accept': 'application/json' } });
+      if (data?.success && Array.isArray(data.leads)) return data.leads as Lead[];
+    } catch (err) {
+      console.warn('[getLeads] Server lead API unavailable:', (err as any)?.message || err);
+    }
+  }
+
   const allLeads = getItem<Lead[]>('leads', SEED_LEADS);
   return tenantFilterArray(allLeads, validTenant, 'leads');
 }
@@ -593,44 +604,44 @@ export async function getLeads(businessId: string): Promise<Lead[]> {
 export async function saveLead(lead: Partial<Lead> & { businessId: string; name: string }): Promise<Lead> {
   const targetTenant = lead.tenant_id || lead.tenantId || lead.businessId;
   const validTenant = validateTenantContext(targetTenant, 'leads', 'SAVE_LEAD');
+
+  // Website chat submits directly to the tenant-scoped server API.
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/leads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ ...lead, tenantId: validTenant, businessId: validTenant })
+    });
+    if (data?.success && data.lead) return data.lead as Lead;
+    throw new Error(data?.error || 'Unable to save lead.');
+  }
+
   const allLeads = getItem<Lead[]>('leads', SEED_LEADS);
   const index = lead.id ? allLeads.findIndex(l => l.id === lead.id) : -1;
   let savedLead: Lead;
 
   if (index >= 0) {
     tenantAssertDocOwnership(allLeads[index], validTenant, 'leads', lead.id);
-    savedLead = tenantValidateEntityMutation({ 
-      ...allLeads[index], 
-      ...lead, 
-      updatedAt: new Date().toISOString() 
+    savedLead = tenantValidateEntityMutation({
+      ...allLeads[index], ...lead, updatedAt: new Date().toISOString()
     }, validTenant, 'leads') as Lead;
     allLeads[index] = savedLead;
   } else {
     const rawLead: Lead = {
-      score: 80,
-      scoreCategory: 'HOT',
-      value: 1200,
-      email: '',
-      phone: '',
-      status: 'new',
-      source: 'website_chat',
-      ...lead,
-      id: lead.id || `lead-${Date.now()}`,
-      businessId: validTenant,
+      score: 80, scoreCategory: 'HOT', value: 1200, email: '', phone: '',
+      status: 'new', source: 'website_chat', ...lead,
+      id: lead.id || 'lead-' + Date.now(), businessId: validTenant,
       createdAt: lead.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     } as Lead;
     savedLead = tenantValidateEntityMutation(rawLead, validTenant, 'leads') as Lead;
     allLeads.unshift(savedLead);
-
-    // Auto-sync Contact in CRM for this lead
     await ensureContactForLead(savedLead);
   }
 
   setItem('leads', allLeads);
   return savedLead;
 }
-
 export const addLead = saveLead;
 
 export async function deleteLead(leadId: string, businessId?: string): Promise<void> {
