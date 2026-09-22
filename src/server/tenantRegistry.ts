@@ -207,13 +207,15 @@ export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<b
   }
 }
 
-export async function deleteKnowledgeFromPostgres(itemId: string): Promise<void> {
+export async function deleteKnowledgeFromPostgres(itemId: string): Promise<boolean> {
   try {
     const isReady = await postgresClient.initialize();
-    if (!isReady) return;
+    if (!isReady) return false;
     await postgresClient.query(`DELETE FROM agentdesk_knowledge WHERE id = $1`, [itemId]);
+    return true;
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresDeleteKnowledgeWarning]', err.message);
+    return false;
   }
 }
 
