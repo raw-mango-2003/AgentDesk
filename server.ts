@@ -343,7 +343,7 @@ function escapeEmailHtml(value: string): string {
 }
 
 function isValidEmailAddress(value: string): boolean {
-  return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 async function sendAgentDeskTransactionalEmail(params: {
@@ -449,7 +449,7 @@ app.post('/api/public/deployment-request', async (req: Request, res: Response) =
       requestId: escapeEmailHtml(requestId), name: escapeEmailHtml(name), email: escapeEmailHtml(email),
       phone: escapeEmailHtml(phone || 'Not provided'), company: escapeEmailHtml(company || 'Not provided'),
       locationsCount: escapeEmailHtml(locationsCount), callVolume: escapeEmailHtml(callVolume || 'Not provided'),
-      requirements: escapeEmailHtml(requirements || 'None provided').replace(/\\n/g, '<br />'), planName: escapeEmailHtml(planName)
+      requirements: escapeEmailHtml(requirements || 'None provided').replace(/\n/g, '<br />'), planName: escapeEmailHtml(planName)
     };
 
     const adminHtml = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.6">' +
