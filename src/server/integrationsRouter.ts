@@ -405,8 +405,10 @@ integrationsRouter.delete(
   async (req: Request, res: Response) => {
     try {
       const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
-      const customId = safeCustomId(String(req.params.customId || ''));
+      const customId = customKeyForTenant(tenantId, String(req.params.customId || ''));
       if (!tenantId || !customId) return res.status(400).json({ success: false, error: 'Tenant and integration ID are required.' });
+      const { getTenant } = await import('./tenantRegistry.js');
+      if (!getTenant(tenantId)) return res.status(404).json({ success: false, error: 'Tenant not found.' });
       const deleted = integrationStore.deleteTenantCustomIntegration(tenantId, customId);
       if (!deleted) return res.status(404).json({ success: false, error: 'Custom integration not found.' });
       return res.json({ success: true });
