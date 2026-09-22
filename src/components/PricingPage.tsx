@@ -640,6 +640,19 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         </div>
       </section>
 
+      <footer className="border-t border-slate-800 mt-12 py-8 px-4 sm:px-8 text-center text-xs text-slate-500">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span>AgentDesk Technologies • © {new Date().getFullYear()}</span>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px]">
+            <a href="/terms" className="hover:text-white underline underline-offset-4">Terms of Use</a>
+            <a href="/privacy" className="hover:text-white underline underline-offset-4">Privacy Policy</a>
+            <a href="/refund-policy" className="hover:text-white underline underline-offset-4">Refund & Cancellation</a>
+            <a href="/acceptable-use" className="hover:text-white underline underline-offset-4">Acceptable Use</a>
+            <a href="/cookie-policy" className="hover:text-white underline underline-offset-4">Cookie Policy</a>
+          </nav>
+        </div>
+      </footer>
+
       {/* AgentDesk Checkout Modal (Starter, Growth, Scale) */}
       <AgentDeskCheckoutModal
         isOpen={checkoutModal.isOpen}
