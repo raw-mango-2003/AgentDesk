@@ -738,6 +738,8 @@ export interface IntegrationStatus {
   description: string;
   lastSync?: string;
   config?: Record<string, string>;
+  tenantId?: string;
+  businessId?: string;
 }
 
 // ----------------------------------------------------
