@@ -33,7 +33,6 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'integrations' | 'localization' | 'audit'>('integrations');
   const [isResetting, setIsResetting] = useState(false);
-  const [managedBusiness, setManagedBusiness] = useState<Business>(business);
   const [integrationRecords, setIntegrationRecords] = useState<IntegrationStatus[]>([]);
   const [configuringProvider, setConfiguringProvider] = useState<IntegrationProvider | null>(null);
   const [configFields, setConfigFields] = useState<Record<string, string>>({});
@@ -55,7 +54,6 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
     integrationRecords.find(item => item.id === provider && (item.tenantId || item.businessId) === business.id);
 
   const loadIntegrationWorkspace = async () => {
-    setManagedBusiness(business);
     setIntegrationRecords(await getIntegrations(business.id));
   };
 
