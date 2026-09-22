@@ -1568,8 +1568,14 @@ tenantRouter.get('/tenants/:tenantId', async (req: Request, res: Response) => {
     }
     const norm = tenantId.trim().toLowerCase();
 
-    if (norm === PUBLIC_DEMO_TENANT_ID.toLowerCase()) {
+    if (
+      norm === PUBLIC_DEMO_TENANT_ID.toLowerCase() ||
+      norm === PUBLIC_DEMO_AGENT_ID.toLowerCase()
+    ) {
       const demo = getTenant(PUBLIC_DEMO_TENANT_ID);
+      if (!demo) {
+        return res.status(404).json({ success: false, error: 'Public demo tenant not found' });
+      }
       return res.json({ success: true, tenant: demo });
     }
 
