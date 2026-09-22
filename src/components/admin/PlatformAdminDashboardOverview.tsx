@@ -18,8 +18,7 @@ import {
   Activity,
   ChevronRight
 } from 'lucide-react';
-import { Business, AIAgent, AnalyticsSummary } from '../../types';
-import { getAnalyticsSummary, safeFetchJson } from '../../lib/dbService';
+import { Business, AIAgent } from '../../types';
 
 interface PlatformAdminDashboardOverviewProps {
   businesses: Business[];
@@ -44,51 +43,11 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
   onOpenCreateBusiness,
   onOpenInviteOwner
 }) => {
-  const [tenantAnalytics, setTenantAnalytics] = React.useState<Record<string, AnalyticsSummary>>({});
-  const [systemHealth, setSystemHealth] = React.useState<{ status: string; uptimeSeconds?: number } | null>(null);
-
   const activeBusinessesCount = businesses.filter(b => ['active', 'trial', 'ACTIVE', 'TRIAL'].includes(String(b.status))).length;
   const activeSubscriptions = subscriptionsList.filter((s: any) => ['active', 'ACTIVE', 'trial', 'TRIAL'].includes(String(s.status))).length;
   const actualSubsCount = subscriptionsCount ?? activeSubscriptions;
-
-  React.useEffect(() => {
-    let cancelled = false;
-    const loadOperationalStats = async () => {
-      const results = await Promise.all(
-        businesses.map(async (business) => {
-          try {
-            return [business.id, await getAnalyticsSummary(business.id)] as const;
-          } catch {
-            return null;
-          }
-        })
-      );
-      if (cancelled) return;
-      const next: Record<string, AnalyticsSummary> = {};
-      results.forEach((result) => {
-        if (result) next[result[0]] = result[1];
-      });
-      setTenantAnalytics(next);
-      try {
-        const health = await safeFetchJson('/api/platform/system-health');
-        if (!cancelled && health?.success) {
-          setSystemHealth({ status: health.environment ? 'HEALTHY' : 'UNKNOWN', uptimeSeconds: health.uptimeSeconds });
-        }
-      } catch {
-        if (!cancelled) setSystemHealth(null);
-      }
-    };
-    if (businesses.length > 0) loadOperationalStats();
-    else {
-      setTenantAnalytics({});
-      setSystemHealth(null);
-    }
-    return () => { cancelled = true; };
-  }, [businesses]);
-
-  const analyticsValues = Object.values(tenantAnalytics);
-  const totalConversations = analyticsValues.reduce((sum, item) => sum + item.totalConversations, 0);
-  const leadsCaptured = analyticsValues.reduce((sum, item) => sum + (item.leadsCapturedCount || 0), 0);
+  const totalConversations = businesses.reduce((sum, b) => sum + (b.aiConversations || 0), 0);
+  const leadsCaptured = 0;
   const activeBillingRecords = subscriptionsList.filter((s: any) => ['active', 'ACTIVE', 'trial', 'TRIAL'].includes(String(s.status)));
   const billingCurrencies = Array.from(new Set(activeBillingRecords.map((s: any) => s.currency).filter(Boolean)));
   const mrrAmount = activeBillingRecords.reduce((sum: number, s: any) => sum + (Number(s.monthlyFee) || Number(s.recurring_base_amount) || 0), 0);
@@ -138,8 +97,8 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
     {
       id: 'ai-uptime',
       title: 'AI Uptime',
-      value: systemHealth?.status === 'HEALTHY' ? 'Healthy' : 'N/A',
-      subtext: systemHealth?.uptimeSeconds !== undefined ? `Uptime ${Math.floor(systemHealth.uptimeSeconds / 3600)}h` : 'Live health check unavailable',
+      value: 'N/A',
+      subtext: 'Live uptime telemetry available in Health & Diagnostics',
       icon: Activity,
       color: 'indigo',
       sectionKey: 'system_health'
@@ -156,7 +115,7 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
     {
       id: 'active-subscriptions',
       title: 'Active Subscriptions',
-      value: actualSubsCount.toString(),
+      value: (subscriptionsCount || businesses.length).toString(),
       subtext: 'Razorpay recurring plans & checkout',
       icon: CreditCard,
       color: 'blue',
@@ -192,7 +151,7 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
     {
       id: 'open-disputes',
       title: 'Open Disputes',
-      value: openDisputesCount === 0 ? 'N/A' : openDisputesCount.toString(),
+      value: 'N/A',
       subtext: 'Provider dispute feed not connected',
       icon: ShieldCheck,
       color: 'emerald',
