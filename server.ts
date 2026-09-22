@@ -353,7 +353,7 @@ app.post('/api/leads', async (req: Request, res: Response) => {
     const tenantId = String(body.tenantId || body.businessId || '').trim().toLowerCase();
     const agentId = String(body.agentId || '').trim().toLowerCase();
     const agent = agentId ? serverAgentsStore.get(agentId) : null;
-    if (!tenantId || (agent && String(agent.tenantId || '').toLowerCase() !== tenantId)) {
+    if (!tenantId || !agent || String(agent.tenantId || '').toLowerCase() !== tenantId) {
       return res.status(400).json({ success: false, error: 'Valid tenant and agent context are required.' });
     }
     const business = getTenant(tenantId);
