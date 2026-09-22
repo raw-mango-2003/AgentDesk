@@ -2138,7 +2138,16 @@ integrationsRouter.post('/platform/automations/test-suite', requirePlatformAdmin
 
     // 2. Generate setup token
     const rawSetupToken = createAccountSetupToken(testOwnerId);
-    const tokenSaved = invitedUser.setupTokenHash === hashToken(rawSetupToken);
+
+    // updateUser() replaces the cached UserRecord object rather than mutating
+    // the original reference. Read the authoritative cached record after token
+    // generation instead of checking the stale invitedUser object.
+    const tokenizedOwner = usersByIdStore.get(testOwnerId);
+    const tokenSaved =
+      !!tokenizedOwner?.setupTokenHash &&
+      tokenizedOwner.setupTokenHash === hashToken(rawSetupToken) &&
+      !!tokenizedOwner.setupTokenExpires &&
+      tokenizedOwner.setupTokenExpires > Date.now();
     const foundByToken = findUserBySetupToken(rawSetupToken);
 
     // 3. Complete setup
@@ -2151,7 +2160,11 @@ integrationsRouter.post('/platform/automations/test-suite', requirePlatformAdmin
       });
     }
     const finalOwner = usersByIdStore.get(testOwnerId);
-    const setupValid = tokenSaved && finalOwner?.status === 'ACTIVE' && finalOwner?.emailVerified === true;
+    const setupValid =
+      tokenSaved &&
+      !!foundByToken &&
+      finalOwner?.status === 'ACTIVE' &&
+      finalOwner?.emailVerified === true;
 
     testResults.push({
       name: 'Business Owner Account Creation & Setup Flow',
