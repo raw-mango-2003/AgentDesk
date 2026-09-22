@@ -18,7 +18,8 @@ import {
   Lock,
   Plus,
   Save,
-  Unplug
+  Unplug,
+  X
 } from 'lucide-react';
 import { Business, AuditLog, IntegrationStatus, IntegrationProvider } from '../types';
 import { getAuditLogs, getBusinesses, getAllBusinesses, getIntegrations, saveIntegrations, saveBusiness, resetDatabaseToSeed, addNotification } from '../lib/dbService';
@@ -229,7 +230,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {integrationCatalog.map(item => {
-              const existing = getIntegrationFor(item.id, business.id);
+              const existing = getIntegrationFor(item.id);
               const connected = existing?.status === 'CONNECTED';
               return (
                 <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
