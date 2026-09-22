@@ -35,6 +35,7 @@ import { ForcedPasswordChangePage } from './components/auth/ForcedPasswordChange
 import { AccountSetupPage } from './components/auth/AccountSetupPage';
 import { PasswordResetPage } from './components/auth/PasswordResetPage';
 import { EmailVerificationPage } from './components/auth/EmailVerificationPage';
+import { LegalPage } from './components/LegalPage';
 import { Business, AppNotification } from './types';
 import { getCountryMetadata } from './lib/localization';
 import { 
@@ -101,7 +102,7 @@ export type SaaSNavTab =
   | 'admin'
   | 'account_credentials';
 
-export type AppView = 'landing' | 'pricing' | 'login' | 'platform_login' | 'onboarding' | 'checkout' | 'dashboard' | 'setup_account' | 'reset_password' | 'verify_email';
+export type AppView = 'landing' | 'pricing' | 'login' | 'platform_login' | 'onboarding' | 'checkout' | 'dashboard' | 'setup_account' | 'reset_password' | 'verify_email' | 'terms' | 'privacy' | 'refunds' | 'acceptable_use' | 'cookies';
 
 export function resolveAppRoute(pathname: string, hash: string): AppView {
   const path = pathname.toLowerCase();
@@ -110,6 +111,11 @@ export function resolveAppRoute(pathname: string, hash: string): AppView {
   if (path === '/setup-account' || normalizedHash.startsWith('#setup-account') || normalizedHash.startsWith('#/setup-account')) return 'setup_account';
   if (path === '/reset-password' || normalizedHash.startsWith('#reset-password') || normalizedHash.startsWith('#/reset-password')) return 'reset_password';
   if (path === '/verify-email' || normalizedHash.startsWith('#verify-email') || normalizedHash.startsWith('#/verify-email')) return 'verify_email';
+  if (path === '/terms' || normalizedHash === '#terms') return 'terms';
+  if (path === '/privacy' || normalizedHash === '#privacy') return 'privacy';
+  if (path === '/refund-policy' || normalizedHash === '#refund-policy') return 'refunds';
+  if (path === '/acceptable-use' || normalizedHash === '#acceptable-use') return 'acceptable_use';
+  if (path === '/cookie-policy' || normalizedHash === '#cookie-policy') return 'cookies';
   if (path === '/pricing' || normalizedHash === '#pricing') return 'pricing';
   if (path === '/login' || normalizedHash === '#login') return 'login';
   if (path === '/platform/login' || normalizedHash === '#platform-login' || normalizedHash === '#platform/login') return 'platform_login';
@@ -507,7 +513,7 @@ export default function App() {
     let target = view;
     if (view === 'get-started' || view === 'signup') target = 'checkout';
 
-    const validViews: AppView[] = ['landing', 'pricing', 'login', 'platform_login', 'onboarding', 'checkout', 'dashboard'];
+    const validViews: AppView[] = ['landing', 'pricing', 'login', 'platform_login', 'onboarding', 'checkout', 'dashboard', 'terms', 'privacy', 'refunds', 'acceptable_use', 'cookies'];
     if (!validViews.includes(target as AppView)) return;
 
     if (target === 'dashboard' && !currentUser) {
@@ -526,7 +532,12 @@ export default function App() {
       dashboard: '/dashboard',
       setup_account: '/setup-account',
       reset_password: '/reset-password',
-      verify_email: '/verify-email'
+      verify_email: '/verify-email',
+      terms: '/terms',
+      privacy: '/privacy',
+      refunds: '/refund-policy',
+      acceptable_use: '/acceptable-use',
+      cookies: '/cookie-policy'
     };
     const nextPath = pathMap[target as AppView] || '/';
 
@@ -595,6 +606,16 @@ export default function App() {
             onSuccess={() => handleNavigate('login')}
             onNavigateLogin={() => handleNavigate('login')}
           />
+        ) : currentView === 'terms' ? (
+          <LegalPage documentId="terms" onBack={() => handleNavigate('landing')} />
+        ) : currentView === 'privacy' ? (
+          <LegalPage documentId="privacy" onBack={() => handleNavigate('landing')} />
+        ) : currentView === 'refunds' ? (
+          <LegalPage documentId="refunds" onBack={() => handleNavigate('landing')} />
+        ) : currentView === 'acceptable_use' ? (
+          <LegalPage documentId="acceptable-use" onBack={() => handleNavigate('landing')} />
+        ) : currentView === 'cookies' ? (
+          <LegalPage documentId="cookies" onBack={() => handleNavigate('landing')} />
         ) : currentView === 'login' ? (
           <BusinessLoginPage
             onLoginSuccess={() => handleNavigate('dashboard')}
