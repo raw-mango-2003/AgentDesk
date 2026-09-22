@@ -14,7 +14,6 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { CurrencyCode, formatPrice, PlanConfig, getPlanConfig } from '../data/pricing';
-import { addAuditLog, addNotification } from '../lib/dbService';
 
 interface ContactSalesModalProps {
   isOpen: boolean;
@@ -53,26 +52,19 @@ export const ContactSalesModal: React.FC<ContactSalesModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Create notification & audit log for enterprise sales team
-      await Promise.all([
-        addAuditLog({
-          businessId: 'platform',
-          actorEmail: email,
-          action: 'SALES_INQUIRY',
-          entity: plan.name,
-          details: `Inquiry from ${name} (${company}) for ${plan.name}. Call Vol: ${callVolume}, Locations: ${locationsCount}. Details: ${requirements || 'None provided'}`
-        }),
-        addNotification({
-          businessId: 'summit-home-services',
-          type: 'system',
-          title: `New Sales Inquiry: ${plan.name}`,
-          message: `${name} from ${company || 'Enterprise Client'} requested deployment info for ${plan.name}. Email: ${email}, Phone: ${phone || 'N/A'}`
-        })
-      ]);
-
+      const response = await fetch('/api/public/deployment-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, company, locationsCount, callVolume, requirements, planName: plan.name })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'We could not submit your deployment request. Please try again.');
+      }
       setIsSuccess(true);
-    } catch (err) {
-      console.error('Error submitting sales inquiry:', err);
+    } catch (err: any) {
+      console.error('Error submitting deployment request:', err);
+      window.alert(err?.message || 'We could not submit your deployment request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
