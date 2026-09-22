@@ -357,6 +357,8 @@ integrationsRouter.post(
     try {
       const tenantId = String(req.body?.tenantId || '').trim().toLowerCase();
       const customId = customKeyForTenant(tenantId, String(req.params.customId || ''));
+      const { getTenant } = await import('./tenantRegistry.js');
+      if (!tenantId || !getTenant(tenantId)) return res.status(404).json({ success: false, error: 'Tenant not found.' });
       const config = integrationStore.getTenantCustomIntegration(tenantId, customId);
       if (!config.name) return res.status(404).json({ success: false, error: 'Custom integration not found.' });
       const base = validateCustomUrl(config.base_url);
@@ -414,17 +416,6 @@ integrationsRouter.delete(
   }
 );
 
-
-  google_calendar: ['client_id', 'client_secret', 'refresh_token'],
-  twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
-  twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
-  whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
-  resend_email: ['api_key', 'from_email'],
-  gemini_ai: ['api_key', 'model'],
-  hubspot_crm: ['access_token', 'portal_id'],
-  salesforce_crm: ['client_id', 'client_secret', 'refresh_token'],
-  custom_webhook: ['webhook_url', 'signing_secret']
-};
 
 function maskTenantIntegrationConfig(config: Record<string, string>): Record<string, string> {
   const masked: Record<string, string> = {};
