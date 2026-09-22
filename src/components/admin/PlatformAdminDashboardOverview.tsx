@@ -94,8 +94,8 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
   const billingCurrencies = Array.from(new Set(activeBillingRecords.map((s: any) => s.currency).filter(Boolean)));
   const mrrAmount = activeBillingRecords.reduce((sum: number, s: any) => sum + (Number(s.monthlyFee) || Number(s.recurring_base_amount) || 0), 0);
   const mrrDisplay = billingCurrencies.length === 1
-    ? `${billingCurrencies[0] === 'INR' ? '₹' : billingCurrencies[0] === 'GBP' ? '£' : '
-
+    ? (billingCurrencies[0] === 'INR' ? '₹' : billingCurrencies[0] === 'GBP' ? '£' : '$') + mrrAmount.toLocaleString()
+    : billingCurrencies.length > 1 ? 'Mixed' : 'N/A';
   // Payments today
   const todayDateString = new Date().toISOString().split('T')[0];
   const paymentsToday = paymentRecords.filter(p => {
