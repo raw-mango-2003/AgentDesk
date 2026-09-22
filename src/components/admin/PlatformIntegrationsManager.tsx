@@ -28,7 +28,15 @@ import {
   AlertTriangle,
   Plus,
   Save,
-  Unplug
+  Unplug,
+  Trash2,
+  Search,
+  TestTube2,
+  Edit3,
+  Globe,
+  Bot,
+  Database,
+  Webhook
 } from 'lucide-react';
 
 interface IntegrationItem {
@@ -68,6 +76,18 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const [tenantOptions, setTenantOptions] = useState<any[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState('');
   const [tenantIntegrations, setTenantIntegrations] = useState<any[]>([]);
+  const [customIntegrations, setCustomIntegrations] = useState<any[]>([]);
+  const [integrationSearch, setIntegrationSearch] = useState('');
+  const [integrationCategory, setIntegrationCategory] = useState('All');
+  const [showCustomIntegrationModal, setShowCustomIntegrationModal] = useState(false);
+  const [editingCustomIntegrationId, setEditingCustomIntegrationId] = useState<string | null>(null);
+  const [testingCustomIntegrationId, setTestingCustomIntegrationId] = useState<string | null>(null);
+  const [customTestResult, setCustomTestResult] = useState<any>(null);
+  const [customIntegrationForm, setCustomIntegrationForm] = useState<Record<string, string>>({
+    name: '', category: 'AI', description: '', base_url: '', auth_type: 'bearer', api_key: '',
+    api_key_header: 'X-API-Key', api_key_prefix: '', username: '', password: '',
+    test_method: 'GET', test_path: '/', model: ''
+  });
   const [tenantIntegrationProvider, setTenantIntegrationProvider] = useState<string | null>(null);
   const [tenantIntegrationFields, setTenantIntegrationFields] = useState<Record<string, string>>({});
   const [savingTenantIntegration, setSavingTenantIntegration] = useState(false);
@@ -123,8 +143,92 @@ export const PlatformIntegrationsManager: React.FC = () => {
 
   const loadTenantIntegrations = async (tenantId: string) => {
     if (!tenantId) return;
-    const data = await safeFetchJson(`/api/platform/tenant-integrations?tenantId=${encodeURIComponent(tenantId)}`);
+    const [data, customData] = await Promise.all([
+      safeFetchJson(`/api/platform/tenant-integrations?tenantId=${encodeURIComponent(tenantId)}`),
+      safeFetchJson(`/api/platform/tenant-integrations/custom?tenantId=${encodeURIComponent(tenantId)}`)
+    ]);
     if (data.success) setTenantIntegrations(data.integrations || []);
+    if (customData.success) setCustomIntegrations(customData.integrations || []);
+  };
+
+  const openNewCustomIntegration = () => {
+    setEditingCustomIntegrationId(null);
+    setCustomTestResult(null);
+    setCustomIntegrationForm({
+      name: '', category: 'AI', description: '', base_url: '', auth_type: 'bearer', api_key: '',
+      api_key_header: 'X-API-Key', api_key_prefix: '', username: '', password: '',
+      test_method: 'GET', test_path: '/', model: ''
+    });
+    setShowCustomIntegrationModal(true);
+  };
+
+  const openEditCustomIntegration = (item: any) => {
+    const masked = item.maskedConfig || {};
+    setEditingCustomIntegrationId(item.id);
+    setCustomTestResult(null);
+    setCustomIntegrationForm({
+      name: item.name || '', category: item.category || 'Other', description: item.description || '',
+      base_url: item.baseUrl || '', auth_type: item.authType || 'none', api_key: '',
+      api_key_header: masked.api_key_header || 'X-API-Key', api_key_prefix: '', username: '',
+      password: '', test_method: item.testMethod || 'GET', test_path: item.testPath || '/', model: item.model || ''
+    });
+    setShowCustomIntegrationModal(true);
+  };
+
+  const saveCustomIntegration = async () => {
+    if (!selectedTenantId) return;
+    if (!customIntegrationForm.name.trim() || !customIntegrationForm.base_url.trim()) {
+      alert('Integration name and API base URL are required.');
+      return;
+    }
+    try {
+      const endpoint = editingCustomIntegrationId
+        ? `/api/platform/tenant-integrations/custom/${encodeURIComponent(editingCustomIntegrationId)}`
+        : '/api/platform/tenant-integrations/custom';
+      const payload = { ...customIntegrationForm, tenantId: selectedTenantId };
+      const data = await safeFetchJson(endpoint, {
+        method: editingCustomIntegrationId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!data.success) throw new Error(data.error || 'Failed to save custom integration.');
+      setShowCustomIntegrationModal(false);
+      setEditingCustomIntegrationId(null);
+      await loadTenantIntegrations(selectedTenantId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to save custom integration.');
+    }
+  };
+
+  const testCustomIntegration = async (id: string) => {
+    setTestingCustomIntegrationId(id);
+    setCustomTestResult(null);
+    try {
+      const data = await safeFetchJson(`/api/platform/tenant-integrations/custom/${encodeURIComponent(id)}/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: selectedTenantId })
+      });
+      setCustomTestResult({ id, ...data });
+    } catch (err: any) {
+      setCustomTestResult({ id, success: false, message: err.message || 'Connection test failed.' });
+    } finally {
+      setTestingCustomIntegrationId(null);
+    }
+  };
+
+  const deleteCustomIntegration = async (id: string, name: string) => {
+    if (!selectedTenantId) return;
+    if (!confirm(`Delete "${name}" permanently? This removes the integration and its stored credentials for this tenant.`)) return;
+    const data = await safeFetchJson(
+      `/api/platform/tenant-integrations/custom/${encodeURIComponent(id)}?tenantId=${encodeURIComponent(selectedTenantId)}`,
+      { method: 'DELETE' }
+    );
+    if (!data.success) {
+      alert(data.error || 'Failed to delete custom integration.');
+      return;
+    }
+    await loadTenantIntegrations(selectedTenantId);
   };
 
   const loadTenants = async () => {
@@ -663,114 +767,140 @@ export const PlatformIntegrationsManager: React.FC = () => {
       </div>
 
       {activeTab === 'tenant' && (
-        <div className="space-y-5">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
               <div>
-                <h3 className="text-base font-bold text-white">Tenant Integration Manager</h3>
-                <p className="text-xs text-slate-400 mt-1">Platform Admin can configure integrations independently for each customer workspace.</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-white">Integrations</h3>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800">TENANT SCOPED</span>
+                </div>
+                <p className="text-sm text-slate-400 mt-1">Connect AgentDesk to the services your customer already uses, including their own APIs.</p>
               </div>
-              <select
-                value={selectedTenantId}
-                onChange={async e => {
-                  setSelectedTenantId(e.target.value);
-                  await loadTenantIntegrations(e.target.value);
-                }}
-                className="w-full lg:w-96 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white"
-              >
-                {tenantOptions.map(tenant => (
-                  <option key={tenant.id} value={tenant.id}>{tenant.name} • {tenant.id} {tenant.isDemo ? '• DEMO' : '• CUSTOMER'}</option>
-                ))}
+              <button onClick={openNewCustomIntegration} disabled={!selectedTenantId} className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 disabled:opacity-50">
+                <Plus className="w-4 h-4" /> Add Custom Integration
+              </button>
+            </div>
+
+            <div className="mt-5 flex flex-col lg:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
+                <input value={integrationSearch} onChange={e => setIntegrationSearch(e.target.value)} placeholder="Search integrations..." className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2.5 text-sm text-white" />
+              </div>
+              <select value={selectedTenantId} onChange={async e => { setSelectedTenantId(e.target.value); await loadTenantIntegrations(e.target.value); }} className="lg:w-96 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white">
+                {tenantOptions.map(tenant => <option key={tenant.id} value={tenant.id}>{tenant.name} • {tenant.id} {tenant.isDemo ? '• DEMO' : '• CUSTOMER'}</option>)}
               </select>
             </div>
-          </div>
-
-          {!selectedTenantId && (
-            <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-xs text-amber-200">
-              No customer tenant is available to configure yet.
+            <div className="mt-3 flex gap-2 flex-wrap">
+              {['All','AI','CRM','Voice','SMS','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(category => (
+                <button key={category} onClick={() => setIntegrationCategory(category)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${integrationCategory === category ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'}`}>{category}</button>
+              ))}
             </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tenantIntegrations.map(item => (
-              <div key={item.provider} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{item.provider.replace(/_/g, ' ')}</h4>
-                    <p className="text-[10px] text-slate-500">{item.fields.join(', ')}</p>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    item.configured ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-400 border border-slate-700'
-                  }`}>
-                    {item.configured ? 'CONNECTED' : 'NOT CONNECTED'}
-                  </span>
-                </div>
-
-                {item.configured && Object.keys(item.maskedConfig || {}).length > 0 && (
-                  <div className="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-1">
-                    {Object.entries(item.maskedConfig).map(([key, value]) => (
-                      <div key={key} className="flex justify-between gap-3 text-[10px]">
-                        <span className="text-slate-500">{key}</span>
-                        <span className="text-slate-300 font-mono truncate">{String(value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openTenantIntegration(item.provider)}
-                    disabled={!selectedTenantId}
-                    className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    {item.configured ? <Key className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                    {item.configured ? 'Edit Integration' : 'Add Integration'}
-                  </button>
-                  {item.configured && (
-                    <button
-                      onClick={() => disconnectTenantIntegration(item.provider)}
-                      className="px-3 rounded-xl bg-rose-950/50 text-rose-300 border border-rose-800"
-                    >
-                      <Unplug className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
           </div>
 
-          {tenantIntegrationProvider && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <h3 className="font-bold text-white">Configure {tenantIntegrationProvider.replace(/_/g, ' ')}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Tenant: {tenantOptions.find(t => t.id === selectedTenantId)?.name || selectedTenantId}</p>
-                  </div>
-                  <button onClick={() => setTenantIntegrationProvider(null)} className="text-slate-400 hover:text-white">✕</button>
-                </div>
-
-                <div className="space-y-3">
-                  {(tenantIntegrations.find(i => i.provider === tenantIntegrationProvider)?.fields || []).map((field: string) => (
-                    <div key={field}>
-                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">{field.replace(/_/g, ' ')}</label>
-                      <input
-                        type={/(secret|token|key|password)/i.test(field) ? 'password' : 'text'}
-                        value={tenantIntegrationFields[field] || ''}
-                        onChange={e => setTenantIntegrationFields(prev => ({ ...prev, [field]: e.target.value }))}
-                        placeholder={tenantIntegrations.find(i => i.provider === tenantIntegrationProvider)?.configured ? 'Leave blank to keep existing value' : 'Enter value'}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white"
-                      />
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h4 className="text-sm font-bold text-white">Available integrations</h4>
+                <p className="text-xs text-slate-500">Built-in connectors can be configured independently for this tenant.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {tenantIntegrations
+                .filter(item => {
+                  const category = item.provider.includes('twilio') ? (item.provider.includes('voice') ? 'Voice' : 'SMS') :
+                    item.provider === 'whatsapp_business' ? 'WhatsApp' :
+                    item.provider.includes('crm') ? 'CRM' :
+                    item.provider.includes('calendar') ? 'Calendar' :
+                    item.provider.includes('email') ? 'Email' :
+                    item.provider.includes('gemini') ? 'AI' : item.provider === 'custom_webhook' ? 'Other' : 'Other';
+                  return (integrationCategory === 'All' || category === integrationCategory) &&
+                    item.provider.replace(/_/g, ' ').includes(integrationSearch.toLowerCase().trim());
+                })
+                .map(item => {
+                  const labels: Record<string,string> = {
+                    google_calendar:'Google Calendar', twilio_voice:'Twilio Voice', twilio_sms:'Twilio SMS',
+                    whatsapp_business:'WhatsApp Business', resend_email:'Resend Email', gemini_ai:'Google Gemini',
+                    hubspot_crm:'HubSpot CRM', salesforce_crm:'Salesforce CRM', custom_webhook:'Custom Webhook'
+                  };
+                  const icons: Record<string, any> = { google_calendar:Globe, gemini_ai:Bot, custom_webhook:Webhook, hubspot_crm:Database, salesforce_crm:Database };
+                  const Icon = icons[item.provider] || PlugZap;
+                  return (
+                    <div key={item.provider} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400"><Icon className="w-5 h-5" /></div>
+                          <div><h5 className="text-sm font-bold text-white">{labels[item.provider] || item.provider}</h5><p className="text-[10px] text-slate-500">{item.provider.replace(/_/g,' ')}</p></div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.configured ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>{item.configured ? 'CONNECTED' : 'AVAILABLE'}</span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-4 min-h-8">{item.provider === 'gemini_ai' ? 'Optional built-in AI connector. You can also use any client-owned or custom AI API below.' : 'Configure this connector for the selected customer workspace.'}</p>
+                      <div className="mt-4 flex gap-2">
+                        <button onClick={() => openTenantIntegration(item.provider)} className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">{item.configured ? 'Configure' : 'Connect'}</button>
+                        {item.configured && <button onClick={() => disconnectTenantIntegration(item.provider)} className="px-3 rounded-xl bg-slate-950 text-slate-300 border border-slate-800 hover:border-rose-700" title="Disconnect"><Unplug className="w-3.5 h-3.5" /></button>}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
+            </div>
+          </section>
 
-                <div className="mt-5 flex justify-end gap-2">
-                  <button onClick={() => setTenantIntegrationProvider(null)} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
-                  <button onClick={saveTenantIntegration} disabled={savingTenantIntegration} className="px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-2 disabled:opacity-50">
-                    <Save className="w-3.5 h-3.5" />
-                    {savingTenantIntegration ? 'Saving...' : 'Save Integration'}
-                  </button>
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div><h4 className="text-sm font-bold text-white">Custom integrations</h4><p className="text-xs text-slate-500">Connect a client's private API, OpenAI-compatible endpoint, webhook, or another HTTP service without changing code.</p></div>
+              <span className="text-[10px] text-slate-500">{customIntegrations.length} configured</span>
+            </div>
+            {customIntegrations.filter(item => (integrationCategory === 'All' || item.category === integrationCategory) && item.name.toLowerCase().includes(integrationSearch.toLowerCase().trim())).length === 0 ? (
+              <div className="bg-slate-900 border border-dashed border-slate-700 rounded-2xl p-8 text-center">
+                <Globe className="w-7 h-7 text-slate-600 mx-auto" />
+                <h5 className="text-sm font-bold text-slate-300 mt-3">No custom integrations yet</h5>
+                <p className="text-xs text-slate-500 mt-1">Add the client's API once and keep it isolated to this tenant.</p>
+                <button onClick={openNewCustomIntegration} className="mt-4 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold"><Plus className="w-3.5 h-3.5 inline mr-1" /> Add Custom Integration</button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {customIntegrations.filter(item => (integrationCategory === 'All' || item.category === integrationCategory) && item.name.toLowerCase().includes(integrationSearch.toLowerCase().trim())).map(item => (
+                  <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400"><PlugZap className="w-5 h-5" /></div><div><h5 className="text-sm font-bold text-white">{item.name}</h5><p className="text-[10px] text-slate-500">{item.category} • Custom</p></div></div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">CONNECTED</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-4 line-clamp-2">{item.description || 'Client-owned API connection.'}</p>
+                    <div className="mt-3 rounded-xl bg-slate-950 border border-slate-800 p-2.5 text-[10px] font-mono text-slate-500 truncate">{item.baseUrl}</div>
+                    {customTestResult?.id === item.id && <div className={`mt-2 text-[11px] ${customTestResult.success ? 'text-emerald-300' : 'text-rose-300'}`}>{customTestResult.message}</div>}
+                    <div className="mt-4 flex gap-2">
+                      <button onClick={() => testCustomIntegration(item.id)} disabled={testingCustomIntegrationId === item.id} className="px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700">{testingCustomIntegrationId === item.id ? 'Testing...' : 'Test'}</button>
+                      <button onClick={() => openEditCustomIntegration(item)} className="px-3 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700"><Edit3 className="w-3.5 h-3.5 inline mr-1" />Edit</button>
+                      <button onClick={() => deleteCustomIntegration(item.id, item.name)} className="px-3 py-2 rounded-xl bg-rose-950/30 text-rose-300 text-xs font-semibold border border-rose-900/50"><Trash2 className="w-3.5 h-3.5 inline" /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {showCustomIntegrationModal && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-5">
+                  <div><h3 className="text-lg font-bold text-white">{editingCustomIntegrationId ? 'Edit Custom Integration' : 'Add Custom Integration'}</h3><p className="text-xs text-slate-400 mt-1">Credentials are encrypted server-side and isolated to the selected tenant.</p></div>
+                  <button onClick={() => setShowCustomIntegrationModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="text-xs text-slate-300">Integration name<input value={customIntegrationForm.name} onChange={e=>setCustomIntegrationForm(p=>({...p,name:e.target.value}))} placeholder="Client AI API" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label>
+                  <label className="text-xs text-slate-300">Category<select value={customIntegrationForm.category} onChange={e=>setCustomIntegrationForm(p=>({...p,category:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white">{['AI','CRM','Voice','SMS','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(x=><option key={x}>{x}</option>)}</select></label>
+                  <label className="md:col-span-2 text-xs text-slate-300">API base URL<input value={customIntegrationForm.base_url} onChange={e=>setCustomIntegrationForm(p=>({...p,base_url:e.target.value}))} placeholder="https://api.client.com/v1" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-mono" /></label>
+                  <label className="md:col-span-2 text-xs text-slate-300">Description<input value={customIntegrationForm.description} onChange={e=>setCustomIntegrationForm(p=>({...p,description:e.target.value}))} placeholder="Client's internal AI endpoint" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label>
+                  <label className="text-xs text-slate-300">Authentication<select value={customIntegrationForm.auth_type} onChange={e=>setCustomIntegrationForm(p=>({...p,auth_type:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white">{[['none','No auth'],['bearer','Bearer token'],['api_key','API key'],['custom_header','Custom header'],['basic','Basic auth']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
+                  {customIntegrationForm.auth_type === 'basic' ? <><label className="text-xs text-slate-300">Username<input value={customIntegrationForm.username} onChange={e=>setCustomIntegrationForm(p=>({...p,username:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label><label className="text-xs text-slate-300">Password<input type="password" value={customIntegrationForm.password} onChange={e=>setCustomIntegrationForm(p=>({...p,password:e.target.value}))} placeholder={editingCustomIntegrationId ? 'Leave blank to keep existing' : ''} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label></> : <label className="text-xs text-slate-300">API key / token<input type="password" value={customIntegrationForm.api_key} onChange={e=>setCustomIntegrationForm(p=>({...p,api_key:e.target.value}))} placeholder={editingCustomIntegrationId ? 'Leave blank to keep existing' : 'Paste secret'} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label>}
+                  {['api_key','custom_header'].includes(customIntegrationForm.auth_type) && <><label className="text-xs text-slate-300">Header name<input value={customIntegrationForm.api_key_header} onChange={e=>setCustomIntegrationForm(p=>({...p,api_key_header:e.target.value}))} placeholder="X-API-Key" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-mono" /></label><label className="text-xs text-slate-300">Prefix<input value={customIntegrationForm.api_key_prefix} onChange={e=>setCustomIntegrationForm(p=>({...p,api_key_prefix:e.target.value}))} placeholder="Bearer" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label></>}
+                  <label className="text-xs text-slate-300">Model (optional)<input value={customIntegrationForm.model} onChange={e=>setCustomIntegrationForm(p=>({...p,model:e.target.value}))} placeholder="client-model-v1" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-mono" /></label>
+                  <label className="text-xs text-slate-300">Test method<select value={customIntegrationForm.test_method} onChange={e=>setCustomIntegrationForm(p=>({...p,test_method:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white"><option>GET</option><option>POST</option></select></label>
+                  <label className="md:col-span-2 text-xs text-slate-300">Test path<input value={customIntegrationForm.test_path} onChange={e=>setCustomIntegrationForm(p=>({...p,test_path:e.target.value}))} placeholder="/" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-mono" /></label>
+                </div>
+                <div className="mt-6 flex justify-end gap-2 border-t border-slate-800 pt-4">
+                  <button onClick={()=>setShowCustomIntegrationModal(false)} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+                  <button onClick={saveCustomIntegration} className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">{editingCustomIntegrationId ? 'Save Changes' : 'Create Integration'}</button>
                 </div>
               </div>
             </div>
