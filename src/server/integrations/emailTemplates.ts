@@ -233,6 +233,28 @@ export function renderEmailTemplate(
       };
     }
 
+    case 'new_lead_received': {
+      const requirement = data.requirement || data.message || 'No requirement provided';
+      const dashboardUrl = data.dashboardUrl || appUrl + '/dashboard/leads';
+      return {
+        subject: 'New Lead Received: ' + name,
+        html: baseLayout('New Lead Received', `
+          <h1>New customer enquiry received</h1>
+          <p>A visitor has submitted their details through your AgentDesk AI receptionist.</p>
+          <div class="info-box">
+            <strong>Name:</strong> ${sanitizeHtml(name)}<br>
+            <strong>Email:</strong> ${sanitizeHtml(data.leadEmail || data.email || 'Not provided')}<br>
+            <strong>Phone:</strong> ${sanitizeHtml(data.leadPhone || data.phone || 'Not provided')}<br>
+            <strong>Lead Score:</strong> ${sanitizeHtml(data.score ?? 'Not scored')}<br>
+            <strong>Source:</strong> ${sanitizeHtml(data.source || 'Website Chat')}<br>
+            <strong>Requirement:</strong> ${sanitizeHtml(requirement)}
+          </div>
+          <div class="btn-container"><a href="${dashboardUrl}" class="btn">View Lead in AgentDesk</a></div>
+        `, appUrl),
+        text: 'New customer enquiry received. Name: ' + name + '. Email: ' + (data.leadEmail || data.email || 'Not provided') + '. Phone: ' + (data.leadPhone || data.phone || 'Not provided') + '. Lead score: ' + (data.score ?? 'Not scored') + '. Requirement: ' + requirement + '. View: ' + dashboardUrl
+      };
+    }
+
     // ------------------------------------------------------------------------
     // BUSINESS OWNER TEMPLATES
     // ------------------------------------------------------------------------
