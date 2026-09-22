@@ -302,6 +302,67 @@ class IntegrationStore {
     return Array.from(this.records.values());
   }
 
+  public getTenantIntegrationId(tenantId: string, provider: string): string {
+    const safeTenant = tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const safeProvider = provider.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    return `tenant_integration_${safeTenant}_${safeProvider}`;
+  }
+
+  public getTenantIntegrationConfig(tenantId: string, provider: string): Record<string, string> {
+    const id = this.getTenantIntegrationId(tenantId, provider);
+    const record = this.records.get(id);
+    if (!record?.encryptedRefreshToken) return {};
+    try {
+      const parsed = JSON.parse(this.decryptSecret(record.encryptedRefreshToken));
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  public saveTenantIntegrationConfig(
+    tenantId: string,
+    provider: string,
+    config: Record<string, string>
+  ): IntegrationRecord {
+    const id = this.getTenantIntegrationId(tenantId, provider);
+    const now = new Date().toISOString();
+    const existing = this.records.get(id);
+    const record: IntegrationRecord = {
+      id,
+      provider: provider.toUpperCase(),
+      type: `TENANT_${provider.toUpperCase()}`,
+      accountEmail: '',
+      encryptedRefreshToken: this.encryptSecret(JSON.stringify(config)),
+      status: 'CONNECTED',
+      connectedAt: existing?.connectedAt || now,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    this.records.set(id, record);
+    this.persistToDisk();
+    this.persistRecordToPostgres(record).catch((err) => {
+      console.error('[IntegrationStore:TenantSaveFailed]', err.message);
+    });
+    return record;
+  }
+
+  public deleteTenantIntegration(tenantId: string, provider: string): boolean {
+    const id = this.getTenantIntegrationId(tenantId, provider);
+    const existed = this.records.delete(id);
+    if (existed) {
+      this.persistToDisk();
+      // Keep database state authoritative when available.
+      postgresClient.initialize().then(async (ready) => {
+        if (ready) {
+          await postgresClient.query('DELETE FROM agentdesk_integrations WHERE id = $1', [id]);
+        }
+      }).catch((err) => console.warn('[IntegrationStore:TenantDeleteFailed]', err.message));
+    }
+    return existed;
+  }
+
+
   /**
    * Platform-level runtime configuration.
    * Values are encrypted at rest and are intentionally not exposed to tenant users.
