@@ -89,7 +89,7 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
 
   const analyticsValues = Object.values(tenantAnalytics);
   const totalConversations = analyticsValues.reduce((sum, item) => sum + item.totalConversations, 0);
-  const leadsCaptured = analyticsValues.reduce((sum, item) => sum + item.leadsCapturedCount, 0);
+  const leadsCaptured = analyticsValues.reduce((sum, item) => sum + (item.leadsCapturedCount || 0), 0);
   const activeBillingRecords = subscriptionsList.filter((s: any) => ['active', 'ACTIVE', 'trial', 'TRIAL'].includes(String(s.status)));
   const billingCurrencies = Array.from(new Set(activeBillingRecords.map((s: any) => s.currency).filter(Boolean)));
   const mrrAmount = activeBillingRecords.reduce((sum: number, s: any) => sum + (Number(s.monthlyFee) || Number(s.recurring_base_amount) || 0), 0);
