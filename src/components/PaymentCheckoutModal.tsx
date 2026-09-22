@@ -39,10 +39,12 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
   const [transactionDetails, setTransactionDetails] = useState<any>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi');
 
   useEffect(() => {
     setError(null);
     setStep('details');
+    setSelectedPaymentMethod('upi');
   }, [isOpen, currency]);
 
   if (!isOpen) return null;
@@ -138,6 +140,24 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         order_id: orderId,
         theme: {
           color: '#2563EB'
+        },
+        config: {
+          display: {
+            blocks: {
+              selected: {
+                name: selectedPaymentMethod === 'upi'
+                  ? 'UPI / QR'
+                  : selectedPaymentMethod === 'card'
+                    ? 'Cards / RuPay'
+                    : 'NetBanking',
+                instruments: [{ method: selectedPaymentMethod }]
+              }
+            },
+            sequence: ['block.selected'],
+            preferences: {
+              show_default_blocks: true
+            }
+          }
         },
         modal: {
           ondismiss: () => {
@@ -287,18 +307,45 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-2 text-[11px] text-slate-300 pt-1">
-                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('upi')}
+                  aria-pressed={selectedPaymentMethod === 'upi'}
+                  className={`flex items-center gap-1.5 p-2 rounded-xl border transition-colors cursor-pointer ${
+                    selectedPaymentMethod === 'upi'
+                      ? 'bg-blue-600/20 border-blue-500 text-white'
+                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-600'
+                  }`}
+                >
                   <QrCode className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Instant UPI QR</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                  <span>UPI / QR</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('card')}
+                  aria-pressed={selectedPaymentMethod === 'card'}
+                  className={`flex items-center gap-1.5 p-2 rounded-xl border transition-colors cursor-pointer ${
+                    selectedPaymentMethod === 'card'
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white'
+                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-600'
+                  }`}
+                >
                   <CreditCard className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Cards / RuPay</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPaymentMethod('netbanking')}
+                  aria-pressed={selectedPaymentMethod === 'netbanking'}
+                  className={`flex items-center gap-1.5 p-2 rounded-xl border transition-colors cursor-pointer ${
+                    selectedPaymentMethod === 'netbanking'
+                      ? 'bg-emerald-600/20 border-emerald-500 text-white'
+                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-600'
+                  }`}
+                >
                   <Building className="w-3.5 h-3.5 text-emerald-400" />
                   <span>NetBanking</span>
-                </div>
+                </button>
               </div>
             </div>
 
