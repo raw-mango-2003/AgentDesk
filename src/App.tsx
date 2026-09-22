@@ -38,14 +38,17 @@ import { EmailVerificationPage } from './components/auth/EmailVerificationPage';
 import { LegalPage } from './components/LegalPage';
 import { Business, AppNotification } from './types';
 import { getCountryMetadata } from './lib/localization';
-import { 
-  getBusinessById, 
-  getAllBusinesses, 
-  saveBusiness,
-  subscribeToTenantRegistry, 
-  getNotifications, 
-  markNotificationsAsRead 
-} from './lib/dbService';
+const loadDbService = () => import('./lib/dbService');
+
+const getBusinessById = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['getBusinessById']>) =>
+  loadDbService().then(module => module.getBusinessById(...args));
+const getAllBusinesses = () => loadDbService().then(module => module.getAllBusinesses());
+const saveBusiness = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['saveBusiness']>) =>
+  loadDbService().then(module => module.saveBusiness(...args));
+const getNotifications = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['getNotifications']>) =>
+  loadDbService().then(module => module.getNotifications(...args));
+const markNotificationsAsRead = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['markNotificationsAsRead']>) =>
+  loadDbService().then(module => module.markNotificationsAsRead(...args));
 import {
   PUBLIC_AGENTDESK_DEMO_BUSINESS,
   PLATFORM_ADMIN_BUSINESS,
@@ -509,13 +512,17 @@ export default function App() {
     }
     loadWorkspaceData();
 
-    const unsubscribe = subscribeToTenantRegistry(() => {
-      loadWorkspaceData();
+    let unsubscribe: (() => void) | null = null;
+    loadDbService().then(module => {
+      if (!isMounted) return;
+      unsubscribe = module.subscribeToTenantRegistry(() => {
+        loadWorkspaceData();
+      });
     });
 
     return () => {
       isMounted = false;
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, [activeBusinessId, currentUser]);
 
