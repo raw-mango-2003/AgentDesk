@@ -29,6 +29,7 @@ import {
   Plus,
   Save,
   Unplug,
+  PlugZap,
   Trash2,
   Search,
   TestTube2,
