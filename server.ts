@@ -44,7 +44,7 @@ import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTen
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
-import { storageService, gmailService, integrationStore } from './src/server/integrations/index.js';
+import { storageService, gmailService, integrationStore, notificationService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
@@ -66,7 +66,9 @@ import {
   resetTenantQuota,
   persistKnowledgeToPostgres,
   deleteKnowledgeFromPostgres,
-  setTenant
+  setTenant,
+  persistLeadToPostgres,
+  getLeadsFromPostgres
 } from './src/server/tenantRegistry.js';
 
 // Safe environment directory resolver for both dev (tsx/ESM) and prod (esbuild/CJS)
@@ -329,6 +331,86 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
     return res.send(file.dataBuffer);
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Tenant-scoped lead API. Website chat uses this server-side source of truth so leads
+// survive browser refreshes/deploys and are visible to the owning business dashboard.
+app.get('/api/leads', requireAuth, requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    if (!tenantId) return res.status(400).json({ success: false, error: 'Tenant context is required.' });
+    const leads = await getLeadsFromPostgres(tenantId);
+    return res.json({ success: true, leads });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/leads', async (req: Request, res: Response) => {
+  try {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const tenantId = String(body.tenantId || body.businessId || '').trim().toLowerCase();
+    const agentId = String(body.agentId || '').trim().toLowerCase();
+    const agent = agentId ? serverAgentsStore.get(agentId) : null;
+    if (!tenantId || (agent && String(agent.tenantId || '').toLowerCase() !== tenantId)) {
+      return res.status(400).json({ success: false, error: 'Valid tenant and agent context are required.' });
+    }
+    const business = getTenant(tenantId);
+    if (!business) return res.status(404).json({ success: false, error: 'Tenant not found.' });
+
+    const name = typeof body.name === 'string' ? body.name.trim().slice(0, 255) : '';
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase().slice(0, 254) : '';
+    const phone = typeof body.phone === 'string' ? body.phone.trim().slice(0, 64) : '';
+    if (!name || (!email && !phone)) {
+      return res.status(400).json({ success: false, error: 'Lead name and at least email or phone are required.' });
+    }
+
+    const now = new Date().toISOString();
+    const lead = {
+      id: typeof body.id === 'string' && body.id.trim() ? body.id.trim().slice(0, 128) : 'lead-' + crypto.randomBytes(10).toString('hex'),
+      tenantId, businessId: tenantId, name, email, phone,
+      company: typeof body.company === 'string' ? body.company.trim().slice(0, 255) : '',
+      source: typeof body.source === 'string' ? body.source.slice(0, 128) : 'website_chat',
+      status: 'new',
+      score: Math.max(0, Math.min(100, Number(body.score) || 0)),
+      scoreCategory: typeof body.scoreCategory === 'string' ? body.scoreCategory.slice(0, 32) : '',
+      requirement: typeof body.requirement === 'string' ? body.requirement.slice(0, 2000) : '',
+      conversationId: typeof body.conversationId === 'string' ? body.conversationId.slice(0, 128) : '',
+      details: body.details && typeof body.details === 'object' ? body.details : {},
+      createdAt: now, updatedAt: now
+    };
+
+    const persisted = await persistLeadToPostgres(lead);
+    if (!persisted && process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ success: false, error: 'Lead storage is temporarily unavailable. Please try again.' });
+    }
+
+    const notifyEmail = typeof business.leadNotificationEmail === 'string' && business.leadNotificationEmail.trim()
+      ? business.leadNotificationEmail.trim()
+      : typeof business.supportEmail === 'string' ? business.supportEmail.trim() : '';
+    const notifyPhone = typeof business.leadNotificationPhone === 'string' && business.leadNotificationPhone.trim()
+      ? business.leadNotificationPhone.trim()
+      : typeof business.phone === 'string' ? business.phone.trim() : '';
+
+    const notificationPayload = {
+      tenantId, email: notifyEmail, phone: notifyPhone,
+      leadName: name, score: lead.score, leadId: lead.id,
+      leadEmail: email, leadPhone: phone, requirement: lead.requirement,
+      source: lead.source, category: 'leads',
+      title: `New Lead: ${name}`,
+      body: `New website enquiry from ${name}. ${lead.requirement ? 'Requirement: ' + lead.requirement : 'Contact details are available in your AgentDesk dashboard.'}`
+    };
+    try {
+      await notificationService.dispatchEvent('NEW_LEAD_RECEIVED', notificationPayload);
+    } catch (notifyError: any) {
+      console.error('[LeadNotificationError]', notifyError?.message || notifyError);
+    }
+
+    return res.status(201).json({ success: true, lead, notifications: { email: !!notifyEmail, whatsapp: !!notifyPhone } });
+  } catch (err: any) {
+    console.error('[LeadCreateError]', err);
+    return res.status(500).json({ success: false, error: 'Unable to save lead.' });
   }
 });
 
