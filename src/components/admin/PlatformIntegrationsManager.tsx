@@ -699,9 +699,9 @@ export const PlatformIntegrationsManager: React.FC = () => {
                     <h4 className="text-sm font-bold text-white">{item.provider.replace(/_/g, ' ')}</h4>
                     <p className="text-[10px] text-slate-500">{item.fields.join(', ')}</p>
                   </div>
-                  <span className={\`px-2 py-0.5 rounded-full text-[10px] font-bold \${
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     item.configured ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-400 border border-slate-700'
-                  }\`}>
+                  }`}>
                     {item.configured ? 'CONNECTED' : 'NOT CONNECTED'}
                   </span>
                 </div>
