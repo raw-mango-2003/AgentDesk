@@ -25,7 +25,10 @@ import {
   Check,
   ArrowRight,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Save,
+  Unplug
 } from 'lucide-react';
 
 interface IntegrationItem {
@@ -61,7 +64,13 @@ interface GmailDetails {
 }
 
 export const PlatformIntegrationsManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'brevo' | 'gmail' | 'all' | 'env' | 'config'>('brevo');
+  const [activeTab, setActiveTab] = useState<'brevo' | 'gmail' | 'all' | 'env' | 'config' | 'tenant'>('brevo');
+  const [tenantOptions, setTenantOptions] = useState<any[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const [tenantIntegrations, setTenantIntegrations] = useState<any[]>([]);
+  const [tenantIntegrationProvider, setTenantIntegrationProvider] = useState<string | null>(null);
+  const [tenantIntegrationFields, setTenantIntegrationFields] = useState<Record<string, string>>({});
+  const [savingTenantIntegration, setSavingTenantIntegration] = useState(false);
   const [integrations, setIntegrations] = useState<IntegrationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [envReport, setEnvReport] = useState<any>(null);
@@ -111,6 +120,80 @@ export const PlatformIntegrationsManager: React.FC = () => {
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+
+  const loadTenantIntegrations = async (tenantId: string) => {
+    if (!tenantId) return;
+    const data = await safeFetchJson(`/api/platform/tenant-integrations?tenantId=${encodeURIComponent(tenantId)}`);
+    if (data.success) setTenantIntegrations(data.integrations || []);
+  };
+
+  const loadTenants = async () => {
+    try {
+      const data = await safeFetchJson('/api/tenants');
+      if (data.success && Array.isArray(data.tenants)) {
+        const tenants = data.tenants.filter((t: any) => t.id !== 'platform');
+        setTenantOptions(tenants);
+        const first = tenants[0];
+        if (first) {
+          setSelectedTenantId(first.id);
+          await loadTenantIntegrations(first.id);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load tenant integrations:', err);
+    }
+  };
+
+  const openTenantIntegration = (provider: string) => {
+    const item = tenantIntegrations.find(i => i.provider === provider);
+    setTenantIntegrationProvider(provider);
+    setTenantIntegrationFields({});
+    if (item?.maskedConfig) {
+      // Secrets are intentionally never returned in plaintext. Empty fields mean "keep existing value".
+      setTenantIntegrationFields({});
+    }
+  };
+
+  const saveTenantIntegration = async () => {
+    if (!selectedTenantId || !tenantIntegrationProvider) return;
+    setSavingTenantIntegration(true);
+    try {
+      const data = await safeFetchJson(
+        `/api/platform/tenant-integrations/${encodeURIComponent(selectedTenantId)}/${encodeURIComponent(tenantIntegrationProvider)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tenantIntegrationFields)
+        }
+      );
+      if (!data.success) throw new Error(data.error || 'Failed to save tenant integration.');
+      setTenantIntegrationProvider(null);
+      setTenantIntegrationFields({});
+      await loadTenantIntegrations(selectedTenantId);
+    } catch (err: any) {
+      alert(err.message || 'Failed to save tenant integration.');
+    } finally {
+      setSavingTenantIntegration(false);
+    }
+  };
+
+  const disconnectTenantIntegration = async (provider: string) => {
+    if (!selectedTenantId) return;
+    if (!confirm('Disconnect this integration for the selected tenant?')) return;
+    const data = await safeFetchJson(
+      `/api/platform/tenant-integrations/${encodeURIComponent(selectedTenantId)}/${encodeURIComponent(provider)}`,
+      { method: 'DELETE' }
+    );
+    if (!data.success) {
+      alert(data.error || 'Failed to disconnect integration.');
+      return;
+    }
+    await loadTenantIntegrations(selectedTenantId);
+  };
+
+  useEffect(() => {
+    loadTenants();
+  }, []);
 
   // Send Test Email via Brevo API
   const handleSendBrevoTestEmail = async () => {
@@ -542,6 +625,18 @@ export const PlatformIntegrationsManager: React.FC = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('tenant')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+              activeTab === 'tenant'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            <span>Tenant Integrations</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'all'
@@ -566,6 +661,122 @@ export const PlatformIntegrationsManager: React.FC = () => {
           <span>Refresh</span>
         </button>
       </div>
+
+      {activeTab === 'tenant' && (
+        <div className="space-y-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+              <div>
+                <h3 className="text-base font-bold text-white">Tenant Integration Manager</h3>
+                <p className="text-xs text-slate-400 mt-1">Platform Admin can configure integrations independently for each customer workspace.</p>
+              </div>
+              <select
+                value={selectedTenantId}
+                onChange={async e => {
+                  setSelectedTenantId(e.target.value);
+                  await loadTenantIntegrations(e.target.value);
+                }}
+                className="w-full lg:w-96 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white"
+              >
+                {tenantOptions.map(tenant => (
+                  <option key={tenant.id} value={tenant.id}>{tenant.name} • {tenant.id} {tenant.isDemo ? '• DEMO' : '• CUSTOMER'}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {!selectedTenantId && (
+            <div className="rounded-xl border border-amber-800 bg-amber-950/30 p-4 text-xs text-amber-200">
+              No customer tenant is available to configure yet.
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tenantIntegrations.map(item => (
+              <div key={item.provider} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">{item.provider.replace(/_/g, ' ')}</h4>
+                    <p className="text-[10px] text-slate-500">{item.fields.join(', ')}</p>
+                  </div>
+                  <span className={\`px-2 py-0.5 rounded-full text-[10px] font-bold \${
+                    item.configured ? 'bg-emerald-950 text-emerald-300 border border-emerald-700' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                  }\`}>
+                    {item.configured ? 'CONNECTED' : 'NOT CONNECTED'}
+                  </span>
+                </div>
+
+                {item.configured && Object.keys(item.maskedConfig || {}).length > 0 && (
+                  <div className="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-1">
+                    {Object.entries(item.maskedConfig).map(([key, value]) => (
+                      <div key={key} className="flex justify-between gap-3 text-[10px]">
+                        <span className="text-slate-500">{key}</span>
+                        <span className="text-slate-300 font-mono truncate">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openTenantIntegration(item.provider)}
+                    disabled={!selectedTenantId}
+                    className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                  >
+                    {item.configured ? <Key className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                    {item.configured ? 'Edit Integration' : 'Add Integration'}
+                  </button>
+                  {item.configured && (
+                    <button
+                      onClick={() => disconnectTenantIntegration(item.provider)}
+                      className="px-3 rounded-xl bg-rose-950/50 text-rose-300 border border-rose-800"
+                    >
+                      <Unplug className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {tenantIntegrationProvider && (
+            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h3 className="font-bold text-white">Configure {tenantIntegrationProvider.replace(/_/g, ' ')}</h3>
+                    <p className="text-xs text-slate-400 mt-1">Tenant: {tenantOptions.find(t => t.id === selectedTenantId)?.name || selectedTenantId}</p>
+                  </div>
+                  <button onClick={() => setTenantIntegrationProvider(null)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+
+                <div className="space-y-3">
+                  {(tenantIntegrations.find(i => i.provider === tenantIntegrationProvider)?.fields || []).map((field: string) => (
+                    <div key={field}>
+                      <label className="block text-[11px] font-semibold text-slate-300 mb-1">{field.replace(/_/g, ' ')}</label>
+                      <input
+                        type={/(secret|token|key|password)/i.test(field) ? 'password' : 'text'}
+                        value={tenantIntegrationFields[field] || ''}
+                        onChange={e => setTenantIntegrationFields(prev => ({ ...prev, [field]: e.target.value }))}
+                        placeholder={tenantIntegrations.find(i => i.provider === tenantIntegrationProvider)?.configured ? 'Leave blank to keep existing value' : 'Enter value'}
+                        className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex justify-end gap-2">
+                  <button onClick={() => setTenantIntegrationProvider(null)} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Cancel</button>
+                  <button onClick={saveTenantIntegration} disabled={savingTenantIntegration} className="px-5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-2 disabled:opacity-50">
+                    <Save className="w-3.5 h-3.5" />
+                    {savingTenantIntegration ? 'Saving...' : 'Save Integration'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* OAuth Callback / Feedback Banner */}
       {oauthBanner && (
