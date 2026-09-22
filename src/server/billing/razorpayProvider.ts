@@ -420,7 +420,7 @@ export class RazorpayProvider implements PaymentProvider {
       providerSubscriptionId: data.id,
       planId: data.notes?.planId || 'growth',
       currency: data.currency || 'USD',
-      amount: (data.plan?.item?.amount || 149700) / 100,
+      amount: data.plan?.item?.amount ? Number(data.plan.item.amount) / 100 : 0,
       status: statusMap[data.status] || 'active',
       currentPeriodStart: data.current_start ? new Date(data.current_start * 1000).toISOString() : undefined,
       currentPeriodEnd: data.current_end ? new Date(data.current_end * 1000).toISOString() : undefined,
@@ -429,137 +429,150 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   public async updateSubscription(subscriptionId: string, planId: string, customPrice?: number): Promise<ProviderSubscription> {
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
-
-    if (this.isConfigured()) {
-      try {
-        // Razorpay API allows updating plan / quantity
-        await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: this.getAuthHeader()
-          },
-          body: JSON.stringify({
-            schedule_change_at: 'now',
-            notes: { planId }
-          })
-        });
-      } catch (err) {
-        console.warn('[Razorpay] updateSubscription error:', err);
-      }
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED.');
     }
 
+    const response = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader()
+      },
+      body: JSON.stringify({
+        schedule_change_at: 'now',
+        notes: { planId }
+      })
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody?.error?.description || `Razorpay update subscription failed with status ${response.status}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
     return {
-      id: subscriptionId,
+      id: data.id || subscriptionId,
       provider: 'razorpay',
-      providerSubscriptionId: subscriptionId,
-      planId,
-      currency: 'USD',
-      amount: customPrice || 1497,
-      status: 'active',
-      nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      providerSubscriptionId: data.id || subscriptionId,
+      planId: data.notes?.planId || planId,
+      currency: data.currency || 'INR',
+      amount: customPrice ?? (data.plan?.item?.amount ? Number(data.plan.item.amount) / 100 : 0),
+      status: data.status === 'paused' ? 'paused' : data.status === 'cancelled' ? 'cancelled' : 'active',
+      nextBillingDate: data.charge_at
+        ? new Date(data.charge_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     };
   }
 
   public async pauseSubscription(subscriptionId: string): Promise<ProviderSubscription> {
-    if (this.isConfigured()) {
-      try {
-        await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/pause`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: this.getAuthHeader()
-          },
-          body: JSON.stringify({ pause_at: 'now' })
-        });
-      } catch (err) {
-        console.warn('[Razorpay] pauseSubscription error:', err);
-      }
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED.');
     }
 
+    const response = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/pause`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader()
+      },
+      body: JSON.stringify({ pause_at: 'now' })
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody?.error?.description || `Razorpay pause subscription failed with status ${response.status}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
     return {
-      id: subscriptionId,
+      id: data.id || subscriptionId,
       provider: 'razorpay',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 1497,
+      providerSubscriptionId: data.id || subscriptionId,
+      planId: data.notes?.planId || 'unknown',
+      currency: data.currency || 'INR',
+      amount: data.plan?.item?.amount ? Number(data.plan.item.amount) / 100 : 0,
       status: 'paused',
       nextBillingDate: 'Paused'
     };
   }
 
   public async resumeSubscription(subscriptionId: string): Promise<ProviderSubscription> {
-    if (this.isConfigured()) {
-      try {
-        await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/resume`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: this.getAuthHeader()
-          },
-          body: JSON.stringify({ resume_at: 'now' })
-        });
-      } catch (err) {
-        console.warn('[Razorpay] resumeSubscription error:', err);
-      }
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED.');
     }
 
-    const nextDate = new Date();
-    nextDate.setDate(nextDate.getDate() + 30);
+    const response = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/resume`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader()
+      },
+      body: JSON.stringify({ resume_at: 'now' })
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody?.error?.description || `Razorpay resume subscription failed with status ${response.status}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const nextDate = data.charge_at ? new Date(data.charge_at * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     return {
-      id: subscriptionId,
+      id: data.id || subscriptionId,
       provider: 'razorpay',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 1497,
+      providerSubscriptionId: data.id || subscriptionId,
+      planId: data.notes?.planId || 'unknown',
+      currency: data.currency || 'INR',
+      amount: data.plan?.item?.amount ? Number(data.plan.item.amount) / 100 : 0,
       status: 'active',
       nextBillingDate: nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     };
   }
 
   public async cancelSubscription(subscriptionId: string, cancelImmediately = false): Promise<ProviderSubscription> {
-    if (this.isConfigured()) {
-      try {
-        await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/cancel`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: this.getAuthHeader()
-          },
-          body: JSON.stringify({ cancel_at_cycle_end: cancelImmediately ? 0 : 1 })
-        });
-      } catch (err) {
-        console.warn('[Razorpay] cancelSubscription error:', err);
-      }
+    if (!this.isConfigured()) {
+      throw new Error('Razorpay integration is NOT_CONFIGURED.');
     }
 
+    const response = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: this.getAuthHeader()
+      },
+      body: JSON.stringify({ cancel_at_cycle_end: cancelImmediately ? 0 : 1 })
+    });
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      throw new Error(errorBody?.error?.description || `Razorpay cancel subscription failed with status ${response.status}`);
+    }
+
+    const data = await response.json().catch(() => ({}));
     return {
-      id: subscriptionId,
+      id: data.id || subscriptionId,
       provider: 'razorpay',
-      providerSubscriptionId: subscriptionId,
-      planId: 'growth',
-      currency: 'USD',
-      amount: 0,
+      providerSubscriptionId: data.id || subscriptionId,
+      planId: data.notes?.planId || 'unknown',
+      currency: data.currency || 'INR',
+      amount: data.plan?.item?.amount ? Number(data.plan.item.amount) / 100 : 0,
       status: 'cancelled',
-      nextBillingDate: 'None'
+      nextBillingDate: cancelImmediately
+        ? 'Cancelled'
+        : (data.current_end ? new Date(data.current_end * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'End of current billing cycle')
     };
   }
 
-  public async listPaymentMethods(customerId: string, businessId: string): Promise<SafePaymentMethod[]> {
-    // In production, query Razorpay customer tokens if available; otherwise return real registered methods (empty if none)
+  public async listPaymentMethods(_customerId: string, _businessId: string): Promise<SafePaymentMethod[]> {
+    // Razorpay tokenized payment-method retrieval is not implemented here.
+    // Do not fabricate local card records as provider-backed payment methods.
     return [];
   }
 
-  public async setPrimaryPaymentMethod(businessId: string, paymentMethodId: string): Promise<boolean> {
-    return true;
+  public async setPrimaryPaymentMethod(_businessId: string, _paymentMethodId: string): Promise<boolean> {
+    throw new Error('Razorpay payment-method management is not available through this integration yet.');
   }
 
-  public async removePaymentMethod(businessId: string, paymentMethodId: string): Promise<boolean> {
-    return true;
+  public async removePaymentMethod(_businessId: string, _paymentMethodId: string): Promise<boolean> {
+    throw new Error('Razorpay payment-method management is not available through this integration yet.');
   }
 
   public async createInvoice(params: CreateInvoiceParams): Promise<ProviderInvoice> {
