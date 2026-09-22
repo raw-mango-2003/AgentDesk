@@ -363,6 +363,78 @@ class IntegrationStore {
   }
 
 
+  public getTenantCustomIntegrations(tenantId: string): Array<{ id: string; config: Record<string, string> }> {
+    const prefix = `tenant_custom_${tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_')}_`;
+    const result: Array<{ id: string; config: Record<string, string> }> = [];
+    for (const [id, record] of this.records.entries()) {
+      if (!id.startsWith(prefix) || !record.encryptedRefreshToken) continue;
+      try {
+        const config = JSON.parse(this.decryptSecret(record.encryptedRefreshToken));
+        if (config && typeof config === 'object') result.push({ id, config });
+      } catch {
+        // Ignore malformed custom integration records.
+      }
+    }
+    return result;
+  }
+
+  public saveTenantCustomIntegration(
+    tenantId: string,
+    customId: string,
+    config: Record<string, string>
+  ): IntegrationRecord {
+    const safeTenant = tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const safeId = customId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const id = `tenant_custom_${safeTenant}_${safeId}`;
+    const now = new Date().toISOString();
+    const existing = this.records.get(id);
+    const record: IntegrationRecord = {
+      id,
+      provider: 'CUSTOM',
+      type: 'TENANT_CUSTOM',
+      accountEmail: '',
+      encryptedRefreshToken: this.encryptSecret(JSON.stringify(config)),
+      status: 'CONNECTED',
+      connectedAt: existing?.connectedAt || now,
+      createdAt: existing?.createdAt || now,
+      updatedAt: now
+    };
+    this.records.set(id, record);
+    this.persistToDisk();
+    this.persistRecordToPostgres(record).catch((err) => {
+      console.error('[IntegrationStore:CustomSaveFailed]', err.message);
+    });
+    return record;
+  }
+
+  public deleteTenantCustomIntegration(tenantId: string, customId: string): boolean {
+    const safeTenant = tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const safeId = customId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const id = `tenant_custom_${safeTenant}_${safeId}`;
+    const existed = this.records.delete(id);
+    if (existed) {
+      this.persistToDisk();
+      postgresClient.initialize().then(async (ready) => {
+        if (ready) await postgresClient.query('DELETE FROM agentdesk_integrations WHERE id = $1', [id]);
+      }).catch((err) => console.warn('[IntegrationStore:CustomDeleteFailed]', err.message));
+    }
+    return existed;
+  }
+
+  public getTenantCustomIntegration(tenantId: string, customId: string): Record<string, string> {
+    const safeTenant = tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const safeId = customId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    const id = `tenant_custom_${safeTenant}_${safeId}`;
+    const record = this.records.get(id);
+    if (!record?.encryptedRefreshToken) return {};
+    try {
+      const parsed = JSON.parse(this.decryptSecret(record.encryptedRefreshToken));
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
   /**
    * Platform-level runtime configuration.
    * Values are encrypted at rest and are intentionally not exposed to tenant users.
