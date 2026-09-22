@@ -1,35 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
-import { DashboardOverview } from './components/DashboardOverview';
-import { VoiceReceptionistDashboard } from './components/VoiceReceptionistDashboard';
-import { MissedCallTextBackDashboard } from './components/MissedCallTextBackDashboard';
-import { LeadsDashboard } from './components/LeadsDashboard';
-import { CRMDashboard } from './components/CRMDashboard';
-import { FollowUpDashboard } from './components/FollowUpDashboard';
-import { ReEngagementDashboard } from './components/ReEngagementDashboard';
-import { ReviewsDashboard } from './components/ReviewsDashboard';
-import { AppointmentsDashboard } from './components/AppointmentsDashboard';
-import { EstimatesDashboard } from './components/EstimatesDashboard';
-import { ColdOutreachDashboard } from './components/ColdOutreachDashboard';
-import { IntegrationsDashboard } from './components/IntegrationsDashboard';
-import { KnowledgeBaseDashboard } from './components/KnowledgeBaseDashboard';
-import { ConversationsDashboard } from './components/ConversationsDashboard';
-import { PlatformAdminDashboard } from './components/PlatformAdminDashboard';
-import { AICopilotDrawer } from './components/AICopilotDrawer';
-import { NotificationsDrawer } from './components/NotificationsDrawer';
+const DashboardOverview = lazy(() => import('./components/DashboardOverview').then(module => ({ default: module.DashboardOverview })));
+const VoiceReceptionistDashboard = lazy(() => import('./components/VoiceReceptionistDashboard').then(module => ({ default: module.VoiceReceptionistDashboard })));
+const MissedCallTextBackDashboard = lazy(() => import('./components/MissedCallTextBackDashboard').then(module => ({ default: module.MissedCallTextBackDashboard })));
+const LeadsDashboard = lazy(() => import('./components/LeadsDashboard').then(module => ({ default: module.LeadsDashboard })));
+const CRMDashboard = lazy(() => import('./components/CRMDashboard').then(module => ({ default: module.CRMDashboard })));
+const FollowUpDashboard = lazy(() => import('./components/FollowUpDashboard').then(module => ({ default: module.FollowUpDashboard })));
+const ReEngagementDashboard = lazy(() => import('./components/ReEngagementDashboard').then(module => ({ default: module.ReEngagementDashboard })));
+const ReviewsDashboard = lazy(() => import('./components/ReviewsDashboard').then(module => ({ default: module.ReviewsDashboard })));
+const AppointmentsDashboard = lazy(() => import('./components/AppointmentsDashboard').then(module => ({ default: module.AppointmentsDashboard })));
+const EstimatesDashboard = lazy(() => import('./components/EstimatesDashboard').then(module => ({ default: module.EstimatesDashboard })));
+const ColdOutreachDashboard = lazy(() => import('./components/ColdOutreachDashboard').then(module => ({ default: module.ColdOutreachDashboard })));
+const IntegrationsDashboard = lazy(() => import('./components/IntegrationsDashboard').then(module => ({ default: module.IntegrationsDashboard })));
+const KnowledgeBaseDashboard = lazy(() => import('./components/KnowledgeBaseDashboard').then(module => ({ default: module.KnowledgeBaseDashboard })));
+const ConversationsDashboard = lazy(() => import('./components/ConversationsDashboard').then(module => ({ default: module.ConversationsDashboard })));
+const PlatformAdminDashboard = lazy(() => import('./components/PlatformAdminDashboard').then(module => ({ default: module.PlatformAdminDashboard })));
+const AICopilotDrawer = lazy(() => import('./components/AICopilotDrawer').then(module => ({ default: module.AICopilotDrawer })));
+const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer').then(module => ({ default: module.NotificationsDrawer })));
 import { ChatWidget } from './components/ChatWidget';
 import { AuthModal } from './components/AuthModal';
-import { PricingPage } from './components/PricingPage';
-import { BillingDashboard } from './components/BillingDashboard';
+const PricingPage = lazy(() => import('./components/PricingPage').then(module => ({ default: module.PricingPage })));
+const BillingDashboard = lazy(() => import('./components/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
 import { PlanUpgradeModal } from './components/PlanUpgradeModal';
-import { LocalizationSettings } from './components/LocalizationSettings';
-import { WidgetSnippetDashboard } from './components/WidgetSnippetDashboard';
+const LocalizationSettings = lazy(() => import('./components/LocalizationSettings').then(module => ({ default: module.LocalizationSettings })));
+const WidgetSnippetDashboard = lazy(() => import('./components/WidgetSnippetDashboard').then(module => ({ default: module.WidgetSnippetDashboard })));
 import { BusinessLoginPage } from './components/auth/BusinessLoginPage';
 import { PlatformAdminLoginPage } from './components/auth/PlatformAdminLoginPage';
 import { BusinessOnboardingFunnel } from './components/auth/BusinessOnboardingFunnel';
-import { AgentDeskCheckout } from './components/AgentDeskCheckout';
+const AgentDeskCheckout = lazy(() => import('./components/AgentDeskCheckout').then(module => ({ default: module.AgentDeskCheckout })));
 import { BusinessAccountSettings } from './components/auth/BusinessAccountSettings';
 import { ForcedPasswordChangePage } from './components/auth/ForcedPasswordChangePage';
 import { AccountSetupPage } from './components/auth/AccountSetupPage';
@@ -80,6 +80,16 @@ import {
   Menu,
   X
 } from 'lucide-react';
+
+
+const RouteLoading: React.FC = () => (
+  <div className="min-h-[50vh] flex items-center justify-center bg-slate-950">
+    <div className="flex flex-col items-center gap-3 text-slate-400">
+      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <span className="text-sm">Loading AgentDesk...</span>
+    </div>
+  </div>
+);
 
 export type SaaSNavTab = 
   | 'overview'
@@ -585,6 +595,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
+        <Suspense fallback={<RouteLoading />}>
         {currentView === 'setup_account' ? (
           <AccountSetupPage
             onSuccess={(businessId) => {
@@ -1511,6 +1522,7 @@ export default function App() {
             )}
           </div>
         )}
+        </Suspense>
       </main>
 
       {/* Floating Demo Chat Widget Overlay */}
