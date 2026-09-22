@@ -119,7 +119,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
   return (
     <>
       {/* Mobile Backdrop */}
-      {isOpenMobile && (
+      {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-xs md:hidden transition-opacity"
           onClick={onCloseMobile}
@@ -133,8 +133,8 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
           md:static md:top-0 md:h-[calc(100vh-4rem)]
           bg-slate-900 border-r border-slate-800
           flex flex-col transition-all duration-300 ease-in-out shrink-0
-          ${isOpenMobile ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'}
-          ${isCollapsedDesktop ? 'md:w-16' : 'md:w-64'}
+          ${mobileOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0'}
+          ${collapsed ? 'md:w-16' : 'md:w-64'}
         `}
       >
         {/* Sidebar Header */}
@@ -143,7 +143,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
             <div className="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
               <ShieldCheck className="w-4 h-4" />
             </div>
-            {(!isCollapsedDesktop || isOpenMobile) && (
+            {(!collapsed || mobileOpen) && (
               <div className="min-w-0">
                 <div className="text-xs font-black text-white uppercase tracking-wider truncate">
                   Platform Admin
@@ -166,11 +166,11 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
 
           {/* Desktop collapse toggle */}
           <button
-            onClick={onToggleCollapseDesktop}
+            onClick={toggleCollapse}
             className="hidden md:flex p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title={isCollapsedDesktop ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            {isCollapsedDesktop ? (
+            {collapsed ? (
               <ChevronRight className="w-4 h-4" />
             ) : (
               <ChevronLeft className="w-4 h-4" />
@@ -198,9 +198,9 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
                       ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 font-bold'
                       : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
                   }
-                  ${isCollapsedDesktop && !isOpenMobile ? 'justify-center px-2' : ''}
+                  ${collapsed && !mobileOpen ? 'justify-center px-2' : ''}
                 `}
-                title={isCollapsedDesktop && !isOpenMobile ? item.label : undefined}
+                title={collapsed && !mobileOpen ? item.label : undefined}
               >
                 <Icon
                   className={`w-4 h-4 shrink-0 transition-colors ${
@@ -240,7 +240,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
                 w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold
                 bg-blue-600/10 hover:bg-blue-600/20 text-blue-300 border border-blue-500/20
                 transition-all cursor-pointer group
-                ${isCollapsedDesktop && !isOpenMobile ? 'justify-center px-2' : ''}
+                ${collapsed && !mobileOpen ? 'justify-center px-2' : ''}
               `}
               title="Open Tenant Business Console"
             >
