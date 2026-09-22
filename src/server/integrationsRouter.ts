@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import {
   gmailService,
   emailService,
@@ -173,7 +174,235 @@ integrationsRouter.post(
 // 1. PLATFORM ADMIN: TENANT-SCOPED INTEGRATIONS
 // ----------------------------------------------------------------------------
 
+const CUSTOM_INTEGRATION_CATEGORIES = ['AI', 'CRM', 'Voice', 'SMS', 'WhatsApp', 'Email', 'Calendar', 'Payments', 'Analytics', 'Other'];
+const CUSTOM_AUTH_TYPES = ['none', 'bearer', 'api_key', 'custom_header', 'basic'];
+
+function safeCustomId(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').slice(0, 80);
+}
+
+function maskCustomConfig(config: Record<string, string>): Record<string, string> {
+  const masked: Record<string, string> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (!value || ['api_key', 'password', 'secret', 'token'].some(k => key.toLowerCase().includes(k))) {
+      if (value) masked[key] = `••••••••${value.slice(-4)}`;
+      continue;
+    }
+    masked[key] = value;
+  }
+  return masked;
+}
+
+function validateCustomUrl(rawUrl: string): URL {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new Error('Base URL must be a valid URL.');
+  }
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('Only HTTP and HTTPS API URLs are supported.');
+  }
+  if (url.username || url.password) {
+    throw new Error('Credentials must not be embedded in the API URL.');
+  }
+  const host = url.hostname.toLowerCase();
+  const blocked = host === 'localhost' || host === '0.0.0.0' || host === '::1' ||
+    /^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) ||
+    /^169\.254\./.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+  if (blocked) throw new Error('Private or local network addresses are not allowed for custom integrations.');
+  return url;
+}
+
+function publicCustomIntegration(item: { id: string; config: Record<string, string> }) {
+  const config = item.config;
+  return {
+    id: item.id,
+    name: config.name || 'Custom Integration',
+    category: config.category || 'Other',
+    description: config.description || '',
+    baseUrl: config.base_url || '',
+    authType: config.auth_type || 'none',
+    testMethod: config.test_method || 'GET',
+    testPath: config.test_path || '/',
+    model: config.model || '',
+    apiKeyHeader: config.api_key_header || '',
+    configured: true,
+    maskedConfig: maskCustomConfig(config)
+  };
+}
+
+
+
 const TENANT_INTEGRATION_FIELDS: Record<string, string[]> = {
+  google_calendar: ['client_id', 'client_secret', 'refresh_token'],
+  twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
+  twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
+  whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
+  resend_email: ['api_key', 'from_email'],
+  gemini_ai: ['api_key', 'model'],
+  hubspot_crm: ['access_token', 'portal_id'],
+  salesforce_crm: ['client_id', 'client_secret', 'refresh_token'],
+  custom_webhook: ['webhook_url', 'signing_secret']
+};
+
+// Custom integrations are tenant-owned and may point at a customer's own API.
+integrationsRouter.get(
+  '/platform/tenant-integrations/custom',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
+      if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required.' });
+      await integrationStore.syncWithPostgres();
+      const { getTenant } = await import('./tenantRegistry.js');
+      if (!getTenant(tenantId)) return res.status(404).json({ success: false, error: 'Tenant not found.' });
+      const integrations = integrationStore.getTenantCustomIntegrations(tenantId).map(publicCustomIntegration);
+      return res.json({ success: true, tenantId, integrations });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to load custom integrations.' });
+    }
+  }
+);
+
+integrationsRouter.post(
+  '/platform/tenant-integrations/custom',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.body?.tenantId || '').trim().toLowerCase();
+      if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required.' });
+      const { getTenant } = await import('./tenantRegistry.js');
+      if (!getTenant(tenantId)) return res.status(404).json({ success: false, error: 'Tenant not found.' });
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const name = String(body.name || '').trim();
+      const baseUrl = String(body.base_url || body.baseUrl || '').trim();
+      const category = String(body.category || 'Other').trim();
+      const authType = String(body.auth_type || body.authType || 'none').trim();
+      if (!name || !baseUrl) return res.status(400).json({ success: false, error: 'Integration name and base URL are required.' });
+      if (!CUSTOM_INTEGRATION_CATEGORIES.includes(category)) return res.status(400).json({ success: false, error: 'Unsupported integration category.' });
+      if (!CUSTOM_AUTH_TYPES.includes(authType)) return res.status(400).json({ success: false, error: 'Unsupported authentication type.' });
+      validateCustomUrl(baseUrl);
+
+      const id = `ci_${safeCustomId(name)}_${crypto.randomUUID().slice(0, 8)}`;
+      const config: Record<string, string> = {
+        name,
+        category,
+        description: String(body.description || '').trim(),
+        base_url: baseUrl,
+        auth_type: authType,
+        api_key: String(body.api_key || '').trim(),
+        api_key_header: String(body.api_key_header || 'X-API-Key').trim(),
+        api_key_prefix: String(body.api_key_prefix || '').trim(),
+        username: String(body.username || '').trim(),
+        password: String(body.password || '').trim(),
+        test_method: String(body.test_method || 'GET').toUpperCase() === 'POST' ? 'POST' : 'GET',
+        test_path: String(body.test_path || '/').trim() || '/',
+        model: String(body.model || '').trim()
+      };
+
+      integrationStore.saveTenantCustomIntegration(tenantId, id, config);
+      return res.status(201).json({ success: true, integration: publicCustomIntegration({ id, config }) });
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message || 'Failed to create custom integration.' });
+    }
+  }
+);
+
+integrationsRouter.put(
+  '/platform/tenant-integrations/custom/:customId',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.body?.tenantId || '').trim().toLowerCase();
+      const customId = safeCustomId(String(req.params.customId || ''));
+      if (!tenantId || !customId) return res.status(400).json({ success: false, error: 'Tenant and integration ID are required.' });
+      const { getTenant } = await import('./tenantRegistry.js');
+      if (!getTenant(tenantId)) return res.status(404).json({ success: false, error: 'Tenant not found.' });
+      const existing = integrationStore.getTenantCustomIntegration(tenantId, customId);
+      if (!existing.name) return res.status(404).json({ success: false, error: 'Custom integration not found.' });
+
+      const body = req.body && typeof req.body === 'object' ? req.body : {};
+      const next = { ...existing };
+      for (const field of ['name','category','description','base_url','auth_type','api_key','api_key_header','api_key_prefix','username','password','test_method','test_path','model']) {
+        if (typeof body[field] === 'string' && body[field].trim()) next[field] = body[field].trim();
+      }
+      if (body.baseUrl) next.base_url = String(body.baseUrl).trim();
+      if (body.authType) next.auth_type = String(body.authType).trim();
+      validateCustomUrl(next.base_url);
+      integrationStore.saveTenantCustomIntegration(tenantId, customId, next);
+      return res.json({ success: true, integration: publicCustomIntegration({ id: integrationStore.getTenantIntegrationId(tenantId, 'unused'), config: next }) });
+    } catch (err: any) {
+      return res.status(400).json({ success: false, error: err.message || 'Failed to update custom integration.' });
+    }
+  }
+);
+
+integrationsRouter.post(
+  '/platform/tenant-integrations/custom/:customId/test',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.body?.tenantId || '').trim().toLowerCase();
+      const customId = safeCustomId(String(req.params.customId || ''));
+      const config = integrationStore.getTenantCustomIntegration(tenantId, customId);
+      if (!config.name) return res.status(404).json({ success: false, error: 'Custom integration not found.' });
+      const base = validateCustomUrl(config.base_url);
+      const target = new URL(config.test_path || '/', base);
+      const headers: Record<string, string> = { Accept: 'application/json, text/plain;q=0.9, */*' };
+      const authType = config.auth_type || 'none';
+      if (authType === 'bearer' && config.api_key) headers.Authorization = `Bearer ${config.api_key}`;
+      if (authType === 'api_key' && config.api_key) headers[config.api_key_header || 'X-API-Key'] = `${config.api_key_prefix}${config.api_key_prefix ? ' ' : ''}${config.api_key}`;
+      if (authType === 'custom_header' && config.api_key) headers[config.api_key_header || 'Authorization'] = config.api_key;
+      if (authType === 'basic' && config.username) headers.Authorization = `Basic ${Buffer.from(`${config.username}:${config.password || ''}`).toString('base64')}`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      const method = config.test_method === 'POST' ? 'POST' : 'GET';
+      let response: globalThis.Response;
+      try {
+        response = await fetch(target.toString(), {
+          method,
+          headers: method === 'POST' ? { ...headers, 'Content-Type': 'application/json' } : headers,
+          body: method === 'POST' ? '{}' : undefined,
+          signal: controller.signal,
+          redirect: 'manual'
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      const ok = response.status >= 200 && response.status < 400;
+      return res.json({
+        success: ok,
+        statusCode: response.status,
+        message: ok ? 'Connection verified successfully.' : `API returned HTTP ${response.status}.`,
+        endpoint: target.toString()
+      });
+    } catch (err: any) {
+      return res.json({ success: false, message: err.name === 'AbortError' ? 'Connection timed out after 8 seconds.' : (err.message || 'Connection test failed.') });
+    }
+  }
+);
+
+integrationsRouter.delete(
+  '/platform/tenant-integrations/custom/:customId',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
+      const customId = safeCustomId(String(req.params.customId || ''));
+      if (!tenantId || !customId) return res.status(400).json({ success: false, error: 'Tenant and integration ID are required.' });
+      const deleted = integrationStore.deleteTenantCustomIntegration(tenantId, customId);
+      if (!deleted) return res.status(404).json({ success: false, error: 'Custom integration not found.' });
+      return res.json({ success: true });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to delete custom integration.' });
+    }
+  }
+);
+
+
   google_calendar: ['client_id', 'client_secret', 'refresh_token'],
   twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
   twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
