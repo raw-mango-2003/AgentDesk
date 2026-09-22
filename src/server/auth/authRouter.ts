@@ -44,11 +44,12 @@ import {
   getAllTenants,
   setTenant,
   PUBLIC_DEMO_TENANT_ID,
-  PUBLIC_DEMO_AGENT_ID,
   serverAgentsStore,
   serverKnowledgeStore,
   serverTenantUsageStore
 } from '../tenantRegistry.js';
+import { PUBLIC_DEMO_AGENT_ID } from '../../data/demoBusiness.js';
+
 import {
   saveTwoFactorChallenge,
   consumeTwoFactorChallenge
