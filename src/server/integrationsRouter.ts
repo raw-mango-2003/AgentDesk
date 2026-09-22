@@ -206,7 +206,6 @@ integrationsRouter.get(
       if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required.' });
 
       await integrationStore.syncWithPostgres();
-      await integrationStore.syncWithPostgres();
       const { getTenant } = await import('./tenantRegistry.js');
       const tenant = getTenant(tenantId);
       if (!tenant) return res.status(404).json({ success: false, error: 'Tenant not found.' });
@@ -238,6 +237,7 @@ integrationsRouter.put(
       const allowedFields = TENANT_INTEGRATION_FIELDS[provider];
       if (!allowedFields) return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
 
+      await integrationStore.syncWithPostgres();
       const { getTenant } = await import('./tenantRegistry.js');
       const tenant = getTenant(tenantId);
       if (!tenant) return res.status(404).json({ success: false, error: 'Tenant not found.' });
