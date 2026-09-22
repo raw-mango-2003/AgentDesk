@@ -181,6 +181,18 @@ function safeCustomId(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_').slice(0, 80);
 }
 
+function customKeyForTenant(tenantId: string, customId: string): string {
+  const safeTenant = tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+  const prefix = `tenant_custom_${safeTenant}_`;
+  const safe = safeCustomId(customId);
+  return safe.startsWith(prefix) ? safe.slice(prefix.length) : safe;
+}
+
+function fullCustomIntegrationId(tenantId: string, customKey: string): string {
+  const safeTenant = tenantId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+  return `tenant_custom_${safeTenant}_${customKeyForTenant(tenantId, customKey)}`;
+}
+
 function maskCustomConfig(config: Record<string, string>): Record<string, string> {
   const masked: Record<string, string> = {};
   for (const [key, value] of Object.entries(config)) {
@@ -315,7 +327,7 @@ integrationsRouter.put(
   async (req: Request, res: Response) => {
     try {
       const tenantId = String(req.body?.tenantId || '').trim().toLowerCase();
-      const customId = safeCustomId(String(req.params.customId || ''));
+      const customId = customKeyForTenant(tenantId, String(req.params.customId || ''));
       if (!tenantId || !customId) return res.status(400).json({ success: false, error: 'Tenant and integration ID are required.' });
       const { getTenant } = await import('./tenantRegistry.js');
       if (!getTenant(tenantId)) return res.status(404).json({ success: false, error: 'Tenant not found.' });
@@ -331,7 +343,7 @@ integrationsRouter.put(
       if (body.authType) next.auth_type = String(body.authType).trim();
       validateCustomUrl(next.base_url);
       integrationStore.saveTenantCustomIntegration(tenantId, customId, next);
-      return res.json({ success: true, integration: publicCustomIntegration({ id: integrationStore.getTenantIntegrationId(tenantId, 'unused'), config: next }) });
+      return res.json({ success: true, integration: publicCustomIntegration({ id: fullCustomIntegrationId(tenantId, customId), config: next }) });
     } catch (err: any) {
       return res.status(400).json({ success: false, error: err.message || 'Failed to update custom integration.' });
     }
@@ -344,7 +356,7 @@ integrationsRouter.post(
   async (req: Request, res: Response) => {
     try {
       const tenantId = String(req.body?.tenantId || '').trim().toLowerCase();
-      const customId = safeCustomId(String(req.params.customId || ''));
+      const customId = customKeyForTenant(tenantId, String(req.params.customId || ''));
       const config = integrationStore.getTenantCustomIntegration(tenantId, customId);
       if (!config.name) return res.status(404).json({ success: false, error: 'Custom integration not found.' });
       const base = validateCustomUrl(config.base_url);
