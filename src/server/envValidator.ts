@@ -164,6 +164,7 @@ export function getIntegrationsStatusReport(gmailStatus?: {
   if (rzpKeySecret) rzpConfiguredVars.push('RAZORPAY_KEY_SECRET');
   else rzpMissingVars.push('RAZORPAY_KEY_SECRET');
   if (process.env.RAZORPAY_WEBHOOK_SECRET) rzpConfiguredVars.push('RAZORPAY_WEBHOOK_SECRET');
+  else rzpMissingVars.push('RAZORPAY_WEBHOOK_SECRET');
 
   result['razorpay_payments'] = {
     id: 'razorpay_payments',
@@ -339,8 +340,12 @@ export function validateEnvironmentOnStartup(gmailStatus?: any): EnvironmentStat
   const core = getCoreEnvironmentStatus();
   const integrations = getIntegrationsStatusReport(gmailStatus);
 
-  console.log('[System] AgentDesk Core Environment: READY');
-  console.log(`[System] Mandatory core configuration verified.`);
+  console.log(`[System] AgentDesk Core Environment: ${core.status}`);
+  if (core.status === 'READY') {
+    console.log('[System] Mandatory core configuration verified.');
+  } else {
+    console.error('[System] Mandatory core configuration is incomplete. Review the startup diagnostics before treating this instance as production-ready.');
+  }
   
   const connected = Object.values(integrations).filter(i => i.status === 'CONNECTED');
   const standby = Object.values(integrations).filter(i => i.status !== 'CONNECTED');
