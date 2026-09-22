@@ -43,6 +43,7 @@ interface TestResult {
 export const PlatformSystemHealth: React.FC = () => {
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
+  const [healthError, setHealthError] = useState<string | null>(null);
   const [runningTests, setRunningTests] = useState(false);
   const [testSuiteResults, setTestSuiteResults] = useState<{
     allPassed: boolean;
@@ -53,13 +54,19 @@ export const PlatformSystemHealth: React.FC = () => {
 
   const fetchHealth = async () => {
     setLoadingHealth(true);
+    setHealthError(null);
     try {
       const res = await safeFetchJson('/api/platform/system-health');
       if (res.success) {
         setHealth(res as unknown as SystemHealthData);
+      } else {
+        setHealth(null);
+        setHealthError(res.error || 'System health endpoint returned an unhealthy response.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load system health:', err);
+      setHealth(null);
+      setHealthError(err?.message || 'Unable to reach the system health service.');
     } finally {
       setLoadingHealth(false);
     }
@@ -101,6 +108,12 @@ export const PlatformSystemHealth: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Health Metrics Overview */}
+      {healthError && (
+        <div className="rounded-xl border border-rose-800/60 bg-rose-950/30 px-4 py-3 text-xs text-rose-200">
+          <span className="font-semibold">Health check unavailable:</span> {healthError}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-3">
           <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 rounded-lg text-emerald-600 dark:text-emerald-400">
@@ -109,8 +122,8 @@ export const PlatformSystemHealth: React.FC = () => {
           <div>
             <div className="text-xs text-slate-500 dark:text-slate-400">System Status</div>
             <div className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 mt-0.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Operational
+              <span className={`w-2.5 h-2.5 rounded-full ${health ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
+              {health ? 'Operational' : 'Unavailable'}
             </div>
           </div>
         </div>
