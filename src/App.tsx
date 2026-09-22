@@ -1024,18 +1024,20 @@ export default function App() {
                   <span>Transcripts</span>
                 </button>
 
-                {/* 14. Integrations */}
-                <button
-                  onClick={() => navigateTab('integrations')}
-                  className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                    activeTab === 'integrations'
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-                  }`}
-                >
-                  <Sliders className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Integrations</span>
-                </button>
+                {/* 14. Integrations, Platform Admin only */}
+                {currentUser?.role === 'PLATFORM_ADMIN' && (
+                  <button
+                    onClick={() => navigateTab('integrations')}
+                    className={`px-3.5 py-2 rounded-xl font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                      activeTab === 'integrations'
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                        : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    }`}
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Integrations</span>
+                  </button>
+                )}
 
                 {/* 15. Billing & Limits */}
                 <button
