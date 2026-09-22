@@ -55,25 +55,38 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [resolvedAgent, setResolvedAgent] = useState<AIAgent | undefined>(initialAgent);
 
   useEffect(() => {
+    // Public landing pages already provide the demo business and knowledge data.
+    // Do not resolve the public agent/tenant over the network until the visitor
+    // actually opens the widget. This keeps the landing page network-light.
+    if (!isEmbedded && externalIsOpen === false) return;
+
+    let cancelled = false;
+
     async function initContext() {
       if (agentId) {
         const { tenant, agent } = await resolveAgentAndTenant(agentId);
+        if (cancelled) return;
         if (tenant) setResolvedBiz(tenant);
         if (agent) setResolvedAgent(agent);
       } else if (tenantId) {
         const { tenant, agent } = await resolveAgentAndTenant(tenantId);
+        if (cancelled) return;
         if (tenant) setResolvedBiz(tenant);
         if (agent) setResolvedAgent(agent);
       } else if (initialBusiness) {
         setResolvedBiz(initialBusiness);
         if (initialBusiness.primaryAgentId) {
           const ag = await getAgentById(initialBusiness.primaryAgentId);
-          if (ag) setResolvedAgent(ag);
+          if (!cancelled && ag) setResolvedAgent(ag);
         }
       }
     }
+
     initContext();
-  }, [agentId, tenantId, initialBusiness?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [agentId, tenantId, initialBusiness?.id, externalIsOpen, isEmbedded]);
 
   const business = resolvedBiz || initialBusiness || PUBLIC_AGENTDESK_DEMO_BUSINESS;
   const [internalIsOpen, setInternalIsOpen] = useState(externalIsOpen ?? false);
