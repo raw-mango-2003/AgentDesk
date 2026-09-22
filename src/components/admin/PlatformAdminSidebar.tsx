@@ -208,11 +208,11 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
                   }`}
                 />
 
-                {(!isCollapsedDesktop || isOpenMobile) && (
+                {(!collapsed || mobileOpen) && (
                   <span className="truncate flex-1 text-left">{item.label}</span>
                 )}
 
-                {(!isCollapsedDesktop || isOpenMobile) && item.badge !== undefined && item.badge !== null && (
+                {(!collapsed || mobileOpen) && item.badge !== undefined && item.badge !== null && (
                   <span
                     className={`
                       ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0
@@ -245,7 +245,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
               title="Open Tenant Business Console"
             >
               <ExternalLink className="w-3.5 h-3.5 shrink-0 text-blue-400 group-hover:scale-110 transition-transform" />
-              {(!isCollapsedDesktop || isOpenMobile) && (
+              {(!collapsed || mobileOpen) && (
                 <span className="truncate">Business Console</span>
               )}
             </button>
