@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { 
   Bot, 
   LogIn, 
@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Business, AppNotification } from '../types';
-import { getBusinessById, getNotifications, subscribeToTenantRegistry } from '../lib/dbService';
-import { TenantSelectModal } from './TenantSelectModal';
+const loadDbService = () => import('../lib/dbService');
+const TenantSelectModal = lazy(() => import('./TenantSelectModal').then(module => ({ default: module.TenantSelectModal })));
 
 interface NavbarProps {
   currentView: string;
@@ -51,21 +51,36 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   useEffect(() => {
     let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
+
     const loadActiveBiz = async () => {
-      if (activeBusinessId && activeBusinessId !== 'platform') {
-        const biz = await getBusinessById(activeBusinessId);
-        if (isMounted) setActiveBusiness(biz);
-      } else {
+      if (!activeBusinessId || activeBusinessId === 'platform') {
         if (isMounted) setActiveBusiness(null);
+        return;
       }
+      const { getBusinessById } = await loadDbService();
+      const biz = await getBusinessById(activeBusinessId);
+      if (isMounted) setActiveBusiness(biz);
     };
+
     loadActiveBiz();
-    const unsubscribe = subscribeToTenantRegistry(() => {
-      loadActiveBiz();
+
+    if (!activeBusinessId) {
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    loadDbService().then(({ subscribeToTenantRegistry }) => {
+      if (!isMounted) return;
+      unsubscribe = subscribeToTenantRegistry(() => {
+        loadActiveBiz();
+      });
     });
+
     return () => {
       isMounted = false;
-      unsubscribe();
+      if (unsubscribe) unsubscribe();
     };
   }, [activeBusinessId]);
 
@@ -349,12 +364,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       </header>
 
       {/* Tenant Selection Modal (Only when explicitly opened by Platform Admin or explicit action) */}
-      <TenantSelectModal
-        isOpen={showTenantModal}
-        onClose={() => setShowTenantModal(false)}
-        onSelectBusiness={handleSelectBusinessFromModal}
-        currentBusinessId={activeBusinessId}
-      />
+      <Suspense fallback={null}>
+        <TenantSelectModal
+          isOpen={showTenantModal}
+          onClose={() => setShowTenantModal(false)}
+          onSelectBusiness={handleSelectBusinessFromModal}
+          currentBusinessId={activeBusinessId}
+        />
+      </Suspense>
     </>
   );
 };
