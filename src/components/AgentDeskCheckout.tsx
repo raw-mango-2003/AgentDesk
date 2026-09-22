@@ -173,6 +173,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [retryingPayment, setRetryingPayment] = useState(false);
   const [paymentFailed, setPaymentFailed] = useState(false);
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
+  const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
   const [paymentCapability, setPaymentCapability] = useState<AvailablePaymentMethodsResponse | null>(null);
   const [inrCalculation, setInrCalculation] = useState<OrderCalculationState | null>(null);
@@ -422,6 +423,11 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     }
     if (!phone.trim() || phone.replace(/\D/g, '').length < 8) {
       setError('Please enter a valid contact phone number.');
+      return;
+    }
+
+    if (!acceptedLegalTerms) {
+      setError('Please review and accept the Terms of Use, Privacy Policy, and Refund & Cancellation Policy before continuing.');
       return;
     }
 
