@@ -44,6 +44,7 @@ import {
   getAllTenants,
   setTenant,
   PUBLIC_DEMO_TENANT_ID,
+  PUBLIC_DEMO_AGENT_ID,
   serverAgentsStore,
   serverKnowledgeStore,
   serverTenantUsageStore
