@@ -33,7 +33,6 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [activeSubTab, setActiveSubTab] = useState<'integrations' | 'localization' | 'audit'>('integrations');
   const [isResetting, setIsResetting] = useState(false);
-  const [tenantOptions, setTenantOptions] = useState<Business[]>([]);
   const [managedBusiness, setManagedBusiness] = useState<Business>(business);
   const [integrationRecords, setIntegrationRecords] = useState<IntegrationStatus[]>([]);
   const [configuringProvider, setConfiguringProvider] = useState<IntegrationProvider | null>(null);
@@ -52,17 +51,16 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
     { id: 'custom_webhook', name: 'Custom Webhook', category: 'Webhooks', description: 'Inbound or outbound JSON event delivery.', fields: ['webhook_url', 'signing_secret'] }
   ];
 
-  const getIntegrationFor = (provider: IntegrationProvider, tenantId: string) =>
-    integrationRecords.find(item => item.id === provider && (item.tenantId || item.businessId) === tenantId);
+  const getIntegrationFor = (provider: IntegrationProvider) =>
+    integrationRecords.find(item => item.id === provider && (item.tenantId || item.businessId) === business.id);
 
-  const loadIntegrationWorkspace = async (tenant: Business) => {
-    setManagedBusiness(tenant);
-    const records = await getIntegrations(tenant.id);
-    setIntegrationRecords(records);
+  const loadIntegrationWorkspace = async () => {
+    setManagedBusiness(business);
+    setIntegrationRecords(await getIntegrations(business.id));
   };
 
   const openIntegrationConfig = (provider: IntegrationProvider) => {
-    const existing = getIntegrationFor(provider, managedBusiness.id);
+    const existing = getIntegrationFor(provider);
     setConfiguringProvider(provider);
     setConfigFields(existing?.config || {});
   };
@@ -80,8 +78,8 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
         description: catalogItem.description,
         status: 'CONNECTED',
         lastSync: new Date().toISOString(),
-        tenantId: managedBusiness.id,
-        businessId: managedBusiness.id,
+        tenantId: business.id,
+        businessId: business.id,
         config: configFields
       };
       const nextRecords = integrationRecords.some(item => item.id === configuringProvider)
@@ -97,21 +95,15 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
   };
 
   const disconnectIntegration = async (provider: IntegrationProvider) => {
-    await saveIntegrations(integrationRecords.filter(item => item.id !== provider));
-    setIntegrationRecords(prev => prev.filter(item => item.id !== provider));
+    const next = integrationRecords.map(item =>
+      item.id === provider ? { ...item, status: 'NOT_CONNECTED' as const, config: undefined } : item
+    );
+    await saveIntegrations(next);
+    setIntegrationRecords(next);
   };
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const tenants = await getAllBusinesses();
-      if (!mounted) return;
-      const selectable = tenants.filter(item => item.id !== 'platform');
-      setTenantOptions(selectable);
-      const initial = selectable.find(item => item.id === business.id) || business;
-      await loadIntegrationWorkspace(initial);
-    })();
-    return () => { mounted = false; };
+    loadIntegrationWorkspace();
   }, [business.id]);
 
   // Editable business settings
@@ -220,22 +212,16 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
             <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
               <div>
                 <h3 className="text-sm font-bold text-white">Tenant Integration Manager</h3>
-                <p className="text-xs text-slate-400 mt-1">Choose a tenant first, then connect, edit, or disconnect integrations for that tenant.</p>
+                <p className="text-xs text-slate-400 mt-1">Configure integrations for the current tenant workspace. Platform Admin can manage any tenant from Platform Admin → Settings → Integrations → Tenant Integrations.</p>
               </div>
-              <select value={managedBusiness.id} onChange={async e => {
-                const selected = tenantOptions.find(item => item.id === e.target.value);
-                if (selected) await loadIntegrationWorkspace(selected);
-              }} className="w-full lg:w-96 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500">
-                {tenantOptions.map(tenant => (
-                  <option key={tenant.id} value={tenant.id}>{tenant.name} • {tenant.id} {tenant.isDemo ? '• DEMO' : '• CUSTOMER'}</option>
-                ))}
-                {tenantOptions.length === 0 && <option value={managedBusiness.id}>{managedBusiness.name} • {managedBusiness.id}</option>}
-              </select>
+              <div className="w-full lg:w-96 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white">
+                {business.name} • {business.id}
+              </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
               <span className="px-2 py-1 rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">Platform Admin</span>
-              <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/20">Managing: {managedBusiness.name}</span>
-              <span className="px-2 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">Tenant ID: {managedBusiness.id}</span>
+              <span className="px-2 py-1 rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/20">Managing: {business.name}</span>
+              <span className="px-2 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">Tenant ID: {business.id}</span>
             </div>
           </div>
 
@@ -245,7 +231,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {integrationCatalog.map(item => {
-              const existing = getIntegrationFor(item.id, managedBusiness.id);
+              const existing = getIntegrationFor(item.id, business.id);
               const connected = existing?.status === 'CONNECTED';
               return (
                 <div key={item.id} className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-3">
@@ -281,7 +267,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                 <div className="flex items-center justify-between mb-5">
                   <div>
                     <h3 className="text-base font-bold text-white">{integrationCatalog.find(item => item.id === configuringProvider)?.name}</h3>
-                    <p className="text-xs text-slate-400 mt-1">Configure for <span className="text-blue-300 font-semibold">{managedBusiness.name}</span> ({managedBusiness.id})</p>
+                    <p className="text-xs text-slate-400 mt-1">Configure for <span className="text-blue-300 font-semibold">{business.name}</span> ({business.id})</p>
                   </div>
                   <button onClick={() => setConfiguringProvider(null)} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"><X className="w-5 h-5" /></button>
                 </div>
