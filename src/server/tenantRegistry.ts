@@ -169,6 +169,63 @@ export async function persistAgentToPostgres(agent: any): Promise<void> {
   }
 }
 
+export type ServerLeadRecord = {
+  id: string;
+  tenantId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  source?: string;
+  status?: string;
+  score?: number;
+  details?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function persistLeadToPostgres(lead: ServerLeadRecord): Promise<boolean> {
+  try {
+    if (!(await postgresClient.initialize())) return false;
+    await postgresClient.query(`
+      INSERT INTO agentdesk_leads
+        (id, tenant_id, name, email, phone, source, status, score, details, created_at, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      ON CONFLICT (id) DO UPDATE SET
+        name=EXCLUDED.name, email=EXCLUDED.email, phone=EXCLUDED.phone,
+        source=EXCLUDED.source, status=EXCLUDED.status, score=EXCLUDED.score,
+        details=EXCLUDED.details, updated_at=EXCLUDED.updated_at
+    `, [
+      lead.id, lead.tenantId, lead.name, lead.email || null, lead.phone || null,
+      lead.source || 'website_chat', lead.status || 'NEW', Number(lead.score) || 0,
+      JSON.stringify(lead.details || {}), lead.createdAt, lead.updatedAt
+    ]);
+    return true;
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresPersistLeadWarning]', err.message);
+    return false;
+  }
+}
+
+export async function getLeadsFromPostgres(tenantId: string): Promise<ServerLeadRecord[]> {
+  try {
+    if (!(await postgresClient.initialize())) return [];
+    const result = await postgresClient.query(`
+      SELECT id, tenant_id, name, email, phone, source, status, score, details, created_at, updated_at
+      FROM agentdesk_leads WHERE tenant_id = $1 ORDER BY created_at DESC
+    `, [tenantId]);
+    return (result.rows || []).map((row: any) => ({
+      id: row.id, tenantId: row.tenant_id, businessId: row.tenant_id,
+      name: row.name, email: row.email || '', phone: row.phone || '',
+      source: row.source || 'website_chat', status: row.status || 'NEW',
+      score: Number(row.score) || 0, ...(row.details && typeof row.details === 'object' ? row.details : {}),
+      createdAt: row.created_at, updatedAt: row.updated_at
+    }));
+  } catch (err: any) {
+    console.warn('[TenantRegistry:PostgresGetLeadsWarning]', err.message);
+    return [];
+  }
+}
+
 export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<boolean> {
   try {
     const isReady = await postgresClient.initialize();
