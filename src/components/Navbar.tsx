@@ -75,8 +75,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     onNavigate('dashboard');
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    // Navigate immediately. The AuthContext clears the local session first
+    // and revokes the server-side session in the background.
+    void logout();
     onNavigate('login');
   };
 
