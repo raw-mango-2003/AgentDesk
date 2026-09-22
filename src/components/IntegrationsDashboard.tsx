@@ -254,7 +254,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                       <h4 className="text-xs font-bold text-white">{item.name}</h4>
                       <p className="text-[10px] text-slate-400">{item.category}</p>
                     </div>
-                    <span className={\`px-2 py-0.5 rounded-full text-[9px] font-extrabold border \${connected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}\`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${connected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>
                       {connected ? 'CONNECTED' : 'NOT CONNECTED'}
                     </span>
                   </div>
@@ -289,7 +289,7 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
                   {integrationCatalog.find(item => item.id === configuringProvider)?.fields.map(field => (
                     <div key={field}>
                       <label className="block text-[11px] font-semibold text-slate-300 mb-1 capitalize">{field.replace(/_/g, ' ')}</label>
-                      <input type={field.includes('secret') || field.includes('token') || field.includes('key') ? 'password' : 'text'} value={configFields[field] || ''} onChange={e => setConfigFields(prev => ({ ...prev, [field]: e.target.value }))} placeholder={\`Enter \${field.replace(/_/g, ' ')}\`} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500" />
+                      <input type={field.includes('secret') || field.includes('token') || field.includes('key') ? 'password' : 'text'} value={configFields[field] || ''} onChange={e => setConfigFields(prev => ({ ...prev, [field]: e.target.value }))} placeholder={`Enter ${field.replace(/_/g, ' ')}`} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500" />
                     </div>
                   ))}
                 </div>
