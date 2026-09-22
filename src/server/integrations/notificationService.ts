@@ -281,6 +281,7 @@ export class NotificationService implements INotificationService {
       case 'ACCOUNT_DELETED': return 'account_deleted';
       case 'ADMIN_CREDENTIAL_CREATED': return null;
       case 'ADMIN_CREDENTIAL_CHANGED': return 'admin_credential_changed';
+      case 'NEW_LEAD_RECEIVED': return 'new_lead_received';
       case '2FA_ENABLED': return '2fa_enabled';
       case '2FA_DISABLED': return '2fa_disabled';
       case 'ACCOUNT_LOCKED': return 'account_locked';
