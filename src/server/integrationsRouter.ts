@@ -170,6 +170,122 @@ integrationsRouter.post(
 );
 
 // ----------------------------------------------------------------------------
+// 1. PLATFORM ADMIN: TENANT-SCOPED INTEGRATIONS
+// ----------------------------------------------------------------------------
+
+const TENANT_INTEGRATION_FIELDS: Record<string, string[]> = {
+  google_calendar: ['client_id', 'client_secret', 'refresh_token'],
+  twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
+  twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
+  whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
+  resend_email: ['api_key', 'from_email'],
+  gemini_ai: ['api_key', 'model'],
+  hubspot_crm: ['access_token', 'portal_id'],
+  salesforce_crm: ['client_id', 'client_secret', 'refresh_token'],
+  custom_webhook: ['webhook_url', 'signing_secret']
+};
+
+function maskTenantIntegrationConfig(config: Record<string, string>): Record<string, string> {
+  const masked: Record<string, string> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (!value) continue;
+    const sensitive = /(key|secret|token|password|sid)/i.test(key);
+    masked[key] = sensitive
+      ? `••••••••${value.slice(-4)}`
+      : value;
+  }
+  return masked;
+}
+
+integrationsRouter.get(
+  '/platform/tenant-integrations',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
+      if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required.' });
+
+      const { getTenant } = await import('./tenantRegistry.js');
+      const tenant = getTenant(tenantId);
+      if (!tenant) return res.status(404).json({ success: false, error: 'Tenant not found.' });
+
+      const integrations = Object.keys(TENANT_INTEGRATION_FIELDS).map(provider => {
+        const config = integrationStore.getTenantIntegrationConfig(tenantId, provider);
+        return {
+          provider,
+          configured: Object.keys(config).length > 0,
+          fields: TENANT_INTEGRATION_FIELDS[provider],
+          maskedConfig: maskTenantIntegrationConfig(config)
+        };
+      });
+
+      return res.json({ success: true, tenantId, integrations });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to load tenant integrations.' });
+    }
+  }
+);
+
+integrationsRouter.put(
+  '/platform/tenant-integrations/:tenantId/:provider',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.tenantId || '').trim().toLowerCase();
+      const provider = String(req.params.provider || '').trim().toLowerCase();
+      const allowedFields = TENANT_INTEGRATION_FIELDS[provider];
+      if (!allowedFields) return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
+
+      const { getTenant } = await import('./tenantRegistry.js');
+      const tenant = getTenant(tenantId);
+      if (!tenant) return res.status(404).json({ success: false, error: 'Tenant not found.' });
+
+      const incoming = req.body && typeof req.body === 'object' ? req.body : {};
+      const existing = integrationStore.getTenantIntegrationConfig(tenantId, provider);
+      const nextConfig: Record<string, string> = { ...existing };
+
+      for (const field of allowedFields) {
+        if (typeof incoming[field] === 'string' && incoming[field].trim()) {
+          nextConfig[field] = incoming[field].trim();
+        }
+      }
+
+      if (Object.keys(nextConfig).length === 0) {
+        return res.status(400).json({ success: false, error: 'At least one integration value is required.' });
+      }
+
+      integrationStore.saveTenantIntegrationConfig(tenantId, provider, nextConfig);
+      return res.json({
+        success: true,
+        tenantId,
+        provider,
+        configured: true,
+        maskedConfig: maskTenantIntegrationConfig(nextConfig)
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to save tenant integration.' });
+    }
+  }
+);
+
+integrationsRouter.delete(
+  '/platform/tenant-integrations/:tenantId/:provider',
+  requirePlatformAdmin,
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = String(req.params.tenantId || '').trim().toLowerCase();
+      const provider = String(req.params.provider || '').trim().toLowerCase();
+      if (!TENANT_INTEGRATION_FIELDS[provider]) return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
+
+      const deleted = integrationStore.deleteTenantIntegration(tenantId, provider);
+      return res.json({ success: true, tenantId, provider, disconnected: deleted });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to disconnect tenant integration.' });
+    }
+  }
+);
+
+// ----------------------------------------------------------------------------
 // 1. PLATFORM ADMIN: INTEGRATIONS MANAGEMENT
 // ----------------------------------------------------------------------------
 
