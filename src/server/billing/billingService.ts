@@ -2521,13 +2521,21 @@ export class BillingService {
         eventId,
         providerName,
         result.event || 'unknown',
-        'PROCESSED',
+        'RECEIVED',
         JSON.stringify(body || {})
       ]);
 
       if ((insertResult?.rowCount ?? 0) === 0) {
-        this.processedWebhookEvents.add(eventId);
-        return { success: true, handled: true, duplicate: true, message: 'Event already processed' };
+        const existingEvent = await postgresClient.query(
+          'SELECT status FROM agentdesk_webhook_events WHERE event_id = $1 LIMIT 1',
+          [eventId]
+        );
+        if (existingEvent?.rows?.[0]?.status === 'PROCESSED') {
+          this.processedWebhookEvents.add(eventId);
+          return { success: true, handled: true, duplicate: true, message: 'Event already processed' };
+        }
+        // A previous attempt may have crashed after recording the event. Leave
+        // RECEIVED/FAILED events retryable instead of dropping the provider retry.
       }
     } else if (process.env.NODE_ENV === 'production') {
       // Payment webhooks must fail closed when durable idempotency storage is unavailable.
@@ -2538,8 +2546,6 @@ export class BillingService {
         error: 'Webhook persistence is temporarily unavailable. Please retry.'
       };
     }
-
-    this.processedWebhookEvents.add(eventId);
 
     // Extract IDs across providers
     let orderId = body?.payload?.payment?.entity?.order_id || body?.payload?.order?.entity?.id;
@@ -2695,6 +2701,13 @@ export class BillingService {
       this.tenantBillingStore.set(norm, billing);
     }
 
+    if (dbConnected) {
+      await postgresClient.query(
+        'UPDATE agentdesk_webhook_events SET status = $2 WHERE event_id = $1',
+        [eventId, 'PROCESSED']
+      );
+    }
+    this.processedWebhookEvents.add(eventId);
     return { success: true, result };
   }
 }
