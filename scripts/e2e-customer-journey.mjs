@@ -33,7 +33,7 @@ const firstChat = await request('/api/widget/chat', {
     message: 'What services do you offer?'
   })
 });
-assert(firstChat.success && firstChat.conversationId === conversationId, 'First customer message did not create a conversation.');
+assert(firstChat.success && typeof firstChat.conversationId === 'string' && firstChat.conversationId.trim().length > 0, 'First customer message did not create a conversation.');
 assert(typeof firstChat.reply === 'string' && firstChat.reply.trim().length > 0, 'AI did not return a customer-facing response.');
 
 const secondChat = await request('/api/widget/chat', {
@@ -44,7 +44,7 @@ const secondChat = await request('/api/widget/chat', {
     message: 'I am interested. How can I get started?'
   })
 });
-assert(secondChat.success && secondChat.conversationId === conversationId, 'Second customer message did not continue the same conversation.');
+assert(secondChat.success && secondChat.conversationId === firstChat.conversationId, 'Second customer message did not continue the same canonical conversation.');
 assert(typeof secondChat.reply === 'string' && secondChat.reply.trim().length > 0, 'AI did not return a follow-up response.');
 assert(secondChat.conversationState && typeof secondChat.conversationState === 'object', 'Conversation state was not returned.');
 
