@@ -2725,6 +2725,8 @@ export class BillingService {
           pdfUrl: '#'
         });
         this.tenantInvoicesStore.set(norm, existingInvoices);
+        const recurringInvoice = existingInvoices[0];
+        if (recurringInvoice) await this.persistInvoice(recurringInvoice);
 
         const txList = this.tenantTransactionsStore.get(norm) || [];
         txList.unshift({
