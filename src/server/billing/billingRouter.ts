@@ -65,9 +65,9 @@ billingRouter.get('/config', (req: Request, res: Response) => {
 
   const razorpay = billingService.getProvider('razorpay') as any;
 
-  const isRazorpayConfigured = Boolean(
-    process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
-  );
+  const isRazorpayConfigured = process.env.NODE_ENV === 'production'
+    ? Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET)
+    : Boolean(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
   const isPaymentsEnabled = isRazorpayConfigured;
 
   const availableProviders = billingService.getAvailableProviders(currency, country);
