@@ -301,6 +301,14 @@ export class RazorpayProvider implements PaymentProvider {
         if (payment.subscription_id && payment.subscription_id !== subscriptionId) {
           return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment does not belong to the authorized subscription.' };
         }
+        // Bind the provider-side subscription to the tenant that created the
+        // server-authorized checkout intent. Payment signature alone is not
+        // sufficient to establish tenant ownership.
+        const subscription = await this.getSubscription(subscriptionId);
+        const subscriptionBusinessId = String(subscription.raw?.notes?.businessId || '').trim().toLowerCase();
+        if (!subscriptionBusinessId || subscriptionBusinessId !== String(params.businessId || '').trim().toLowerCase()) {
+          return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay subscription is not authorized for this tenant.' };
+        }
       } else {
         if (!orderId) {
           return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'A server-authorized Razorpay order is required for checkout verification.' };
@@ -434,7 +442,8 @@ export class RazorpayProvider implements PaymentProvider {
       status: statusMap[data.status] || 'active',
       currentPeriodStart: data.current_start ? new Date(data.current_start * 1000).toISOString() : undefined,
       currentPeriodEnd: data.current_end ? new Date(data.current_end * 1000).toISOString() : undefined,
-      nextBillingDate: data.charge_at ? new Date(data.charge_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : nextDate.toLocaleDateString('en-US')
+      nextBillingDate: data.charge_at ? new Date(data.charge_at * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : nextDate.toLocaleDateString('en-US'),
+      raw: data
     };
   }
 
