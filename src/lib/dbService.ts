@@ -1745,6 +1745,16 @@ export async function updateBusinessSettings(businessId: string, settings: any):
 
 export async function deleteBusiness(businessId: string, actorEmail?: string): Promise<{ success: boolean; message: string }> {
   const validTenant = validateTenantContext(businessId, 'businesses', 'DELETE_TENANT');
+
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/admin/businesses/' + encodeURIComponent(validTenant), {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!data?.success) throw new Error(data?.error || 'Unable to delete tenant.');
+    return { success: true, message: data.message || 'Tenant deleted successfully.' };
+  }
+
   const list = await getAllBusinesses();
   const targetBiz = list.find(b => normalizeTenantId(b.id) === validTenant);
   const filtered = list.filter(b => normalizeTenantId(b.id) !== validTenant);
@@ -1761,7 +1771,7 @@ export async function deleteBusiness(businessId: string, actorEmail?: string): P
 
   return {
     success: true,
-    message: `Tenant "${targetBiz?.name || validTenant}" was successfully and permanently deleted.`
+    message: `Tenant "${targetBiz?.name || validTenant}" permanently erased.`
   };
 }
 
