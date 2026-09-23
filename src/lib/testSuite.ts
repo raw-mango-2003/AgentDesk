@@ -393,6 +393,66 @@ export function runConversationTestSuite(
     });
   }
 
+  // TEST 6: Lead Capture & Contact Safety
+  {
+    const rec = createFreshRecord('test_lead_capture_safety');
+    const turns: TestResultTurn[] = [];
+
+    const start = classifyConversationIntent(
+      normalizeInput('I want to book a demo'),
+      rec,
+      business.name
+    );
+    const nameTurn = classifyConversationIntent(
+      normalizeInput('Rakshit Nagar'),
+      rec,
+      business.name
+    );
+    const contactTurn = classifyConversationIntent(
+      normalizeInput('07006502684'),
+      rec,
+      business.name
+    );
+
+    const leakedReply = validateAnswer(
+      'Please call us at 07006502684 or email support@example.com.',
+      { intents: [], attributes: [], resolvedEntity: null, resolvedEntityType: 'general', isYesNo: false, isShortFollowUp: false, isConfirmation: false, isNegation: false, isAmbiguousMultipleEntities: false, isAmbiguousMissingEntity: false, candidateEntities: [] },
+      { ...business, phone: '07006502684', supportEmail: 'support@example.com' },
+      rec
+    );
+
+    const leadFlowPassed =
+      start.primaryType === 'BOOKING' &&
+      nameTurn.primaryType === 'BOOKING' &&
+      rec.state.bookingState.stage === 'COLLECTING_CONTACT' &&
+      contactTurn.primaryType === 'BOOKING' &&
+      rec.leadCaptured === true &&
+      rec.customerPhone === '07006502684';
+
+    const contactLeakBlocked =
+      !leakedReply.includes('07006502684') &&
+      !leakedReply.includes('support@example.com');
+
+    const passed = leadFlowPassed && contactLeakBlocked;
+    turns.push({
+      userQuery: 'Booking -> name -> phone number',
+      expectedKeywords: ['leadCaptured=true', 'customerPhone captured', 'contact leak blocked'],
+      actualReply: contactTurn.directReply || leakedReply,
+      resolvedEntity: null,
+      resolvedIntent: contactTurn.primaryType,
+      isClosing: false,
+      passed,
+      failureReason: passed ? undefined : 'Lead capture state or direct contact disclosure safeguard failed.'
+    });
+
+    testResults.push({
+      testId: 'LEAD_CAPTURE_CONTACT_SAFETY',
+      testName: 'Lead Capture Flow and Client Contact Disclosure Protection',
+      passed,
+      turns
+    });
+  }
+
   return testResults;
 }
 
