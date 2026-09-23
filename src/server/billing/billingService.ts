@@ -288,6 +288,69 @@ export class BillingService {
     this.seedDefaultTenants();
     this.seedDefaultPromoCodes();
     this.seedDefaultAuditLogs();
+    this.hydratePersistentBilling().catch(err => {
+      console.warn('[BillingService:HydrationWarning]', err?.message || err);
+    });
+  }
+
+  private async hydratePersistentBilling(): Promise<void> {
+    if (!(await postgresClient.initialize())) return;
+
+    const tenantResult = await postgresClient.query('SELECT id, settings FROM agentdesk_tenants WHERE settings IS NOT NULL');
+    for (const row of tenantResult?.rows || []) {
+      const billing = row.settings?.billing;
+      if (billing && typeof billing === 'object') {
+        this.tenantBillingStore.set(String(row.id).toLowerCase(), billing as TenantBillingRecord);
+      }
+    }
+
+    const invoiceResult = await postgresClient.query('SELECT id, tenant_id, razorpay_invoice_id, amount, currency, status, hosted_invoice_url, created_at, updated_at FROM agentdesk_invoices ORDER BY created_at DESC');
+    for (const row of invoiceResult?.rows || []) {
+      const tenantId = String(row.tenant_id || '').toLowerCase();
+      if (!tenantId) continue;
+      const invoices = this.tenantInvoicesStore.get(tenantId) || [];
+      invoices.push({
+        id: row.id,
+        businessId: tenantId,
+        invoiceNumber: row.razorpay_invoice_id || row.id,
+        date: String(row.created_at || '').slice(0, 10),
+        createdAt: row.created_at,
+        description: 'AgentDesk subscription invoice',
+        amount: Number(row.amount) || 0,
+        currency: row.currency as CurrencyCode,
+        status: row.status === 'PAID' ? 'PAID' : 'PENDING',
+        provider: 'razorpay',
+        providerInvoiceId: row.razorpay_invoice_id || undefined,
+        hostedInvoiceUrl: row.hosted_invoice_url || undefined
+      });
+      this.tenantInvoicesStore.set(tenantId, invoices);
+    }
+  }
+
+  private async persistBillingSnapshot(record: TenantBillingRecord): Promise<void> {
+    const connected = await postgresClient.initialize();
+    if (!connected) {
+      if (process.env.NODE_ENV === 'production') throw new Error('Billing persistence is unavailable.');
+      return;
+    }
+
+    await postgresClient.query(
+      "UPDATE agentdesk_tenants SET plan_id = $2, currency = $3, settings = COALESCE(settings, '{}'::jsonb) || jsonb_build_object('billing', $4::jsonb), updated_at = $5 WHERE id = $1",
+      [record.businessId, record.planId, record.currency, JSON.stringify(record), record.updatedAt]
+    );
+  }
+
+  private async persistInvoice(invoice: BillingInvoice): Promise<void> {
+    const connected = await postgresClient.initialize();
+    if (!connected) {
+      if (process.env.NODE_ENV === 'production') throw new Error('Invoice persistence is unavailable.');
+      return;
+    }
+
+    await postgresClient.query(
+      "INSERT INTO agentdesk_invoices (id, tenant_id, razorpay_invoice_id, amount, currency, status, hosted_invoice_url, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET razorpay_invoice_id = EXCLUDED.razorpay_invoice_id, amount = EXCLUDED.amount, currency = EXCLUDED.currency, status = EXCLUDED.status, hosted_invoice_url = EXCLUDED.hosted_invoice_url, updated_at = EXCLUDED.updated_at",
+      [invoice.id, invoice.businessId, invoice.providerInvoiceId || null, invoice.amount, invoice.currency, invoice.status, invoice.hostedInvoiceUrl || null, invoice.createdAt || invoice.date, new Date().toISOString()]
+    );
   }
 
   private seedDefaultAuditLogs() {
@@ -679,6 +742,7 @@ export class BillingService {
     })();
 
     const record: TenantBillingRecord = {
+      ...(business?.billing && typeof business.billing === 'object' ? business.billing : {}),
       ...(existing || {}),
       businessId: norm,
       planId,
@@ -2021,6 +2085,7 @@ export class BillingService {
     }
 
     this.tenantBillingStore.set(norm, currentBilling);
+    await this.persistBillingSnapshot(currentBilling);
 
     // Record Transaction
     const txList = this.getTransactions(norm);
@@ -2147,6 +2212,8 @@ export class BillingService {
       });
     }
     this.tenantInvoicesStore.set(norm, invList);
+    const latestInvoice = invList[0];
+    if (latestInvoice) await this.persistInvoice(latestInvoice);
 
     // Register safe payment method if passed
     if (paymentMethodData) {
@@ -2344,6 +2411,7 @@ export class BillingService {
     billing.status = 'paused';
     billing.updatedAt = new Date().toISOString();
     this.tenantBillingStore.set(norm, billing);
+    await this.persistBillingSnapshot(billing);
     return billing;
   }
 
@@ -2359,6 +2427,7 @@ export class BillingService {
     billing.status = 'active';
     billing.updatedAt = new Date().toISOString();
     this.tenantBillingStore.set(norm, billing);
+    await this.persistBillingSnapshot(billing);
     return billing;
   }
 
@@ -2375,6 +2444,7 @@ export class BillingService {
     billing.autoRenew = false;
     billing.updatedAt = new Date().toISOString();
     this.tenantBillingStore.set(norm, billing);
+    await this.persistBillingSnapshot(billing);
     return billing;
   }
 
@@ -2684,6 +2754,7 @@ export class BillingService {
       billing.nextBillingDate = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
       billing.updatedAt = new Date().toISOString();
       this.tenantBillingStore.set(norm, billing);
+      await this.persistBillingSnapshot(billing);
     }
 
     if (result.businessId) {
