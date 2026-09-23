@@ -317,6 +317,29 @@ export async function persistUsageToPostgres(usage: TenantUsageRecord): Promise<
   }
 }
 
+export async function deleteTenantDataFromPostgres(tenantId: string): Promise<void> {
+  const norm = String(tenantId || '').trim().toLowerCase();
+  if (!norm) throw new Error('Tenant ID is required.');
+  if (!(await postgresClient.initialize())) throw new Error('PostgreSQL is unavailable.');
+
+  // Delete tenant-owned rows first. No unscoped delete is used.
+  await postgresClient.query('DELETE FROM agentdesk_sessions WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_2fa_challenges WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_oauth_states WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_conversations WHERE tenant_id = $1 OR business_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_leads WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_appointments WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_knowledge WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_files WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_usage WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_invoices WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_delivery_logs WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_users WHERE tenant_id = $1', [norm]);
+  await postgresClient.query("DELETE FROM agentdesk_integrations WHERE id LIKE $1 OR id LIKE $2",
+    ['tenant_integration_' + norm.replace(/[^a-z0-9_-]/g, '_') + '_%', 'tenant_custom_' + norm.replace(/[^a-z0-9_-]/g, '_') + '_%']);
+  await postgresClient.query('DELETE FROM agentdesk_agents WHERE tenant_id = $1', [norm]);
+  await postgresClient.query('DELETE FROM agentdesk_tenants WHERE id = $1', [norm]);
+}
 export async function syncAllTenantDataFromPostgres(): Promise<void> {
   try {
     const isReady = await postgresClient.initialize();
