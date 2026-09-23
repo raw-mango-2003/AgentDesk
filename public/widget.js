@@ -289,9 +289,9 @@
       '  <span>Leave your contact info:</span>',
       '</div>',
       '<input type="text" id="agentdesk-lead-name" class="agentdesk-lead-input" placeholder="Your Name" />',
-      '<input type="email" id="agentdesk-lead-email" class="agentdesk-lead-input" placeholder="Your Email *" />',
+      '<input type="email" id="agentdesk-lead-email" class="agentdesk-lead-input" placeholder="Your Email (Optional)" />',
       '<input type="tel" id="agentdesk-lead-phone" class="agentdesk-lead-input" placeholder="Phone Number (Optional)" />',
-      '<button id="agentdesk-lead-submit" class="agentdesk-lead-btn" style="background-color: ' + (themeColor || (state.agent && state.agent.primaryColor) || '#2563eb') + ';">Connect With Sales</button>'
+      '<button id="agentdesk-lead-submit" class="agentdesk-lead-btn" style="background-color: ' + (themeColor || (state.agent && state.agent.primaryColor) || '#2563eb') + ';">Request a Callback</button>'
     ].join('\n');
 
     parentDiv.appendChild(card);
