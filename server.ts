@@ -276,6 +276,13 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
 
 // Apply a bounded API-wide rate limit before individual routers.
 // Sensitive routes may apply stricter route-specific limiters (for example auth and password reset).
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  // API responses can contain tenant data, contact records, conversations, billing
+  // state, or security metadata. Never allow intermediary/browser caching.
+  res.setHeader('Cache-Control', 'no-store, private');
+  next();
+});
+
 app.use('/api', generalApiRateLimiter);
 
 // Mount Billing & Webhooks API Router
@@ -955,6 +962,54 @@ export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge
   }
 
   return { business, knowledge, agent: resolvedAgent };
+}
+
+
+function resolvePublicWidgetTarget(identifier?: string) {
+  const normId = String(identifier || '').trim().toLowerCase();
+
+  if (
+    normId === PLATFORM_ADMIN_AGENT_ID.toLowerCase() ||
+    normId === PLATFORM_ADMIN_TENANT_ID.toLowerCase() ||
+    normId === 'platform-admin' ||
+    normId === 'platform_admin'
+  ) {
+    return { business: null, agent: null, knowledge: [] as KnowledgeItem[] };
+  }
+
+  const resolved = resolveBusinessAndKnowledge(identifier);
+  if (!resolved.business || !resolved.agent) {
+    return { business: null, agent: null, knowledge: [] as KnowledgeItem[] };
+  }
+
+  const businessStatus = String(resolved.business.status || '').trim().toLowerCase();
+  const subscriptionState = String(resolved.business.subscriptionState || '').trim().toUpperCase();
+  const agentStatus = String(resolved.agent.status || '').trim().toLowerCase();
+
+  const isPublicDemo =
+    resolved.business.id.toLowerCase() === PUBLIC_DEMO_TENANT_ID.toLowerCase() ||
+    resolved.agent.id.toLowerCase() === PUBLIC_DEMO_AGENT_ID.toLowerCase();
+
+  if (!isPublicDemo) {
+    const businessAllowed =
+      businessStatus === 'active' &&
+      (!subscriptionState || ['ACTIVE', 'TRIAL'].includes(subscriptionState));
+    const agentAllowed = !['draft', 'paused', 'disabled', 'inactive', 'archived'].includes(agentStatus);
+    if (!businessAllowed || !agentAllowed) {
+      return { business: null, agent: null, knowledge: [] as KnowledgeItem[] };
+    }
+  }
+
+  return resolved;
+}
+
+function canonicalizePublicConversationId(tenantId: string, suppliedId?: string): string {
+  const raw = String(suppliedId || '').trim().slice(0, 200);
+  const safeTenant = String(tenantId || '').trim().toLowerCase();
+  const digest = crypto.createHash('sha256')
+    .update(safeTenant + ':' + (raw || crypto.randomUUID()))
+    .digest('hex');
+  return 'conv_' + digest;
 }
 
 // ==========================================
@@ -1720,8 +1775,8 @@ app.get('/api/widget/ping', (_req: Request, res: Response) => {
 app.get('/api/widget/config', (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const targetId = (req.query.agentId || req.query.businessId || req.query.tenantId || '').toString();
-  const { business, agent, knowledge } = resolveBusinessAndKnowledge(targetId);
-  if (!business || !agent) return res.status(404).json({ error: 'Agent or business not found.' });
+  const { business, agent, knowledge } = resolvePublicWidgetTarget(targetId);
+  if (!business || !agent) return res.status(404).json({ error: 'Public widget is not available for this agent.' });
 
   // Return strictly sanitized public metadata (zero private tokens or cross-tenant data)
   return res.json({
@@ -1775,13 +1830,28 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
   try {
     const {
-      conversationId,
+      conversationId: suppliedConversationId,
       agentId,
       businessId,
       tenantId,
-      message,
-      conversationHistory = []
+      message
     } = req.body;
+
+    const targetIdentifier = agentId || tenantId || businessId;
+    const { business: currentBusiness, knowledge: effectiveKnowledge, agent } = resolvePublicWidgetTarget(targetIdentifier);
+    if (!currentBusiness || !agent) {
+      return res.status(404).json({ success: false, error: 'Public widget is not available for this agent.' });
+    }
+
+    const safeConvId = canonicalizePublicConversationId(currentBusiness.id, suppliedConversationId);
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
+
+    if (!checkRateLimit('widget:' + currentBusiness.id.toLowerCase() + ':' + clientIp, 30, 60000)) {
+      return res.status(429).json({
+        success: false,
+        reply: "You have sent messages too quickly. Please wait a moment before trying again."
+      });
+    }
 
     if (!message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({ error: 'Message text is required.' });
@@ -1797,7 +1867,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
     // Loop & Session Abuse Protection (Max 35 user turns per conversation)
-    if (!(await checkAndIncrementConversationTurns(safeConvId, 35))) {
+    if (!(await checkAndIncrementConversationTurns(currentBusiness.id.toLowerCase() + ':' + safeConvId, 35))) {
       return res.json({
         success: true,
         reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
@@ -1808,11 +1878,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
       });
     }
 
-    const targetIdentifier = agentId || tenantId || businessId;
-    const { business: currentBusiness, knowledge: effectiveKnowledge, agent } = resolveBusinessAndKnowledge(targetIdentifier);
-    if (!currentBusiness || !agent) return res.status(404).json({ success: false, error: 'Agent or business not found.' });
-
-    const record = getOrCreateConversation(safeConvId, currentBusiness.id);
+    const record = await conversationStore.getOrCreateConversationAsync(safeConvId, currentBusiness.id);
 
     // Lead-capture guardrail: once the visitor provides a phone/email during
     // the lead-capture flow, persist the lead immediately and keep the AI
@@ -1970,7 +2036,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
       extracted = extractIntentsAndEntities(normInput, record, currentBusiness.name);
     } else {
       extracted = extractIntentsAndEntities(normInput, record, currentBusiness.name);
-      const targetedKnowledge = retrieveTargetedKnowledge(currentBusiness, effectiveKnowledge, extracted);
+      const targetedKnowledge = retrieveTargetedKnowledge(currentBusiness, effectiveKnowledge, extracted, { publicOnly: true });
 
       let geminiReply: string | null = null;
       // Check zero-cost hourly agent budget before calling Gemini
@@ -2043,8 +2109,8 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'A valid widget identifier is required.' });
     }
 
-    const { business, agent } = resolveBusinessAndKnowledge(targetIdentifier);
-    if (!business || !agent) return res.status(404).json({ success: false, error: 'Business or agent not found.' });
+    const { business, agent } = resolvePublicWidgetTarget(targetIdentifier);
+    if (!business || !agent) return res.status(404).json({ success: false, error: 'Public widget is not available for this agent.' });
 
     // Reject mismatched identifiers so a public caller cannot combine an agent
     // from one tenant with a business/tenant identifier from another tenant.
@@ -2061,9 +2127,10 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
     const safeNotes = typeof notes === 'string'
       ? notes.trim().slice(0, 1000)
       : 'Lead submitted through the AgentDesk website widget';
-    const safeConversationId = typeof conversationId === 'string'
-      ? conversationId.trim().slice(0, 100)
-      : `conv_${Date.now()}`;
+    const safeConversationId = canonicalizePublicConversationId(
+      business.id,
+      typeof conversationId === 'string' ? conversationId : undefined
+    );
 
     const validEmail = !safeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail);
     const validPhone = !safePhone || /^[+\d][\d\s().-]{6,30}$/.test(safePhone);
