@@ -1399,22 +1399,21 @@ export async function getKnowledgeDocs(businessId: string): Promise<KnowledgeIte
 }
 
 export async function updateLeadStatus(
-  arg1: string,
-  arg2: any,
-  arg3?: any
+  leadId: string,
+  status: LeadStatus | string,
+  notes?: string,
+  businessId?: string
 ): Promise<void> {
-  const businessId = arg3 !== undefined ? arg1 : undefined;
-  const leadId = arg3 !== undefined ? arg2 : arg1;
-  const status = arg3 !== undefined ? arg3 : arg2;
-  const notes = arg3 !== undefined ? arg3 : undefined;
+  const cleanLeadId = String(leadId || '').trim();
+  const cleanStatus = String(status || '').trim().toLowerCase();
+  if (!cleanLeadId || !cleanStatus) throw new Error('Lead ID and status are required.');
 
   // Production dashboard mutations must go through the authenticated,
   // tenant-scoped API. Do not silently write only to localStorage.
   if (typeof window !== 'undefined' && isProductionRuntime()) {
-    const targetNotes = arg3 !== undefined && typeof arg3 === 'string' ? arg3 : undefined;
-    const body: Record<string, string> = { status: String(status) };
-    if (targetNotes !== undefined) body.notes = targetNotes;
-    const data = await safeFetchJson('/api/leads/' + encodeURIComponent(leadId), {
+    const body: Record<string, string> = { status: cleanStatus };
+    if (notes !== undefined) body.notes = notes;
+    const data = await safeFetchJson('/api/leads/' + encodeURIComponent(cleanLeadId), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(body)
@@ -1424,11 +1423,11 @@ export async function updateLeadStatus(
   }
 
   const allLeads = getItem<Lead[]>('leads', SEED_LEADS);
-  const lead = allLeads.find(l => l.id === leadId);
+  const lead = allLeads.find(l => l.id === cleanLeadId);
   if (lead) {
-    if (businessId) tenantAssertDocOwnership(lead, businessId, 'leads', leadId);
-    lead.status = status;
-    if (arg3 !== undefined && typeof arg3 === 'string') lead.notes = arg3;
+    if (businessId) tenantAssertDocOwnership(lead, businessId, 'leads', cleanLeadId);
+    lead.status = cleanStatus as LeadStatus;
+    if (notes !== undefined) lead.notes = notes;
     lead.updatedAt = new Date().toISOString();
     setItem('leads', allLeads);
   }
