@@ -302,14 +302,19 @@
       var email = (card.querySelector('#agentdesk-lead-email').value || '').trim();
       var phone = (card.querySelector('#agentdesk-lead-phone').value || '').trim();
 
+      if (!name) {
+        alert('Please provide your name.');
+        return;
+      }
       if (!email && !phone) {
         alert('Please provide an email or phone number.');
         return;
       }
 
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
       submitLead({ name: name, email: email, phone: phone }, card);
-    };
-  }
+    };  }
 
   function submitLead(leadData, formContainer) {
     var targetId = state.targetId || (state.agent && state.agent.id) || (state.business && state.business.id);
@@ -327,15 +332,35 @@
         notes: 'Captured via AgentDesk embed widget'
       })
     })
-      .then(function (res) { return res.json(); })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          if (!res.ok || !data || !data.success) {
+            throw new Error((data && data.error) || 'Unable to submit your request.');
+          }
+          return data;
+        });
+      })
       .then(function (data) {
         state.leadCaptured = true;
-        formContainer.innerHTML = '<div style="color: #16a34a; font-size: 12px; font-weight: 600; padding: 6px 0; display: flex; align-items: center; gap: 6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Contact information received! Our team will reach out shortly.</div>';
-        dispatchCustomEvent('lead', leadData);
+        formContainer.innerHTML = '<div style="color: #16a34a; font-size: 12px; font-weight: 600; padding: 6px 0; display: flex; align-items: center; gap: 6px;">Details received! Our team will reach out shortly.</div>';
+        dispatchCustomEvent('lead', data.lead || leadData);
       })
       .catch(function (err) {
         console.error('Lead submit error:', err);
-      });
+        var button = formContainer.querySelector('#agentdesk-lead-submit');
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Request a Callback';
+        }
+        var errorEl = formContainer.querySelector('.agentdesk-lead-error');
+        if (!errorEl) {
+          errorEl = document.createElement('div');
+          errorEl.className = 'agentdesk-lead-error';
+          errorEl.style.cssText = 'color:#dc2626;font-size:11px;margin-top:5px;';
+          formContainer.appendChild(errorEl);
+        }
+        errorEl.textContent = err.message || 'Unable to submit your request. Please try again.';
+      });;
   }
 
   function setTyping(isTyping) {
