@@ -870,8 +870,8 @@ export function validateAnswer(
 
   // Public receptionist safeguard: never expose direct client contact details.
   // Leads are captured inside AgentDesk and the client follows up from the dashboard.
-  const responseEmailPattern = /\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b/i;
-  const responsePhonePattern = /(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b\\d{10}\\b/;
+  const responseEmailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+  const responsePhonePattern = /(?:\+91[-.\s]?)?[6-9]\d{9}\b|\b\d{10}\b/;
   const containsConfiguredContact = [
     business?.supportEmail,
     business?.leadNotificationEmail,
