@@ -294,14 +294,24 @@ export class RazorpayProvider implements PaymentProvider {
       if (expectedBuf.length !== signatureBuf.length || !crypto.timingSafeEqual(expectedBuf, signatureBuf)) {
         return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay signature mismatch' };
       }
-      if (!orderId || subscriptionId) {
-        return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'A server-authorized Razorpay order is required for checkout verification.' };
-      }
       const payment = await this.fetchPaymentDetails(paymentId);
       if (!payment) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment could not be confirmed on the server.' };
-      if (payment.order_id !== orderId) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment does not belong to the authorized order.' };
+
+      if (subscriptionId) {
+        if (payment.subscription_id && payment.subscription_id !== subscriptionId) {
+          return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment does not belong to the authorized subscription.' };
+        }
+      } else {
+        if (!orderId) {
+          return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'A server-authorized Razorpay order is required for checkout verification.' };
+        }
+        if (payment.order_id !== orderId) {
+          return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment does not belong to the authorized order.' };
+        }
+      }
+
       const expectedSubunits = Math.round(Number(amount) * 100);
-      if (!Number.isFinite(expectedSubunits) || Number(payment.amount) !== expectedSubunits) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment amount does not match the authorized order.' };
+      if (!Number.isFinite(expectedSubunits) || Number(payment.amount) !== expectedSubunits) return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: 'Razorpay payment amount does not match the authorized payment.' };
       if (payment.status !== 'captured') return { verified: false, paymentId, transactionId: `PAY-RZP-${paymentId}`, status: 'failed', message: `Razorpay payment is not captured (status: ${payment.status || 'unknown'}).` };
       return { verified: true, paymentId, transactionId: `PAY-RZP-${paymentId.replace(/^pay_/, '')}`, status: 'paid', message: 'Razorpay signature, order, amount, and captured status verified successfully', method: payment.method, raw: payment };
     } catch {
