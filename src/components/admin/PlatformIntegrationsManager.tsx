@@ -873,21 +873,27 @@ export const PlatformIntegrationsManager: React.FC = () => {
                         >
                           {item.configured ? 'Configure' : 'Connect'}
                         </button>
-                        {item.configured && (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              deleteTenantIntegration(item.provider, labels[item.provider] || item.provider);
-                            }}
-                            className="relative z-10 pointer-events-auto px-3 rounded-xl bg-rose-950/30 text-rose-300 border border-rose-900/50 hover:border-rose-700 cursor-pointer"
-                            title="Delete integration"
-                            aria-label={`Delete ${labels[item.provider] || item.provider} integration`}
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            if (!item.configured) {
+                              alert(`${labels[item.provider] || item.provider} is not configured for this tenant.`);
+                              return;
+                            }
+                            deleteTenantIntegration(item.provider, labels[item.provider] || item.provider);
+                          }}
+                          className={`relative z-10 pointer-events-auto px-3 rounded-xl border cursor-pointer ${
+                            item.configured
+                              ? 'bg-rose-950/30 text-rose-300 border-rose-900/50 hover:border-rose-700'
+                              : 'bg-slate-900/70 text-slate-500 border-slate-700 hover:text-slate-300 hover:border-slate-600'
+                          }`}
+                          title={item.configured ? 'Delete integration' : 'Integration is not configured'}
+                          aria-label={`Delete ${labels[item.provider] || item.provider} integration`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   );
