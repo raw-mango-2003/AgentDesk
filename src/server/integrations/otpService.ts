@@ -75,6 +75,18 @@ export class OTPService implements IOTPService {
       }
     }
 
+    // In production, never create an OTP that cannot actually be delivered.
+    // The local fallback is development-only because exposing a production OTP
+    // through logs or an in-memory store would create a broken and insecure flow.
+    if (process.env.NODE_ENV === 'production') {
+      return {
+        success: false,
+        error: channel === 'sms'
+          ? 'SMS verification is not configured. Please configure Twilio Verify before enabling SMS 2FA.'
+          : 'OTP delivery is not configured for this channel.'
+      };
+    }
+
     // Secure local fallback generator (6-digit numeric OTP)
     const code = Math.floor(100000 + crypto.randomInt(0, 900000)).toString();
     const codeHash = this.hashCode(code);
