@@ -156,7 +156,10 @@ export function getIntegrationsStatusReport(gmailStatus?: {
   // 2. Razorpay Integration
   const rzpKeyId = (process.env.RAZORPAY_KEY_ID || '').trim();
   const rzpKeySecret = (process.env.RAZORPAY_KEY_SECRET || '').trim();
-  const isRzpConfigured = Boolean(rzpKeyId && rzpKeySecret);
+  const webhookSecret = (process.env.RAZORPAY_WEBHOOK_SECRET || '').trim();
+  const isRzpConfigured = process.env.NODE_ENV === 'production'
+    ? Boolean(rzpKeyId && rzpKeySecret && webhookSecret)
+    : Boolean(rzpKeyId && rzpKeySecret);
   const rzpConfiguredVars: string[] = [];
   const rzpMissingVars: string[] = [];
   if (rzpKeyId) rzpConfiguredVars.push('RAZORPAY_KEY_ID');
