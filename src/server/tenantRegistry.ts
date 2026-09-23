@@ -579,7 +579,7 @@ export function checkTenantQuota(tenantId: string, metric: 'aiUsage' | 'voiceMin
  * Transactionally provisions a new customer tenant after verified payment.
  * Guarantees strict isolation, dedicated agent, dedicated knowledge base, and plan limits.
  */
-export function provisionCustomerTenant(params: {
+export async function provisionCustomerTenant(params: {
   tenantId: string;
   businessName: string;
   customerName?: string;
@@ -589,7 +589,7 @@ export function provisionCustomerTenant(params: {
   currency: string;
   paymentId?: string;
   orderId?: string;
-}): { success: boolean; business: Business; agent: AIAgent } {
+}): Promise<{ success: boolean; business: Business; agent: AIAgent }> {
   const {
     tenantId,
     businessName,
@@ -767,13 +767,24 @@ export function provisionCustomerTenant(params: {
     newBusiness.ownerId = createdUser.id;
   }
 
-  // Persist newly provisioned entities to PostgreSQL
-  persistTenantToPostgres(newBusiness).catch(() => {});
-  persistAgentToPostgres(newAgent).catch(() => {});
-  for (const k of initialKnowledge) {
-    persistKnowledgeToPostgres(k).catch(() => {});
+  // Persist newly provisioned entities before reporting provisioning success.
+  // A paid tenant must not exist only in process memory.
+  try {
+    await persistTenantToPostgres(newBusiness);
+    await persistAgentToPostgres(newAgent);
+    for (const k of initialKnowledge) {
+      const persisted = await persistKnowledgeToPostgres(k);
+      if (!persisted && process.env.NODE_ENV === 'production') {
+        throw new Error('Knowledge base persistence failed.');
+      }
+    }
+    await persistUsageToPostgres(serverTenantUsageStore.get(normTenant)!);
+  } catch (persistenceError: any) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Tenant provisioning persistence failed. Please retry provisioning safely.');
+    }
+    console.warn('[TenantProvisioning:PersistenceWarning]', persistenceError?.message || persistenceError);
   }
-  persistUsageToPostgres(serverTenantUsageStore.get(normTenant)!).catch(() => {});
 
   console.log(`[Tenant Provisioning] Successfully provisioned tenant "${normTenant}" with plan "${planKey}" for customer "${customerEmail}"`);
 
