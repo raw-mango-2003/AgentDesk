@@ -89,7 +89,9 @@ export class OTPService implements IOTPService {
       channel
     });
 
-    console.log(`[OTPService:Local] Verification Code for ${cleanId} [${channel.toUpperCase()}]: ${code}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[OTPService:Local] Verification Code for ${cleanId} [${channel.toUpperCase()}]: ${code}`);
+    }
 
     return {
       success: true,
