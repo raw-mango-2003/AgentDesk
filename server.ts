@@ -1834,9 +1834,20 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
       record.customerEmail = capturedEmail || record.customerEmail;
       record.customerPhone = capturedPhone || record.customerPhone;
       record.leadCaptured = true;
+      record.status = 'HUMAN_REQUIRED';
       record.state.bookingState.contact = capturedEmail || capturedPhone;
       record.state.bookingState.stage = 'CONFIRMED';
       record.state.conversationStage = 'COURSE_DISCUSSION';
+
+      // Preserve the visitor's contact message in the conversation transcript.
+      record.messages.push({
+        id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        conversationId: record.conversationId,
+        businessId: record.businessId,
+        role: 'user',
+        content: safeMessage,
+        timestamp: new Date().toISOString()
+      });
 
       const leadKey = crypto.createHash('sha256')
         .update(`${String(currentBusiness.id).toLowerCase()}:${safeConvId}`)
