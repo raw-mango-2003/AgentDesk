@@ -1025,6 +1025,7 @@ export interface SubscriptionRecord {
   setupPayment?: 'ONE_TIME';
   subscriptionType?: 'RECURRING';
   provider?: PaymentProviderName;
+  providerSubscriptionId?: string;
   currentPeriodStart?: string;
   currentPeriodEnd?: string;
   razorpayOrderId?: string;
