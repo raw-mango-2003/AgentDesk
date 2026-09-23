@@ -24,6 +24,12 @@ import {
   PUBLIC_DEMO_TENANT_ID,
   PUBLIC_DEMO_AGENT_ID 
 } from '../data/demoBusiness';
+const getCsrfHeader = (): Record<string, string> => {
+  if (typeof document === 'undefined') return {};
+  const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+  return match ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
+};
+
 const loadDbService = () => import('../lib/dbService');
 const addLead = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['addLead']>) => loadDbService().then(module => module.addLead(...args));
 const saveConversation = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['saveConversation']>) => loadDbService().then(module => module.saveConversation(...args));
@@ -440,7 +446,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         try {
           const res = await fetch('/api/voice/process', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
             body: JSON.stringify({
               conversationId,
               transcript: transcriptText,
@@ -734,7 +740,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       // Call server-side Gemini AI chat route
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
         body: JSON.stringify({
           conversationId,
           businessId: business.id,
