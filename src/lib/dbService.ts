@@ -1399,16 +1399,36 @@ export async function getKnowledgeDocs(businessId: string): Promise<KnowledgeIte
 }
 
 export async function updateLeadStatus(
-  arg1: string, 
-  arg2: any, 
+  arg1: string,
+  arg2: any,
   arg3?: any
 ): Promise<void> {
+  const businessId = arg3 !== undefined ? arg1 : undefined;
   const leadId = arg3 !== undefined ? arg2 : arg1;
   const status = arg3 !== undefined ? arg3 : arg2;
+  const notes = arg3 !== undefined ? arg3 : undefined;
+
+  // Production dashboard mutations must go through the authenticated,
+  // tenant-scoped API. Do not silently write only to localStorage.
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const targetNotes = arg3 !== undefined && typeof arg3 === 'string' ? arg3 : undefined;
+    const body: Record<string, string> = { status: String(status) };
+    if (targetNotes !== undefined) body.notes = targetNotes;
+    const data = await safeFetchJson('/api/leads/' + encodeURIComponent(leadId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!data?.success) throw new Error(data?.error || 'Unable to update lead.');
+    return;
+  }
+
   const allLeads = getItem<Lead[]>('leads', SEED_LEADS);
   const lead = allLeads.find(l => l.id === leadId);
   if (lead) {
+    if (businessId) tenantAssertDocOwnership(lead, businessId, 'leads', leadId);
     lead.status = status;
+    if (arg3 !== undefined && typeof arg3 === 'string') lead.notes = arg3;
     lead.updatedAt = new Date().toISOString();
     setItem('leads', allLeads);
   }
