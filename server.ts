@@ -233,6 +233,9 @@ function isCsrfExempt(req: Request): boolean {
   if (exemptExact.has(fullPath) || exemptExact.has(subPath)) return true;
   if (fullPath.startsWith('/api/billing/webhook') || fullPath.startsWith('/api/webhooks')) return true;
   if (subPath.startsWith('/billing/webhook') || subPath.startsWith('/webhooks')) return true;
+  // Public embeddable widget routes intentionally do not use AgentDesk
+  // session cookies and must remain callable cross-origin.
+  if (fullPath.startsWith('/api/widget/') || subPath.startsWith('/widget/')) return true;
   if (fullPath.startsWith('/api/chat') || subPath.startsWith('/chat')) return true;
 
   return false;
