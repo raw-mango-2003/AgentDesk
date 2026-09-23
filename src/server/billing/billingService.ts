@@ -1913,6 +1913,72 @@ export class BillingService {
         currency,
         metadata: { customerEmail, customerName, customerPhone }
       });
+
+      // Persist a server-authorized subscription intent before the browser
+      // receives the subscription id. Verification must be bound to this
+      // tenant-specific intent after checkout completes.
+      const subscriptionIntentId = sub.providerSubscriptionId || sub.id;
+      const intentNow = new Date().toISOString();
+      const subscriptionSignup: PendingSignup = {
+        id: `subscription_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        tenantId: normalizedTenantId,
+        businessName: businessName || businessId,
+        customerName: customerName || 'Valued Customer',
+        customerEmail: customerEmail || 'billing@customer.com',
+        customerPhone: customerPhone || '',
+        planId,
+        planName: planCfg.name,
+        currency,
+        display_currency: displayCurrency || currency,
+        display_amount: displayAmount !== undefined ? displayAmount : subAmount,
+        payment_currency: currency,
+        payment_amount: subAmount,
+        monthlyFee: subAmount,
+        setupFee: 0,
+        subtotal: subAmount,
+        subscription_fee: subAmount,
+        subscription_total: subAmount,
+        recurring_base_amount: subAmount,
+        recurring_tax_amount: 0,
+        recurring_total_amount: subAmount,
+        base_amount: subAmount,
+        discount_amount: 0,
+        tax_amount: 0,
+        final_amount: subAmount,
+        totalDueToday: subAmount,
+        total_due_today: subAmount,
+        provider: providerName,
+        payment_provider: providerName,
+        provider_order_id: subscriptionIntentId,
+        razorpayOrderId: subscriptionIntentId,
+        status: 'PENDING',
+        createdAt: intentNow,
+        updatedAt: intentNow
+      };
+      const subscriptionPaymentRecord: PaymentRecord = {
+        id: subscriptionIntentId,
+        userId: customerEmail || normalizedTenantId,
+        tenantId: normalizedTenantId,
+        plan: planId,
+        amount: subAmount,
+        base_amount: subAmount,
+        discount_amount: 0,
+        tax_amount: 0,
+        final_amount: subAmount,
+        currency,
+        provider: providerName,
+        payment_provider: providerName,
+        provider_order_id: subscriptionIntentId,
+        razorpayOrderId: subscriptionIntentId,
+        status: 'PENDING',
+        createdAt: intentNow,
+        updatedAt: intentNow,
+        metadata: { businessName, customerName, customerEmail, customerPhone, type: 'subscription' }
+      };
+      this.pendingSignupsStore.set(subscriptionIntentId, subscriptionSignup);
+      this.paymentRecordsStore.set(subscriptionIntentId, subscriptionPaymentRecord);
+      await this.persistPaymentIntent(subscriptionIntentId, subscriptionSignup, subscriptionPaymentRecord);
+
       return {
         success: true,
         type: 'subscription',
