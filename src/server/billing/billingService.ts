@@ -1685,6 +1685,7 @@ export class BillingService {
           breakdown: calc,
           currency,
           provider: providerName,
+      providerSubscriptionId: subscriptionId,
           planId,
           planName: calc.planName,
           tenantId: normalizedTenantId,
