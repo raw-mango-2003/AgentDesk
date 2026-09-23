@@ -70,6 +70,24 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
     });
   };
 
+  const getCsrfToken = async (): Promise<string | undefined> => {
+    if (typeof document !== 'undefined') {
+      const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+      if (match?.[1]) return decodeURIComponent(match[1]);
+    }
+
+    try {
+      const csrfRes = await fetch('/api/auth/csrf', {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const csrfData = await csrfRes.json().catch(() => null);
+      return csrfData?.csrfToken || undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
   const getPaymentErrorMessage = (payload: any, fallback: string): string => {
     const candidates = [
       payload,
@@ -99,9 +117,18 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
 
     try {
       // 1. Request Server Checkout Session
+      const csrfToken = await getCsrfToken();
+      if (!csrfToken) {
+        throw new Error('Security token could not be initialized. Please refresh and try again.');
+      }
+
       const sessionRes = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken
+        },
         body: JSON.stringify({
           businessId,
           planId,
@@ -144,7 +171,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         description: type === 'implementation_fee' 
           ? `${planName} Implementation Setup Fee` 
           : `${planName} Monthly Subscription`,
-        order_id: orderId,
+        ...(isSubscriptionCheckout ? {} : { order_id: orderId }),
         theme: {
           color: '#2563EB'
         },
@@ -180,9 +207,18 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         }) => {
           try {
             setStep('processing');
+            const verifyCsrfToken = await getCsrfToken();
+            if (!verifyCsrfToken) {
+              throw new Error('Security token could not be initialized. Please refresh and try again.');
+            }
+
             const verifyRes = await fetch('/api/billing/verify-payment', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-csrf-token': verifyCsrfToken
+              },
               body: JSON.stringify({
                 businessId,
                 provider: 'razorpay',
