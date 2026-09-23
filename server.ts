@@ -51,7 +51,6 @@ import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/post
 import { syncUsersFromPostgres, bootstrapPlatformAdminAsync, userRegistryReady } from './src/server/auth/userRegistry.js';
 import { requireTenantMiddleware, verifyTenantFilterSecurity } from './src/server/tenantMiddleware.js';
 import { conversationStore } from './src/server/db/conversationStore.js';
-import { saveLead } from './src/lib/dbService.js';
 import { 
   serverBusinessesStore, 
   serverAgentsStore, 
