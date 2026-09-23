@@ -2657,6 +2657,9 @@ async function startServer() {
     console.log('[Diagnostic] migration initialization: failure');
     console.log('[Diagnostic] user registry initialization: failure');
     console.error('[ServerStartup] PostgreSQL database bootstrap failed:', err.message);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
   }
 
   const server = createServer(app);
