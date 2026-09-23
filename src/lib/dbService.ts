@@ -449,6 +449,14 @@ export async function saveBusiness(business: Business): Promise<void> {
 // ----------------------------------------------------
 
 export async function getAllAgents(): Promise<AIAgent[]> {
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/agents', { headers: { 'Accept': 'application/json' } });
+    if (!data?.success || !Array.isArray(data.agents)) {
+      throw new Error(data?.error || 'Unable to load AI agents.');
+    }
+    return data.agents as AIAgent[];
+  }
+
   initializeDatabaseIfNeeded();
   return getItem<AIAgent[]>('agents', SEED_AGENTS);
 }
@@ -470,6 +478,19 @@ export async function getAgentsByTenantId(tenantId: string): Promise<AIAgent[]> 
 export async function saveAgent(agent: AIAgent): Promise<void> {
   const validTenant = validateTenantContext(agent.tenantId, 'agents', 'SAVE_AGENT');
   const guardedAgent = tenantValidateEntityMutation(agent, validTenant, 'agents');
+
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ ...guardedAgent, tenantId: validTenant })
+    });
+    if (!data?.success || !data.agent) {
+      throw new Error(data?.error || 'Unable to persist AI agent.');
+    }
+    return;
+  }
+
   const list = await getAllAgents();
   const index = list.findIndex(a => a.id === guardedAgent.id);
   if (index >= 0) {
