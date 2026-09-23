@@ -1336,9 +1336,9 @@ app.get('/api/knowledge/:tenantId', requireTenantAccess, (req: Request, res: Res
 });
 
 // POST Create Knowledge Item for a Tenant
-app.post('/api/knowledge', requireTenantAccess, (req: Request, res: Response) => {
+app.post('/api/knowledge', requireTenantAccess, async (req: Request, res: Response) => {
   const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
-  const { title, content, type = 'faq', category = 'General', status = 'active', active = true } = req.body;
+  const { title, content, type = 'faq', category = 'General', status = 'active', active = true, visibility = 'public' } = req.body;
 
   if (!normTenantId) {
     return res.status(400).json({ error: 'Tenant context could not be determined.' });
@@ -1390,7 +1390,7 @@ app.post('/api/knowledge', requireTenantAccess, (req: Request, res: Response) =>
 });
 
 // PUT Update Knowledge Item for a Tenant
-app.put('/api/knowledge/:id', requireTenantAccess, (req: Request, res: Response) => {
+app.put('/api/knowledge/:id', requireTenantAccess, async (req: Request, res: Response) => {
   const { id } = req.params;
   const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
   const { title, content, type, category, status, active } = req.body;
@@ -1436,7 +1436,7 @@ app.put('/api/knowledge/:id', requireTenantAccess, (req: Request, res: Response)
 });
 
 // DELETE Knowledge Item for a Tenant
-app.delete(['/api/knowledge/:tenantId/:id', '/api/knowledge/:id'], requireTenantAccess, (req: Request, res: Response) => {
+app.delete(['/api/knowledge/:tenantId/:id', '/api/knowledge/:id'], requireTenantAccess, async (req: Request, res: Response) => {
   const id = req.params.id;
   const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
 
