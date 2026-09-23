@@ -26,7 +26,7 @@ import {
 } from '../data/demoBusiness';
 const getCsrfHeader = (): Record<string, string> => {
   if (typeof document === 'undefined') return {};
-  const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+  const match = document.cookie.match(/(?:^|;\s*)agentdesk_csrf=([^;]*)/);
   return match ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
 };
 
