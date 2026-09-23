@@ -72,7 +72,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
 
   const getCsrfToken = async (): Promise<string | undefined> => {
     if (typeof document !== 'undefined') {
-      const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+      const match = document.cookie.match(/(?:^|;\s*)agentdesk_csrf=([^;]*)/);
       if (match?.[1]) return decodeURIComponent(match[1]);
     }
 
