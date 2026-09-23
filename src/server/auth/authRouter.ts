@@ -658,7 +658,16 @@ authRouter.post('/login', authRateLimiter, async (req: Request, res: Response) =
         expiresAt: Date.now() + 5 * 60 * 1000
       });
 
-      await otpService.sendOTP(user.twoFactorPhone, 'sms');
+      const otpResult = await otpService.sendOTP(user.twoFactorPhone, 'sms');
+      if (!otpResult.success) {
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'SMS_SERVICE_UNAVAILABLE',
+            message: otpResult.error || 'SMS verification is currently unavailable.'
+          }
+        });
+      }
       const maskedPhone = `${user.twoFactorPhone.slice(0, 3)}***${user.twoFactorPhone.slice(-4)}`;
 
       return res.json({
@@ -886,7 +895,16 @@ authRouter.post(['/platform-login', '/platform/login'], authRateLimiter, async (
         expiresAt: Date.now() + 5 * 60 * 1000
       });
 
-      await otpService.sendOTP(user.twoFactorPhone, 'sms');
+      const otpResult = await otpService.sendOTP(user.twoFactorPhone, 'sms');
+      if (!otpResult.success) {
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'SMS_SERVICE_UNAVAILABLE',
+            message: otpResult.error || 'SMS verification is currently unavailable.'
+          }
+        });
+      }
       const maskedPhone = `${user.twoFactorPhone.slice(0, 3)}***${user.twoFactorPhone.slice(-4)}`;
 
       return res.json({
@@ -2247,6 +2265,15 @@ authRouter.post('/2fa/setup', requireAuth, authRateLimiter, async (req: Request,
 
     const cleanPhone = phone.trim();
     const otpRes = await otpService.sendOTP(cleanPhone, 'sms');
+    if (!otpRes.success) {
+      return res.status(503).json({
+        success: false,
+        error: {
+          code: 'SMS_SERVICE_UNAVAILABLE',
+          message: otpRes.error || 'SMS verification is currently unavailable.'
+        }
+      });
+    }
 
     // Create challenge for enabling 2FA
     const challengeId = `2fa_setup_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
