@@ -1818,16 +1818,6 @@ app.get('/api/widget/config', (req: Request, res: Response) => {
 // POST Public Widget Chat Endpoint (Strict Multi-Tenant Isolation & Zero-Cost Budget Protection)
 app.post('/api/widget/chat', async (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
-  
-  // IP Rate Limit Protection (Max 30 msg/min per IP)
-  if (!checkRateLimit(`widget:${clientIp}`, 30, 60000)) {
-    return res.status(429).json({
-      success: false,
-      reply: "You have sent messages too quickly. Please wait a moment before trying again."
-    });
-  }
-
   try {
     const {
       conversationId: suppliedConversationId,
@@ -1864,9 +1854,8 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     }
 
     const safeMessage = message.trim().slice(0, 600);
-    const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
-    // Loop & Session Abuse Protection (Max 35 user turns per conversation)
+    // Loop & Session Abuse Protection (Max 35 user turns per tenant-scoped conversation)
     if (!(await checkAndIncrementConversationTurns(currentBusiness.id.toLowerCase() + ':' + safeConvId, 35))) {
       return res.json({
         success: true,
