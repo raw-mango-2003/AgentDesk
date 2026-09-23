@@ -304,7 +304,7 @@ export class BillingService {
       }
     }
 
-    const invoiceResult = await postgresClient.query('SELECT id, tenant_id, razorpay_invoice_id, amount, currency, status, hosted_invoice_url, created_at, updated_at FROM agentdesk_invoices ORDER BY created_at DESC');
+    const invoiceResult = await postgresClient.query('SELECT id, tenant_id, razorpay_invoice_id, invoice_number, description, amount, currency, status, hosted_invoice_url, created_at, updated_at FROM agentdesk_invoices ORDER BY created_at DESC');
     for (const row of invoiceResult?.rows || []) {
       const tenantId = String(row.tenant_id || '').toLowerCase();
       if (!tenantId) continue;
@@ -312,10 +312,10 @@ export class BillingService {
       invoices.push({
         id: row.id,
         businessId: tenantId,
-        invoiceNumber: row.razorpay_invoice_id || row.id,
+        invoiceNumber: row.invoice_number || row.razorpay_invoice_id || row.id,
         date: String(row.created_at || '').slice(0, 10),
         createdAt: row.created_at,
-        description: 'AgentDesk subscription invoice',
+        description: row.description || 'AgentDesk subscription invoice',
         amount: Number(row.amount) || 0,
         currency: row.currency as CurrencyCode,
         status: row.status === 'PAID' ? 'PAID' : 'PENDING',
@@ -348,8 +348,8 @@ export class BillingService {
     }
 
     await postgresClient.query(
-      "INSERT INTO agentdesk_invoices (id, tenant_id, razorpay_invoice_id, amount, currency, status, hosted_invoice_url, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (id) DO UPDATE SET razorpay_invoice_id = EXCLUDED.razorpay_invoice_id, amount = EXCLUDED.amount, currency = EXCLUDED.currency, status = EXCLUDED.status, hosted_invoice_url = EXCLUDED.hosted_invoice_url, updated_at = EXCLUDED.updated_at",
-      [invoice.id, invoice.businessId, invoice.providerInvoiceId || null, invoice.amount, invoice.currency, invoice.status, invoice.hostedInvoiceUrl || null, invoice.createdAt || invoice.date, new Date().toISOString()]
+      "INSERT INTO agentdesk_invoices (id, tenant_id, razorpay_invoice_id, invoice_number, description, amount, currency, status, hosted_invoice_url, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO UPDATE SET razorpay_invoice_id = EXCLUDED.razorpay_invoice_id, invoice_number = EXCLUDED.invoice_number, description = EXCLUDED.description, amount = EXCLUDED.amount, currency = EXCLUDED.currency, status = EXCLUDED.status, hosted_invoice_url = EXCLUDED.hosted_invoice_url, updated_at = EXCLUDED.updated_at",
+      [invoice.id, invoice.businessId, invoice.providerInvoiceId || null, invoice.invoiceNumber, invoice.description, invoice.amount, invoice.currency, invoice.status, invoice.hostedInvoiceUrl || null, invoice.createdAt || invoice.date, new Date().toISOString()]
     );
   }
 
