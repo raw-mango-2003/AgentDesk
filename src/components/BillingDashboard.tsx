@@ -528,7 +528,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
             <Lock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span>PCI-DSS Level 1 & RBI E-Mandate Compliant Tokenization</span>
+            <span>Payment details are handled by the payment provider; AgentDesk does not store raw card or CVV data.</span>
           </div>
         </div>
       </div>
@@ -644,7 +644,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
             <FileText className="w-5 h-5 text-purple-400" />
             <span>Statements & Billing History</span>
           </h2>
-          <span className="text-xs text-slate-400">All invoices verified for tax & compliance</span>
+          <span className="text-xs text-slate-400">Billing records and payment status</span>
         </div>
 
         <div className="rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden shadow-xl">
