@@ -149,6 +149,8 @@ export class ConversationStore {
           summary = EXCLUDED.summary,
           state = EXCLUDED.state,
           updated_at = EXCLUDED.updated_at
+        WHERE agentdesk_conversations.business_id = EXCLUDED.business_id
+          AND COALESCE(agentdesk_conversations.tenant_id, agentdesk_conversations.business_id) = EXCLUDED.tenant_id
       `, [
         record.conversationId,
         record.businessId,
