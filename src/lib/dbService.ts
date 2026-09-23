@@ -1154,9 +1154,21 @@ export const saveColdOutreachCampaign = saveCampaign;
 
 export async function getConversations(businessId?: string): Promise<Conversation[]> {
   initializeDatabaseIfNeeded();
+  const validTenant = businessId
+    ? validateTenantContext(businessId, 'conversations', 'GET_CONVERSATIONS')
+    : undefined;
+
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    try {
+      const data = await safeFetchJson('/api/conversations', { headers: { 'Accept': 'application/json' } });
+      if (data?.success && Array.isArray(data.conversations)) return data.conversations as Conversation[];
+    } catch (err) {
+      console.warn('[getConversations] Server conversation API unavailable:', (err as any)?.message || err);
+    }
+  }
+
   const all = getItem<Conversation[]>('conversations', []);
-  if (!businessId) return all;
-  const validTenant = validateTenantContext(businessId, 'conversations', 'GET_CONVERSATIONS');
+  if (!validTenant) return all;
   return tenantFilterArray(all, validTenant, 'conversations');
 }
 
@@ -1187,15 +1199,24 @@ export async function saveConversation(conv: any): Promise<any> {
 }
 
 export async function updateConversationStatus(
-  arg1: string, 
-  arg2: any, 
-  arg3?: any
+  convId: string,
+  status: any,
+  businessId?: string
 ): Promise<void> {
-  const convId = arg3 !== undefined ? arg2 : arg1;
-  const status = arg3 !== undefined ? arg3 : arg2;
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/conversations/' + encodeURIComponent(convId), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    if (!data?.success) throw new Error(data?.error || 'Unable to update conversation.');
+    return;
+  }
+
   const all = getItem<Conversation[]>('conversations', []);
   const item = all.find(c => c.id === convId);
   if (item) {
+    if (businessId) tenantAssertDocOwnership(item, businessId, 'conversations', convId);
     item.status = status;
     item.updatedAt = new Date().toISOString();
     setItem('conversations', all);
