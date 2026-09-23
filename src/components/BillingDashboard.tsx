@@ -683,7 +683,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => showNotificationMessage(`Downloaded official tax receipt for ${inv.invoiceNumber}`)}
+                          onClick={() => window.open(`/api/billing/tenant/${encodeURIComponent(business.id)}/invoices/${encodeURIComponent(inv.id)}/print`, '_blank', 'noopener,noreferrer')}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
