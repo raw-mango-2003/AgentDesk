@@ -14,7 +14,7 @@ import {
   Phone,
   Mail
 } from 'lucide-react';
-import { Business, Message, KnowledgeItem, Conversation, Lead, AIAgent } from '../types';
+import { Business, Message, KnowledgeItem, Conversation, AIAgent } from '../types';
 import { 
   DEMO_BUSINESS, 
   DEMO_KNOWLEDGE_ITEMS, 
@@ -31,7 +31,6 @@ const getCsrfHeader = (): Record<string, string> => {
 };
 
 const loadDbService = () => import('../lib/dbService');
-const addLead = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['addLead']>) => loadDbService().then(module => module.addLead(...args));
 const saveConversation = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['saveConversation']>) => loadDbService().then(module => module.saveConversation(...args));
 const getKnowledgeItems = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['getKnowledgeItems']>) => loadDbService().then(module => module.getKnowledgeItems(...args));
 const resolveAgentAndTenant = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['resolveAgentAndTenant']>) => loadDbService().then(module => module.resolveAgentAndTenant(...args));
