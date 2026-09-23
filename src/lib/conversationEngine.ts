@@ -876,7 +876,9 @@ export function validateAnswer(
   // Public receptionist safeguard: never expose direct client contact details.
   // Leads are captured inside AgentDesk and the client follows up from the dashboard.
   const responseEmailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
-  const responsePhonePattern = /(?:\+91[-.\s]?)?[6-9]\d{9}\b|\b\d{10}\b/;
+  const responsePhonePattern = /(?:\+?\d{1,3}[\s().-]*)?(?:\d[\s().-]*){7,14}\d/;
+  const responseContactLinkPattern = /\b(?:mailto:|tel:|whatsapp:|sms:)/i;
+  const responseSensitiveMetaPattern = /\b(?:tenant[_-]?id|business[_-]?id|agent[_-]?id|api[_-]?key|session[_-]?secret|system\s+prompt|developer\s+prompt|internal\s+instructions?)\b/i;
   const containsConfiguredContact = [
     business?.supportEmail,
     business?.leadNotificationEmail,
@@ -887,7 +889,13 @@ export function validateAnswer(
     return normalizedValue.length > 3 && cleaned.toLowerCase().includes(normalizedValue);
   });
 
-  if (containsConfiguredContact || responseEmailPattern.test(cleaned) || responsePhonePattern.test(cleaned)) {
+  if (
+    containsConfiguredContact ||
+    responseEmailPattern.test(cleaned) ||
+    responsePhonePattern.test(cleaned) ||
+    responseContactLinkPattern.test(cleaned) ||
+    responseSensitiveMetaPattern.test(cleaned)
+  ) {
     return "I can capture your details here for our team, and they will follow up with you shortly.";
   }
 
