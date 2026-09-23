@@ -205,13 +205,17 @@ export async function persistLeadToPostgres(lead: ServerLeadRecord): Promise<boo
     return true;
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresPersistLeadWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
     return false;
   }
 }
 
 export async function getLeadsFromPostgres(tenantId: string): Promise<ServerLeadRecord[]> {
   try {
-    if (!(await postgresClient.initialize())) return [];
+    if (!(await postgresClient.initialize())) {
+      if (process.env.NODE_ENV === 'production') throw new Error('PostgreSQL is unavailable.');
+      return [];
+    }
     const result = await postgresClient.query(`
       SELECT id, tenant_id, name, email, phone, source, status, score, details, created_at, updated_at
       FROM agentdesk_leads WHERE tenant_id = $1 ORDER BY created_at DESC
@@ -225,6 +229,7 @@ export async function getLeadsFromPostgres(tenantId: string): Promise<ServerLead
     }));
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresGetLeadsWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
     return [];
   }
 }
@@ -264,6 +269,7 @@ export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<b
     return true;
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresPersistKnowledgeWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
     return false;
   }
 }
@@ -279,6 +285,7 @@ export async function deleteKnowledgeFromPostgres(itemId: string, tenantId: stri
     return true;
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresDeleteKnowledgeWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
     return false;
   }
 }
@@ -385,6 +392,7 @@ export async function syncAllTenantDataFromPostgres(): Promise<void> {
     }
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresSyncWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
   }
 }
 
