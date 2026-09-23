@@ -65,6 +65,7 @@ import {
   provisionCustomerTenant,
   resetTenantQuota,
   persistKnowledgeToPostgres,
+  persistTenantToPostgres,
   deleteKnowledgeFromPostgres,
   setTenant,
   persistLeadToPostgres,
