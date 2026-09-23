@@ -37,7 +37,8 @@ import {
   Globe,
   Bot,
   Database,
-  Webhook
+  Webhook,
+  X
 } from 'lucide-react';
 
 interface IntegrationItem {
@@ -631,6 +632,30 @@ export const PlatformIntegrationsManager: React.FC = () => {
     } finally {
       setTestingId(null);
     }
+  };
+
+  const tenantProviderLabels: Record<string, string> = {
+    google_calendar: 'Google Calendar',
+    twilio_voice: 'Twilio Voice',
+    twilio_sms: 'Twilio SMS',
+    whatsapp_business: 'WhatsApp Business',
+    resend_email: 'Resend Email',
+    gemini_ai: 'Google Gemini',
+    hubspot_crm: 'HubSpot CRM',
+    salesforce_crm: 'Salesforce CRM',
+    custom_webhook: 'Custom Webhook'
+  };
+
+  const tenantProviderFields: Record<string, string[]> = {
+    google_calendar: ['client_id', 'client_secret', 'refresh_token'],
+    twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
+    twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
+    whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
+    resend_email: ['api_key', 'from_email'],
+    gemini_ai: ['api_key', 'model'],
+    hubspot_crm: ['access_token', 'portal_id'],
+    salesforce_crm: ['client_id', 'client_secret', 'refresh_token'],
+    custom_webhook: ['webhook_url', 'signing_secret']
   };
 
   return (
@@ -1500,31 +1525,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                   { name: 'PLATFORM_ADMIN_INITIAL_PASSWORD', desc: 'Initial password (hashed on first boot, never overwritten)' }
                 ].map((item) => {
                   const isConfigured = envReport?.core?.[item.name]?.configured ?? true;
-                  const tenantProviderLabels: Record<string, string> = {
-    google_calendar: 'Google Calendar',
-    twilio_voice: 'Twilio Voice',
-    twilio_sms: 'Twilio SMS',
-    whatsapp_business: 'WhatsApp Business',
-    resend_email: 'Resend Email',
-    gemini_ai: 'Google Gemini',
-    hubspot_crm: 'HubSpot CRM',
-    salesforce_crm: 'Salesforce CRM',
-    custom_webhook: 'Custom Webhook'
-  };
-
-  const tenantProviderFields: Record<string, string[]> = {
-    google_calendar: ['client_id', 'client_secret', 'refresh_token'],
-    twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
-    twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
-    whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
-    resend_email: ['api_key', 'from_email'],
-    gemini_ai: ['api_key', 'model'],
-    hubspot_crm: ['access_token', 'portal_id'],
-    salesforce_crm: ['client_id', 'client_secret', 'refresh_token'],
-    custom_webhook: ['webhook_url', 'signing_secret']
-  };
-
-  return (
+                  return (
                     <div key={item.name} className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80">
                       <div className="space-y-0.5">
                         <div className="font-mono text-xs font-bold text-slate-200">{item.name}</div>
