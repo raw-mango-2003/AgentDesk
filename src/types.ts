@@ -101,6 +101,8 @@ export interface KnowledgeItem {
   category?: string;
   status: KnowledgeStatus;
   active?: boolean;
+  /** Controls whether this item may be used by the public website widget. */
+  visibility?: 'public' | 'internal' | 'restricted';
   sourceUrl?: string;
   fileName?: string;
   fileSize?: string;
