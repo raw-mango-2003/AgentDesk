@@ -2142,6 +2142,9 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       business.id,
       typeof conversationId === 'string' ? conversationId : undefined
     );
+    const publicConversationId = typeof conversationId === 'string' && conversationId.trim()
+      ? conversationId.trim().slice(0, 100)
+      : safeConversationId;
 
     const validEmail = !safeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail);
     const validPhone = !safePhone || /^[+\d][\d\s().-]{6,30}$/.test(safePhone);
