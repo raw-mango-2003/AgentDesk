@@ -1876,8 +1876,6 @@ export class BillingService {
     if (orderId) await this.hydratePaymentIntent(orderId);
     const pendingSignup = (orderId ? this.pendingSignupsStore.get(orderId) : undefined) ||
       Array.from(this.pendingSignupsStore.values()).find(s => s.tenantId === norm || s.razorpayOrderId === orderId);
-    const pendingSignup = (orderId ? this.pendingSignupsStore.get(orderId) : undefined) ||
-      Array.from(this.pendingSignupsStore.values()).find(s => s.tenantId === norm || s.razorpayOrderId === orderId);
     const paymentRecord = (orderId ? this.paymentRecordsStore.get(orderId) : undefined) ||
       Array.from(this.paymentRecordsStore.values()).find(p => p.razorpayOrderId === orderId || p.tenantId === norm);
 
