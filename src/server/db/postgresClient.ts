@@ -184,6 +184,9 @@ class PostgresClient {
           this.isConnected = false;
           this.pool = null;
           this.lastError = `External PostgreSQL unreachable: ${safeMessage}`;
+          // Recreate the pool so a transient network/database outage can recover
+          // without requiring a process restart.
+          this.initPool();
         }
       }
 
