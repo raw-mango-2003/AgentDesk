@@ -322,6 +322,41 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
   }
 });
 
+// Tenant-scoped conversations. Every read/update is bound to the authenticated
+// tenant context so conversation IDs cannot be used to cross the tenant boundary.
+app.get('/api/conversations', requireAuth, requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    const conversations = await conversationStore.getConversationsByBusinessAsync(tenantId);
+    return res.json({ success: true, conversations });
+  } catch (err: any) {
+    console.error('[ConversationListError]', err);
+    return res.status(500).json({ success: false, error: 'Unable to load conversations.' });
+  }
+});
+
+app.patch('/api/conversations/:conversationId', requireAuth, requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    const conversationId = String(req.params.conversationId || '').trim();
+    const allowed = new Set(['AI_ACTIVE', 'HUMAN_REQUIRED', 'HUMAN_ACTIVE', 'RESOLVED']);
+    const status = typeof req.body?.status === 'string' ? req.body.status.trim().toUpperCase() : '';
+    if (!conversationId || !allowed.has(status)) {
+      return res.status(400).json({ success: false, error: 'A valid conversation ID and status are required.' });
+    }
+    const updated = await conversationStore.updateConversationStatusAsync(
+      conversationId,
+      tenantId,
+      status as any
+    );
+    if (!updated) return res.status(404).json({ success: false, error: 'Conversation not found.' });
+    return res.json({ success: true, conversation: updated });
+  } catch (err: any) {
+    console.error('[ConversationUpdateError]', err);
+    return res.status(500).json({ success: false, error: 'Unable to update conversation.' });
+  }
+});
+
 // Tenant-scoped lead API. Website chat uses this server-side source of truth so leads
 // survive browser refreshes/deploys and are visible to the owning business dashboard.
 app.get('/api/leads', requireAuth, requireTenantAccess, async (req: Request, res: Response) => {
