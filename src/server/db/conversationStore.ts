@@ -215,6 +215,20 @@ export class ConversationStore {
     return records;
   }
 
+  public async updateConversationStatusAsync(
+    conversationId: string,
+    businessId: string,
+    status: ConversationRecord['status']
+  ): Promise<ConversationRecord | null> {
+    const record = await this.getConversationAsync(conversationId, businessId);
+    if (!record) return null;
+    record.status = status;
+    record.updatedAt = new Date().toISOString();
+    conversationsCache.set(this.getKey(businessId, conversationId), record);
+    await this.persistConversationAsync(record);
+    return record;
+  }
+
   /**
    * Delete conversations for a business/tenant from PostgreSQL and memory
    */
