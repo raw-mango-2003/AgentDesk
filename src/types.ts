@@ -855,6 +855,7 @@ export interface BillingInfo {
   planId: string;
   planName: string;
   provider?: PaymentProviderName;
+  providerSubscriptionId?: string;
   status: 'Active' | 'Trial' | 'Past Due' | 'Cancelled' | 'active' | 'trialing' | 'past_due' | 'paused' | 'cancelled';
   currency: CurrencyCode;
   implementationFee: number;
