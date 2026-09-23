@@ -40,14 +40,14 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ business }) => {
   }, [business.id]);
 
   const handleStatusChange = async (leadId: string, newStatus: LeadStatus) => {
-    await updateLeadStatus(leadId, newStatus);
+    await updateLeadStatus(leadId, newStatus, undefined, business.id);
     loadData();
   };
 
   const handleSaveNotes = async (leadId: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (lead) {
-      await updateLeadStatus(leadId, lead.status, tempNotes);
+      await updateLeadStatus(leadId, lead.status, tempNotes, business.id);
       setEditingNotesLeadId(null);
       loadData();
     }
