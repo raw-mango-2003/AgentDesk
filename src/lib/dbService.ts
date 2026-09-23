@@ -365,7 +365,8 @@ export async function getAllBusinesses(): Promise<Business[]> {
         return merged;
       }
     } catch (err) {
-      // Graceful fallback to local storage
+      if (isProductionRuntime()) throw err;
+      // Development fallback only.
     } finally {
       inFlightFetchBusinesses = null;
     }
@@ -400,7 +401,7 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
         setItem('businesses', currentList);
       }
     } catch (err) {
-      // Non-fatal
+      if (isProductionRuntime()) throw err;
     }
   }
 
