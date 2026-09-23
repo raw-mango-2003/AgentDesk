@@ -273,7 +273,7 @@ export function classifyConversationIntent(
       primaryType: 'HUMAN_HANDOFF',
       secondaryTypes: [],
       requiresKnowledgeRetrieval: false,
-      directReply: `I'd be happy to connect you with our support team for ${businessName}. Please share your contact details or click 'Connect with Human Support' below.`,
+      directReply: `I can capture your details here for the team. Please share your contact details or click 'Connect with Human Support' below.`,
       isClosing: false,
       needsHumanHandoff: true,
       suggestedActions: ['Connect with Human Support']
@@ -286,7 +286,7 @@ export function classifyConversationIntent(
       primaryType: 'COMPLAINT',
       secondaryTypes: ['HUMAN_HANDOFF'],
       requiresKnowledgeRetrieval: false,
-      directReply: "I apologize for any frustration. Let me connect you directly with our support team so we can assist you right away.",
+      directReply: "I apologize for the frustration. I can capture your details here so our team can follow up.",
       isClosing: false,
       needsHumanHandoff: true,
       suggestedActions: ['Connect with Human Support']
@@ -376,7 +376,7 @@ export function classifyConversationIntent(
       primaryType: 'NEGATION',
       secondaryTypes: ['CLOSING_INTENT'],
       requiresKnowledgeRetrieval: false,
-      directReply: "No problem at all! Feel free to reach out anytime if you need more details. Have a wonderful day!",
+      directReply: "No problem at all! If you need more details, you can ask me here. Have a wonderful day!",
       isClosing: true,
       needsHumanHandoff: false,
       suggestedActions: []
@@ -611,7 +611,7 @@ export function generateEngineAnswer(
   // A. Human Handoff Intent
   if (extracted.intents.includes('human_support')) {
     return {
-      reply: `I'd be happy to connect you with our human support team for ${bizName}. Please share your contact details or click 'Connect with Human Support' below.`,
+      reply: `I can capture your details here for the team. Please share your contact details or click 'Connect with Human Support' below.`,
       isClosing: false,
       needsHumanHandoff: true,
       suggestedActions: ['Connect with Human Support']
@@ -734,7 +734,7 @@ export function generateEngineAnswer(
       }
     }
     return {
-      reply: `Our programs at ${bizName} are open to students, graduates, and career changers. Contact our admissions team to get started!`,
+      reply: `Our programs at ${bizName} are open to students, graduates, and career changers. If you'd like to get started, I can capture your details here for the admissions team.`,
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: ['How to Enroll']
@@ -866,6 +866,24 @@ export function validateAnswer(
   // If not closing turn, remove any stray goodbye or closing phrases
   if (!extracted.intents.includes('goodbye') && !extracted.intents.includes('closing')) {
     cleaned = cleaned.replace(/\b(Goodbye!|Have a great day!|Bye!|Farewell!)\b/gi, '').trim();
+  }
+
+  // Public receptionist safeguard: never expose direct client contact details.
+  // Leads are captured inside AgentDesk and the client follows up from the dashboard.
+  const responseEmailPattern = /\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b/i;
+  const responsePhonePattern = /(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b\\d{10}\\b/;
+  const containsConfiguredContact = [
+    business?.supportEmail,
+    business?.leadNotificationEmail,
+    business?.phone,
+    business?.leadNotificationPhone
+  ].filter(Boolean).some((value: any) => {
+    const normalizedValue = String(value).trim().toLowerCase();
+    return normalizedValue.length > 3 && cleaned.toLowerCase().includes(normalizedValue);
+  });
+
+  if (containsConfiguredContact || responseEmailPattern.test(cleaned) || responsePhonePattern.test(cleaned)) {
+    return "I can capture your details here for our team, and they will follow up with you shortly.";
   }
 
   // Strict Safeguard: Prevent customer from ever seeing raw tenantId / businessId / UUID slugs
