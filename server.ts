@@ -1751,8 +1751,6 @@ app.get('/api/widget/config', (req: Request, res: Response) => {
       name: business.name,
       industry: business.industry,
       website: business.website,
-      supportEmail: business.supportEmail,
-      phone: business.phone,
       logo: business.logo,
       primaryColor: business.primaryColor
     },
@@ -1840,8 +1838,12 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
       record.state.bookingState.stage = 'CONFIRMED';
       record.state.conversationStage = 'COURSE_DISCUSSION';
 
+      const leadKey = crypto.createHash('sha256')
+        .update(`${String(currentBusiness.id).toLowerCase()}:${safeConvId}`)
+        .digest('hex')
+        .slice(0, 32);
       const lead = {
-        id: 'lead-' + crypto.randomBytes(16).toString('hex'),
+        id: `lead-${leadKey}`,
         tenantId: currentBusiness.id,
         businessId: currentBusiness.id,
         name: capturedName,
@@ -1878,6 +1880,34 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
             error: 'Lead storage is temporarily unavailable. Please try again.'
           });
         }
+      }
+
+      // Notify the client after durable persistence. Notification failure must not
+      // cause the visitor to see a false submission failure.
+      const notifyEmail = typeof currentBusiness.leadNotificationEmail === 'string' && currentBusiness.leadNotificationEmail.trim()
+        ? currentBusiness.leadNotificationEmail.trim()
+        : typeof currentBusiness.supportEmail === 'string' ? currentBusiness.supportEmail.trim() : '';
+      const notifyPhone = typeof currentBusiness.leadNotificationPhone === 'string' && currentBusiness.leadNotificationPhone.trim()
+        ? currentBusiness.leadNotificationPhone.trim()
+        : typeof currentBusiness.phone === 'string' ? currentBusiness.phone.trim() : '';
+      try {
+        await notificationService.dispatchEvent('NEW_LEAD_RECEIVED', {
+          tenantId: currentBusiness.id,
+          email: notifyEmail,
+          phone: notifyPhone,
+          leadName: capturedName,
+          leadEmail: capturedEmail,
+          leadPhone: capturedPhone,
+          leadId: lead.id,
+          score: 85,
+          requirement: lead.requirement,
+          source: lead.source,
+          category: 'leads',
+          title: `New Lead: ${capturedName}`,
+          body: `New website enquiry from ${capturedName}. Contact details are available in your AgentDesk dashboard.`
+        });
+      } catch (notifyError: any) {
+        console.error('[ChatLeadNotificationError]', notifyError?.message || notifyError);
       }
 
       const capturedContact = capturedPhone ? 'phone number' : 'email address';
@@ -1996,32 +2026,118 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
   try {
     const { agentId, businessId, tenantId, conversationId, name, email, phone, notes } = req.body || {};
     const targetIdentifier = agentId || tenantId || businessId;
-    const { business } = resolveBusinessAndKnowledge(targetIdentifier);
-    if (!business) return res.status(404).json({ success: false, error: 'Business not found.' });
+    if (!targetIdentifier || typeof targetIdentifier !== 'string') {
+      return res.status(400).json({ success: false, error: 'A valid widget identifier is required.' });
+    }
 
-    const leadId = `lead_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-    const leadRecord = {
+    const { business, agent } = resolveBusinessAndKnowledge(targetIdentifier);
+    if (!business || !agent) return res.status(404).json({ success: false, error: 'Business or agent not found.' });
+
+    // Reject mismatched identifiers so a public caller cannot combine an agent
+    // from one tenant with a business/tenant identifier from another tenant.
+    const suppliedTenantIds = [businessId, tenantId]
+      .filter((value: any) => typeof value === 'string' && value.trim())
+      .map((value: string) => value.trim().toLowerCase());
+    if (suppliedTenantIds.some((value: string) => value !== String(business.id).trim().toLowerCase())) {
+      return res.status(400).json({ success: false, error: 'Widget tenant identifiers do not match.' });
+    }
+
+    const safeName = typeof name === 'string' ? name.trim().slice(0, 100) : '';
+    const safeEmail = typeof email === 'string' ? email.trim().slice(0, 160) : '';
+    const safePhone = typeof phone === 'string' ? phone.trim().slice(0, 32) : '';
+    const safeNotes = typeof notes === 'string'
+      ? notes.trim().slice(0, 1000)
+      : 'Lead submitted through the AgentDesk website widget';
+    const safeConversationId = typeof conversationId === 'string'
+      ? conversationId.trim().slice(0, 100)
+      : `conv_${Date.now()}`;
+
+    const validEmail = !safeEmail || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(safeEmail);
+    const validPhone = !safePhone || /^[+\\d][\\d\\s().-]{6,30}$/.test(safePhone);
+    if (!safeName) {
+      return res.status(400).json({ success: false, error: 'Please provide your name.' });
+    }
+    if (!safeEmail && !safePhone) {
+      return res.status(400).json({ success: false, error: 'Please provide an email address or phone number.' });
+    }
+    if (!validEmail) {
+      return res.status(400).json({ success: false, error: 'Please provide a valid email address.' });
+    }
+    if (!validPhone) {
+      return res.status(400).json({ success: false, error: 'Please provide a valid phone number.' });
+    }
+
+    // One lead per conversation + tenant. Repeated clicks/retries update the
+    // same database row instead of creating duplicate leads.
+    const leadKey = crypto.createHash('sha256')
+      .update(`${String(business.id).toLowerCase()}:${safeConversationId}`)
+      .digest('hex')
+      .slice(0, 32);
+    const leadId = `lead_${leadKey}`;
+    const now = new Date().toISOString();
+    const leadRecord: any = {
       id: leadId,
+      tenantId: business.id,
       businessId: business.id,
-      conversationId: (conversationId || `conv_${Date.now()}`).toString().slice(0, 100),
-      name: (name || 'Website Visitor').toString().trim().slice(0, 100),
-      email: (email || '').toString().trim().slice(0, 100),
-      phone: (phone || '').toString().trim().slice(0, 50),
-      source: 'Embed Widget',
+      conversationId: safeConversationId,
+      name: safeName,
+      email: safeEmail,
+      phone: safePhone,
+      source: 'AI Chat Widget',
       status: 'new' as const,
       score: 85,
-      notes: (notes || 'Lead submitted through embedded website AI widget').toString().trim().slice(0, 500),
-      createdAt: new Date().toISOString()
+      details: {
+        conversationId: safeConversationId,
+        notes: safeNotes,
+        capturedBy: 'AI Receptionist'
+      },
+      createdAt: now,
+      updatedAt: now
     };
 
-    const savedLead = await saveLead(leadRecord);
+    const persisted = await persistLeadToPostgres(leadRecord);
+    if (!persisted && process.env.NODE_ENV === 'production') {
+      return res.status(503).json({
+        success: false,
+        error: 'Lead storage is temporarily unavailable. Please try again.'
+      });
+    }
+
+    // Notify the client, but never expose the client's own contact details to
+    // the visitor. Notification failures must not undo a successfully stored lead.
+    const notifyEmail = typeof business.leadNotificationEmail === 'string' && business.leadNotificationEmail.trim()
+      ? business.leadNotificationEmail.trim()
+      : typeof business.supportEmail === 'string' ? business.supportEmail.trim() : '';
+    const notifyPhone = typeof business.leadNotificationPhone === 'string' && business.leadNotificationPhone.trim()
+      ? business.leadNotificationPhone.trim()
+      : typeof business.phone === 'string' ? business.phone.trim() : '';
+
+    try {
+      await notificationService.dispatchEvent('NEW_LEAD_RECEIVED', {
+        tenantId: business.id,
+        email: notifyEmail,
+        phone: notifyPhone,
+        leadName: safeName,
+        leadEmail: safeEmail,
+        leadPhone: safePhone,
+        leadId,
+        score: 85,
+        requirement: safeNotes,
+        source: 'AI Chat Widget',
+        category: 'leads',
+        title: `New Lead: ${safeName}`,
+        body: `New website enquiry from ${safeName}. Contact details are available in your AgentDesk dashboard.`
+      });
+    } catch (notifyError: any) {
+      console.error('[WidgetLeadNotificationError]', notifyError?.message || notifyError);
+    }
 
     console.log(`[Widget Lead Capture] New lead captured for tenant (${business.id})`);
 
     return res.json({
       success: true,
       message: 'Lead captured successfully',
-      lead: savedLead
+      lead: leadRecord
     });
   } catch (error: any) {
     console.error('[Widget Lead Capture] Persistence failed:', error?.message || 'Unknown error');
