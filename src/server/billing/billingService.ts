@@ -334,10 +334,13 @@ export class BillingService {
       return;
     }
 
-    await postgresClient.query(
+    const result = await postgresClient.query(
       "UPDATE agentdesk_tenants SET plan_id = $2, currency = $3, settings = COALESCE(settings, '{}'::jsonb) || jsonb_build_object('billing', $4::jsonb), updated_at = $5 WHERE id = $1",
       [record.businessId, record.planId, record.currency, JSON.stringify(record), record.updatedAt]
     );
+    if (process.env.NODE_ENV === 'production' && (result?.rowCount ?? 0) !== 1) {
+      throw new Error('Billing tenant record was not found for persistence.');
+    }
   }
 
   private async persistInvoice(invoice: BillingInvoice): Promise<void> {
