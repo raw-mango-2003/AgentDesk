@@ -625,7 +625,7 @@ export function generateEngineAnswer(
       reply: `Hello! I am ${assistantName}, the AI receptionist for ${bizName}. How can I assist you today?`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['View Programs', 'Tuition & Fees', 'Class Timings']
+      suggestedActions: ['Learn More', 'Services', 'Get Started']
     };
   }
 
@@ -659,7 +659,7 @@ export function generateEngineAnswer(
     }
 
     return {
-      reply: `Welcome to ${bizName}! We offer professional certified training tracks. What specific program or topic are you interested in?`,
+      reply: `Welcome to ${bizName}! What product, service, or topic would you like to know more about?`,
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: ['Ask About Pricing', 'Class Schedule']
@@ -676,12 +676,12 @@ export function generateEngineAnswer(
           reply: match[1].trim(),
           isClosing: false,
           needsHumanHandoff: false,
-          suggestedActions: ['Book Demo Class', 'View Programs']
+          suggestedActions: ['Learn More', 'Get Started']
         };
       }
     }
     return {
-      reply: `Yes, we offer free interactive demo sessions. Would you like me to register you with your name and contact details?`,
+      reply: `I don't have confirmed demo details in the knowledge base yet. I can capture your enquiry for the team if you'd like.`,
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: ['Book Demo Class']
@@ -712,7 +712,7 @@ export function generateEngineAnswer(
       }
     }
     return {
-      reply: `Refund requests can be submitted within 7 days of enrollment for eligible programs at ${bizName}.`,
+      reply: `I don't have confirmed refund-policy details in the knowledge base for ${bizName}. I can capture your enquiry for the team if you'd like.`,
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: []
@@ -734,10 +734,10 @@ export function generateEngineAnswer(
       }
     }
     return {
-      reply: `Our programs at ${bizName} are open to students, graduates, and career changers. If you'd like to get started, I can capture your details here for the admissions team.`,
+      reply: `I don't have confirmed eligibility or admissions details in the knowledge base for ${bizName}. I can capture your enquiry for the team if you'd like.`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['How to Enroll']
+      suggestedActions: ['Get Started', 'Ask Another Question']
     };
   }
 
@@ -774,7 +774,7 @@ export function generateEngineAnswer(
   if (isFeeAsked && isDurationAsked && (fee || duration)) {
     const entityLabel = entity || 'program';
     return {
-      reply: `The ${entityLabel} costs ${fee || 'our standard rate'} and runs for ${duration || 'the standard program duration'}.`,
+      reply: `For ${entityLabel}, the available details are ${fee ? `a fee of ${fee}` : 'a fee not specified'}${duration ? ` and a duration of ${duration}` : ''}.`,
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: ['Class Timings', 'Syllabus Details', 'How to Enroll']
