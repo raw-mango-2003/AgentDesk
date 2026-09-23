@@ -68,6 +68,7 @@ export class ConversationStore {
       }
     } catch (err: any) {
       console.warn('[ConversationStore:GetWarning]', err.message);
+      if (process.env.NODE_ENV === 'production') throw err;
     }
 
     // 2. Memory cache fallback
@@ -131,7 +132,7 @@ export class ConversationStore {
     try {
       const isReady = await postgresClient.initialize();
       if (!isReady) {
-        if (process.env.REQUIRE_PERSISTENT_CONVERSATIONS === 'true') {
+        if (process.env.NODE_ENV === 'production' || process.env.REQUIRE_PERSISTENT_CONVERSATIONS === 'true') {
           throw new Error('PostgreSQL is offline: Cannot persist conversation record.');
         }
         return;
@@ -164,7 +165,7 @@ export class ConversationStore {
       ]);
     } catch (err: any) {
       console.warn('[ConversationStore:PersistWarning]', err.message);
-      if (process.env.REQUIRE_PERSISTENT_CONVERSATIONS === 'true') {
+      if (process.env.NODE_ENV === 'production' || process.env.REQUIRE_PERSISTENT_CONVERSATIONS === 'true') {
         throw err;
       }
     }
@@ -204,6 +205,7 @@ export class ConversationStore {
       }
     } catch (err: any) {
       console.warn('[ConversationStore:LookupListWarning]', err.message);
+      if (process.env.NODE_ENV === 'production') throw err;
     }
 
     // Fallback to cache
@@ -259,6 +261,7 @@ export class ConversationStore {
       }
     } catch (err: any) {
       console.warn('[ConversationStore:DeleteWarning]', err.message);
+      if (process.env.NODE_ENV === 'production') throw err;
     }
 
     return deletedCount;
