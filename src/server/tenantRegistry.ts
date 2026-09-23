@@ -595,7 +595,7 @@ export async function provisionCustomerTenant(params: {
     businessName,
     customerName,
     customerEmail,
-    customerPhone = '+1 (555) 000-0000',
+    customerPhone = '',
     planId,
     currency,
     paymentId,
