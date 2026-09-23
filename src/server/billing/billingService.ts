@@ -353,6 +353,36 @@ export class BillingService {
     );
   }
 
+  private async persistPaymentIntent(orderId: string, pendingSignup: PendingSignup, paymentRecord: PaymentRecord): Promise<void> {
+    const connected = await postgresClient.initialize();
+    if (!connected) {
+      if (process.env.NODE_ENV === 'production') throw new Error('Payment intent persistence is unavailable.');
+      return;
+    }
+
+    await postgresClient.query(
+      "INSERT INTO agentdesk_payment_intents (order_id, tenant_id, status, pending_signup, payment_record, created_at, updated_at) VALUES ($1,$2,$3,$4::jsonb,$5::jsonb,NOW(),NOW()) ON CONFLICT (order_id) DO UPDATE SET status = EXCLUDED.status, pending_signup = EXCLUDED.pending_signup, payment_record = EXCLUDED.payment_record, updated_at = NOW()",
+      [orderId, pendingSignup.tenantId, pendingSignup.status, JSON.stringify(pendingSignup), JSON.stringify(paymentRecord)]
+    );
+  }
+
+  private async hydratePaymentIntent(orderId: string): Promise<void> {
+    if (!orderId || this.pendingSignupsStore.has(orderId)) return;
+    if (!(await postgresClient.initialize())) return;
+
+    const result = await postgresClient.query(
+      'SELECT pending_signup, payment_record FROM agentdesk_payment_intents WHERE order_id = $1 LIMIT 1',
+      [orderId]
+    );
+    const row = result?.rows?.[0];
+    if (!row) return;
+
+    const pendingSignup = row.pending_signup as PendingSignup;
+    const paymentRecord = row.payment_record as PaymentRecord;
+    if (pendingSignup) this.pendingSignupsStore.set(orderId, pendingSignup);
+    if (paymentRecord) this.paymentRecordsStore.set(orderId, paymentRecord);
+  }
+
   private seedDefaultAuditLogs() {
     // Audit logs must record real payment lifecycle events; initialize as clean empty log store
     this.paymentAuditLogsStore = [];
@@ -1701,6 +1731,7 @@ export class BillingService {
         }
       };
       this.paymentRecordsStore.set(orderId, paymentRecord);
+      await this.persistPaymentIntent(orderId, pendingSignup, paymentRecord);
 
       this.recordAuditLog({
         action: 'order_created',
@@ -1842,6 +1873,9 @@ export class BillingService {
     } = params;
 
     const norm = businessId.trim().toLowerCase();
+    if (orderId) await this.hydratePaymentIntent(orderId);
+    const pendingSignup = (orderId ? this.pendingSignupsStore.get(orderId) : undefined) ||
+      Array.from(this.pendingSignupsStore.values()).find(s => s.tenantId === norm || s.razorpayOrderId === orderId);
     const pendingSignup = (orderId ? this.pendingSignupsStore.get(orderId) : undefined) ||
       Array.from(this.pendingSignupsStore.values()).find(s => s.tenantId === norm || s.razorpayOrderId === orderId);
     const paymentRecord = (orderId ? this.paymentRecordsStore.get(orderId) : undefined) ||
