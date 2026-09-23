@@ -593,8 +593,10 @@ export async function getLeads(businessId: string): Promise<Lead[]> {
     try {
       const data = await safeFetchJson('/api/leads', { headers: { 'Accept': 'application/json' } });
       if (data?.success && Array.isArray(data.leads)) return data.leads as Lead[];
+      throw new Error(data?.error || 'Unable to load leads from the server.');
     } catch (err) {
       console.warn('[getLeads] Server lead API unavailable:', (err as any)?.message || err);
+      throw err;
     }
   }
 
@@ -1162,8 +1164,10 @@ export async function getConversations(businessId?: string): Promise<Conversatio
     try {
       const data = await safeFetchJson('/api/conversations', { headers: { 'Accept': 'application/json' } });
       if (data?.success && Array.isArray(data.conversations)) return data.conversations as Conversation[];
+      throw new Error(data?.error || 'Unable to load conversations from the server.');
     } catch (err) {
       console.warn('[getConversations] Server conversation API unavailable:', (err as any)?.message || err);
+      throw err;
     }
   }
 
