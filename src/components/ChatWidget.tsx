@@ -706,6 +706,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [leadPhone, setLeadPhone] = useState('');
   const [leadMessage, setLeadMessage] = useState('');
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [isSubmittingHandoff, setIsSubmittingHandoff] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -818,48 +819,79 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const handleHandoffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!leadName || (!leadEmail && !leadPhone)) return;
+    if (isSubmittingHandoff || !leadName.trim() || (!leadEmail.trim() && !leadPhone.trim())) return;
 
-    const newLead: Omit<Lead, 'id' | 'createdAt'> = {
-      businessId: business.id,
-      name: leadName,
-      email: leadEmail || 'N/A',
-      phone: leadPhone || 'N/A',
-      message: leadMessage || 'Requested human support via AI Chat widget.',
-      source: 'AI Chat Widget',
-      status: 'new'
-    };
+    setIsSubmittingHandoff(true);
 
-    await addLead(newLead);
+    try {
+      // Public/embedded widgets must use the public lead-capture endpoint.
+      // /api/leads is intentionally authenticated for tenant workspace users.
+      const response = await fetch('/api/widget/lead', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          agentId: resolvedAgent?.id || agentId || business.primaryAgentId,
+          businessId: business.id,
+          tenantId: business.tenantId || business.id,
+          conversationId,
+          name: leadName.trim(),
+          email: leadEmail.trim(),
+          phone: leadPhone.trim(),
+          notes: leadMessage.trim() || 'Requested human support via AI Chat widget.'
+        })
+      });
 
-    // Save conversation state to database
-    const convRecord: Conversation = {
-      id: `conv-${Date.now()}`,
-      businessId: business.id,
-      customerName: leadName,
-      customerEmail: leadEmail,
-      customerPhone: leadPhone,
-      status: 'HUMAN_REQUIRED',
-      messages,
-      leadCaptured: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    await saveConversation(convRecord);
-
-    setLeadSubmitted(true);
-    setShowHandoffForm(false);
-
-    setMessages(prev => [
-      ...prev,
-      {
-        id: `sys-${Date.now()}`,
-        sender: 'system',
-        text: `Thank you, ${leadName}! Your request has been recorded. Our support team at ${business.name} will reach out to you shortly.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Unable to submit your callback request.');
       }
-    ]);
+
+      // Keep a local conversation snapshot for the current widget session.
+      // The lead itself is now persisted server-side and visible to the client.
+      const convRecord: Conversation = {
+        id: conversationId || `conv-${Date.now()}`,
+        businessId: business.id,
+        customerName: leadName.trim(),
+        customerEmail: leadEmail.trim(),
+        customerPhone: leadPhone.trim(),
+        status: 'HUMAN_REQUIRED',
+        messages,
+        leadCaptured: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      await saveConversation(convRecord);
+
+      setLeadSubmitted(true);
+      setShowHandoffForm(false);
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `sys-${Date.now()}`,
+          sender: 'system',
+          text: `Thank you, ${leadName.trim()}! Your request has been recorded. Our team will reach out to you shortly.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } catch (error: any) {
+      console.error('[HandoffLeadSubmitError]', error);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `sys-error-${Date.now()}`,
+          sender: 'system',
+          text: error?.message || 'We could not submit your request right now. Please try again.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
+      setIsSubmittingHandoff(false);
+    }
   };
 
   const resetChat = () => {
@@ -1112,9 +1144,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                   <div className="flex gap-2">
                     <button
                       type="submit"
+                      disabled={isSubmittingHandoff}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs py-2 rounded-lg transition-colors shadow"
                     >
-                      Request Call Back
+                      {isSubmittingHandoff ? 'Submitting...' : 'Request Call Back'}
                     </button>
                     <button
                       type="button"
