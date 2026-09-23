@@ -245,7 +245,7 @@ export function classifyConversationIntent(
             directReply: `Thanks ${customerName}! I've captured your details. Our team will reach out shortly. Is there anything else you'd like to know?`,
             isClosing: false,
             needsHumanHandoff: false,
-            suggestedActions: ['View Class Timings', 'Check Course Syllabus', 'Course Pricing']
+            suggestedActions: ['Learn More', 'Pricing', 'Get Started']
           };
         }
       }
@@ -332,7 +332,7 @@ export function classifyConversationIntent(
       directReply: `I am ${assistantName}, the AI receptionist for ${businessName}. How can I assist you today?`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['What courses do you offer?', 'What are the tuition fees?', 'Class timings']
+      suggestedActions: ['What services do you offer?', 'What are your prices?', 'How can I get started?']
     };
   }
 
@@ -347,7 +347,7 @@ export function classifyConversationIntent(
         directReply: `Hello! I am the AI receptionist for ${businessName}. How can I assist you today?`,
         isClosing: false,
         needsHumanHandoff: false,
-        suggestedActions: ['What courses do you offer?', 'What is the fee?', 'Class timings']
+        suggestedActions: ['What services do you offer?', 'What is your pricing?', 'How can I get started?']
       };
     }
   }
@@ -643,7 +643,7 @@ export function generateEngineAnswer(
           reply: match[1].trim(),
           isClosing: false,
           needsHumanHandoff: false,
-          suggestedActions: offerings.length > 0 ? offerings : ['Tuition Details', 'Class Timings']
+          suggestedActions: offerings.length > 0 ? offerings : ['Pricing', 'Services']
         };
       }
     }
@@ -662,7 +662,7 @@ export function generateEngineAnswer(
       reply: `Welcome to ${bizName}! What product, service, or topic would you like to know more about?`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['Ask About Pricing', 'Class Schedule']
+      suggestedActions: ['Pricing', 'Schedule']
     };
   }
 
@@ -684,7 +684,7 @@ export function generateEngineAnswer(
       reply: `I don't have confirmed demo details in the knowledge base yet. I can capture your enquiry for the team if you'd like.`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['Book Demo Class']
+      suggestedActions: ['Request a Demo']
     };
   }
 
@@ -729,7 +729,7 @@ export function generateEngineAnswer(
           reply: match[1].trim(),
           isClosing: false,
           needsHumanHandoff: false,
-          suggestedActions: ['How to Enroll', 'Course Fees']
+          suggestedActions: ['Get Started', 'Pricing']
         };
       }
     }
@@ -777,7 +777,7 @@ export function generateEngineAnswer(
       reply: `For ${entityLabel}, the available details are ${fee ? `a fee of ${fee}` : 'a fee not specified'}${duration ? ` and a duration of ${duration}` : ''}.`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['Class Timings', 'Syllabus Details', 'How to Enroll']
+      suggestedActions: ['Schedule', 'More Details', 'Get Started']
     };
   }
 
@@ -799,14 +799,14 @@ export function generateEngineAnswer(
           reply: `No, the ${entityLabel} is not free. The fee is ${fee}. We also provide live demo sessions and flexible options.`,
           isClosing: false,
           needsHumanHandoff: false,
-          suggestedActions: ['Class Timings', 'Course Duration']
+          suggestedActions: ['Schedule', 'More Details']
         };
       }
       return {
         reply: `The ${entityLabel} fee is ${fee}.`,
         isClosing: false,
         needsHumanHandoff: false,
-        suggestedActions: ['Course Duration', 'Class Timings', 'Syllabus']
+        suggestedActions: ['Duration', 'Schedule', 'More Details']
       };
     }
   }
@@ -818,7 +818,7 @@ export function generateEngineAnswer(
       reply: `The ${entityLabel} duration is ${duration}.`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['Course Fee', 'Class Timings']
+      suggestedActions: ['Pricing', 'Schedule']
     };
   }
 
@@ -828,7 +828,7 @@ export function generateEngineAnswer(
       reply: `Class timings: ${timing}`,
       isClosing: false,
       needsHumanHandoff: false,
-      suggestedActions: ['Course Fee', 'Enrollment Process']
+      suggestedActions: ['Pricing', 'Get Started']
     };
   }
 
