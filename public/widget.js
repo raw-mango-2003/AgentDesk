@@ -314,7 +314,8 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting...';
       submitLead({ name: name, email: email, phone: phone }, card);
-    };  }
+    };
+  }
 
   function submitLead(leadData, formContainer) {
     var targetId = state.targetId || (state.agent && state.agent.id) || (state.business && state.business.id);
