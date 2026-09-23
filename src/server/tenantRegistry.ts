@@ -718,11 +718,12 @@ export function provisionCustomerTenant(params: {
       businessId: normTenant,
       title: `Welcome & Overview for ${businessName.trim()}`,
       type: 'text',
-      content: `${businessName.trim()} provides premium services. Our office contact is ${customerPhone.trim()} and email is ${customerEmail.trim()}. We assist clients with consultations, service inquiries, and scheduling.`,
+      content: `${businessName.trim()} provides consultations, service inquiries, and scheduling support. Ask about our services, availability, pricing, and how to get started.`,
       category: 'Overview',
       status: 'active',
       active: true,
-      tags: ['overview', 'contact', 'services'],
+      visibility: 'public',
+      tags: ['overview', 'services'],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }
