@@ -2051,6 +2051,37 @@ export class BillingService {
       throw new Error('Payment record does not belong to this tenant.');
     }
 
+    // Checkout callbacks can be retried by the browser. Once the same
+    // server-authorized intent is fully activated, return the existing
+    // activation instead of creating duplicate transactions/invoices.
+    const existingBilling = this.getTenantBilling(norm);
+    if (
+      paymentRecord?.status === 'CAPTURED' &&
+      pendingSignup?.status === 'ACTIVATED' &&
+      existingBilling.status === 'active'
+    ) {
+      const existingInvoices = this.getInvoices(norm);
+      return {
+        success: true,
+        status: 'ACTIVATED',
+        alreadyProcessed: true,
+        tenantId: norm,
+        transactionId: existingBilling.lastPaymentId,
+        invoiceNumber: existingInvoices[0]?.invoiceNumber,
+        nextBillingDate: existingBilling.nextBillingDate,
+        monthlyFee: existingBilling.monthlyFee,
+        setupFee: existingBilling.implementationFee,
+        amount: paymentRecord.final_amount ?? paymentRecord.amount,
+        currency: paymentRecord.currency,
+        displayCurrency: displayCurrency || currency,
+        displayAmount: displayAmount ?? paymentRecord.amount,
+        paymentCurrency: currency,
+        paymentAmount: paymentRecord.amount,
+        billing: existingBilling,
+        business: getTenant(norm)
+      };
+    }
+
     // For paid checkout, the amount is server-authoritative. Never trust the
     // amount echoed by the browser; it must match the amount used to create
     // the stored Razorpay order.
@@ -2110,6 +2141,9 @@ export class BillingService {
         pendingSignup.status = 'FAILED';
         pendingSignup.failureReason = verification.message || 'Signature mismatch';
         pendingSignup.updatedAt = new Date().toISOString();
+      }
+      if (pendingSignup && paymentRecord) {
+        await this.persistPaymentIntent(intentKey || paymentRecord.id, pendingSignup, paymentRecord);
       }
       this.recordAuditLog({
         action: 'payment_failed',
@@ -2182,6 +2216,9 @@ export class BillingService {
         paymentRecord.subscription_tax_rate = pendingSignup.subscription_tax_rate;
         paymentRecord.setup_tax_rate = pendingSignup.setup_tax_rate;
       }
+    }
+    if (pendingSignup && paymentRecord) {
+      await this.persistPaymentIntent(intentKey || paymentRecord.id, pendingSignup, paymentRecord);
     }
 
     // 2. Create / Update Subscription Record as ACTIVE
