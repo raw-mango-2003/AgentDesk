@@ -1414,8 +1414,22 @@ export async function convertUnansweredQuestionToKnowledge(
 // ----------------------------------------------------
 
 export async function getKnowledgeDocs(businessId: string): Promise<KnowledgeItem[]> {
-  initializeDatabaseIfNeeded();
   const validTenant = validateTenantContext(businessId, 'knowledge', 'GET_KNOWLEDGE');
+
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/knowledge?businessId=' + encodeURIComponent(validTenant), {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!data?.success || !Array.isArray(data.items)) {
+      throw new Error(data?.error || 'Unable to load knowledge base.');
+    }
+    return data.items.filter((item: KnowledgeItem) =>
+      normalizeTenantId(item.tenantId || item.businessId) === validTenant
+    );
+  }
+
+  initializeDatabaseIfNeeded();
   const all = getItem<KnowledgeItem[]>('knowledge', SEED_KNOWLEDGE_DOCS);
   return tenantFilterArray(all, validTenant, 'knowledge');
 }
@@ -1458,6 +1472,25 @@ export async function updateLeadStatus(
 export async function saveKnowledgeDoc(doc: Partial<KnowledgeItem> & { businessId: string; title: string }): Promise<KnowledgeItem> {
   const targetTenant = doc.tenant_id || doc.tenantId || doc.businessId;
   const validTenant = validateTenantContext(targetTenant, 'knowledge', 'SAVE_KNOWLEDGE');
+
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const endpoint = doc.id
+      ? '/api/knowledge/' + encodeURIComponent(String(doc.id))
+      : '/api/knowledge';
+    const data = await safeFetchJson(endpoint, {
+      method: doc.id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        ...doc,
+        tenantId: validTenant,
+        businessId: validTenant
+      })
+    });
+    if (!data?.success || !data.item) {
+      throw new Error(data?.error || 'Unable to save knowledge item.');
+    }
+    return data.item as KnowledgeItem;
+  }
   const all = getItem<KnowledgeItem[]>('knowledge', SEED_KNOWLEDGE_DOCS);
   const index = doc.id ? all.findIndex(k => k.id === doc.id) : -1;
   let saved: KnowledgeItem;
@@ -1492,6 +1525,15 @@ export async function saveKnowledgeDoc(doc: Partial<KnowledgeItem> & { businessI
 export async function deleteKnowledgeDoc(arg1: string, arg2?: string): Promise<void> {
   const idToDelete = arg2 !== undefined ? arg2 : arg1;
   const businessId = arg2 !== undefined ? arg1 : undefined;
+
+  if (typeof window !== 'undefined' && isProductionRuntime() && businessId) {
+    await safeFetchJson('/api/knowledge/' + encodeURIComponent(businessId) + '/' + encodeURIComponent(idToDelete), {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json' }
+    });
+    return;
+  }
+
   const all = getItem<KnowledgeItem[]>('knowledge', SEED_KNOWLEDGE_DOCS);
   const existing = all.find(k => k.id === idToDelete);
   if (existing && businessId) {
