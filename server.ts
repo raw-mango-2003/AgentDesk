@@ -1006,6 +1006,35 @@ function resolvePublicWidgetTarget(identifier?: string) {
   return resolved;
 }
 
+function sanitizePublicBusinessForAI(business: any): any {
+  if (!business) return business;
+  const safeAgentSettings = business.agentSettings
+    ? {
+        ...business.agentSettings,
+        systemSecurityInstructions: undefined,
+        internalInstructions: undefined
+      }
+    : undefined;
+
+  return {
+    ...business,
+    id: undefined,
+    tenantId: undefined,
+    tenant_id: undefined,
+    businessId: undefined,
+    ownerId: undefined,
+    supportEmail: undefined,
+    phone: undefined,
+    leadNotificationEmail: undefined,
+    leadNotificationPhone: undefined,
+    lastPaymentId: undefined,
+    lastOrderId: undefined,
+    billing: undefined,
+    paymentVerified: undefined,
+    agentSettings: safeAgentSettings
+  };
+}
+
 function canonicalizePublicConversationId(tenantId: string, suppliedId?: string): string {
   const raw = String(suppliedId || '').trim().slice(0, 200);
   const safeTenant = String(tenantId || '').trim().toLowerCase();
