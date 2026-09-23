@@ -118,7 +118,8 @@
     container.id = 'agentdesk-container';
 
     // Launcher Button
-    var primaryBg = themeColor || (state.agent && state.agent.primaryColor) || '#2563eb';
+    var candidatePrimaryBg = themeColor || (state.agent && state.agent.primaryColor) || '#2563eb';
+    var primaryBg = /^#[0-9a-f]{3,6}$/i.test(candidatePrimaryBg) ? candidatePrimaryBg : '#2563eb';
     var launcher = document.createElement('button');
     launcher.id = 'agentdesk-launcher';
     launcher.style.backgroundColor = primaryBg;
