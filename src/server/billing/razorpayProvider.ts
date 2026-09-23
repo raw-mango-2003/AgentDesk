@@ -443,6 +443,12 @@ export class RazorpayProvider implements PaymentProvider {
       throw new Error('Razorpay integration is NOT_CONFIGURED.');
     }
 
+    const currentResponse = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
+      headers: { Authorization: this.getAuthHeader() }
+    });
+    const currentData = currentResponse.ok ? await currentResponse.json().catch(() => ({})) : {};
+    const existingNotes = currentData?.notes && typeof currentData.notes === 'object' ? currentData.notes : {};
+
     const response = await fetch(`https://api.razorpay.com/v1/subscriptions/${subscriptionId}`, {
       method: 'PATCH',
       headers: {
@@ -451,7 +457,7 @@ export class RazorpayProvider implements PaymentProvider {
       },
       body: JSON.stringify({
         schedule_change_at: 'now',
-        notes: { planId }
+        notes: { ...existingNotes, planId }
       })
     });
 
