@@ -2647,6 +2647,10 @@ async function startServer() {
       console.log('[Diagnostic] user registry initialization: failure');
       const err = postgresClient.getStatus().error || 'Unavailable';
       console.warn(`[Diagnostic] Database unavailable reason: ${err}`);
+       if (process.env.NODE_ENV === 'production') {
+         console.error('[ServerStartup] Refusing production startup because PostgreSQL is unavailable.');
+         process.exit(1);
+       }
     }
   } catch (err: any) {
     console.log(`[Diagnostic] DATABASE provider initialization: failure`);
