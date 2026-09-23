@@ -325,6 +325,48 @@ export class BillingService {
       });
       this.tenantInvoicesStore.set(tenantId, invoices);
     }
+
+    const txResult = await postgresClient.query('SELECT id, tenant_id, transaction_id, amount, currency, provider, status, type, description, metadata, created_at, updated_at FROM agentdesk_billing_transactions ORDER BY created_at DESC');
+    for (const row of txResult?.rows || []) {
+      const tenantId = String(row.tenant_id || '').toLowerCase();
+      if (!tenantId) continue;
+      const tx = row.metadata && typeof row.metadata === 'object' ? row.metadata as BillingTransaction : {
+        id: row.id,
+        businessId: tenantId,
+        date: String(row.created_at || '').slice(0, 10),
+        createdAt: row.created_at,
+        amount: Number(row.amount) || 0,
+        currency: row.currency as CurrencyCode,
+        provider: row.provider as PaymentProviderName,
+        status: row.status as PaymentTransactionStatus,
+        transactionId: row.transaction_id,
+        type: row.type as BillingTransaction['type'],
+        description: row.description || 'AgentDesk payment transaction'
+      };
+      const list = this.tenantTransactionsStore.get(tenantId) || [];
+      list.push(tx);
+      this.tenantTransactionsStore.set(tenantId, list);
+    }
+
+    const pmResult = await postgresClient.query('SELECT id, tenant_id, provider, provider_payment_method_id, brand, last4, expiry, is_primary, created_at FROM agentdesk_payment_methods ORDER BY created_at DESC');
+    for (const row of pmResult?.rows || []) {
+      const tenantId = String(row.tenant_id || '').toLowerCase();
+      if (!tenantId) continue;
+      const method: SafePaymentMethod = {
+        id: row.id,
+        businessId: tenantId,
+        provider: row.provider as PaymentProviderName,
+        providerPaymentMethodId: row.provider_payment_method_id || undefined,
+        brand: row.brand || 'Card',
+        last4: row.last4 || '****',
+        expiry: row.expiry || '',
+        isPrimary: Boolean(row.is_primary),
+        createdAt: row.created_at
+      };
+      const list = this.tenantPaymentMethodsStore.get(tenantId) || [];
+      list.push(method);
+      this.tenantPaymentMethodsStore.set(tenantId, list);
+    }
   }
 
   private async persistBillingSnapshot(record: TenantBillingRecord): Promise<void> {
@@ -356,7 +398,57 @@ export class BillingService {
     );
   }
 
-  private async persistPaymentIntent(orderId: string, pendingSignup: PendingSignup, paymentRecord: PaymentRecord): Promise<void> {
+  private async persistTransaction(tx: BillingTransaction): Promise<void> {
+    const connected = await postgresClient.initialize();
+    if (!connected) {
+      if (process.env.NODE_ENV === 'production') throw new Error('Transaction persistence is unavailable.');
+      return;
+    }
+    await postgresClient.query(
+      `INSERT INTO agentdesk_billing_transactions
+        (id, tenant_id, transaction_id, amount, currency, provider, status, type, description, metadata, created_at, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+       ON CONFLICT (id) DO UPDATE SET
+         transaction_id = EXCLUDED.transaction_id,
+         amount = EXCLUDED.amount,
+         currency = EXCLUDED.currency,
+         provider = EXCLUDED.provider,
+         status = EXCLUDED.status,
+         type = EXCLUDED.type,
+         description = EXCLUDED.description,
+         metadata = EXCLUDED.metadata,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        tx.id, tx.businessId, tx.transactionId, tx.amount, tx.currency, tx.provider,
+        tx.status, tx.type, tx.description,
+        JSON.stringify(tx), tx.createdAt || tx.date, new Date().toISOString()
+      ]
+    );
+  }
+
+  private async persistPaymentMethod(method: SafePaymentMethod): Promise<void> {
+    const connected = await postgresClient.initialize();
+    if (!connected) {
+      if (process.env.NODE_ENV === 'production') throw new Error('Payment method persistence is unavailable.');
+      return;
+    }
+    await postgresClient.query(
+      `INSERT INTO agentdesk_payment_methods
+        (id, tenant_id, provider, provider_payment_method_id, brand, last4, expiry, is_primary, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT (id) DO UPDATE SET
+         provider = EXCLUDED.provider,
+         provider_payment_method_id = EXCLUDED.provider_payment_method_id,
+         brand = EXCLUDED.brand,
+         last4 = EXCLUDED.last4,
+         expiry = EXCLUDED.expiry,
+         is_primary = EXCLUDED.is_primary`,
+      [method.id, method.businessId, method.provider, method.providerPaymentMethodId || null,
+       method.brand || null, method.last4 || null, method.expiry || null, Boolean(method.isPrimary), method.createdAt]
+    );
+  }
+
+  private async persistPaymentIntent(orderId: string, pendingSignup: PendingSignup, paymentRecord: PaymentRecord): Promise<void>
     const connected = await postgresClient.initialize();
     if (!connected) {
       if (process.env.NODE_ENV === 'production') throw new Error('Payment intent persistence is unavailable.');
@@ -1876,18 +1968,40 @@ export class BillingService {
     } = params;
 
     const norm = businessId.trim().toLowerCase();
-    if (orderId) await this.hydratePaymentIntent(orderId);
-    const pendingSignup = (orderId ? this.pendingSignupsStore.get(orderId) : undefined) ||
-      Array.from(this.pendingSignupsStore.values()).find(s => s.tenantId === norm || s.razorpayOrderId === orderId);
-    const paymentRecord = (orderId ? this.paymentRecordsStore.get(orderId) : undefined) ||
-      Array.from(this.paymentRecordsStore.values()).find(p => p.razorpayOrderId === orderId || p.tenantId === norm);
+    const intentKey = orderId || subscriptionId;
+    if (intentKey) await this.hydratePaymentIntent(intentKey);
+    const pendingSignup = (intentKey ? this.pendingSignupsStore.get(intentKey) : undefined) ||
+      Array.from(this.pendingSignupsStore.values()).find(s => s.tenantId === norm && (!intentKey || s.razorpayOrderId === intentKey));
+    const paymentRecord = (intentKey ? this.paymentRecordsStore.get(intentKey) : undefined) ||
+      Array.from(this.paymentRecordsStore.values()).find(p =>
+        p.tenantId === norm &&
+        (!intentKey || p.razorpayOrderId === intentKey)
+      );
+
+    if (pendingSignup && pendingSignup.tenantId.toLowerCase() !== norm) {
+      throw new Error('Payment authorization does not belong to this tenant.');
+    }
+    if (paymentRecord && paymentRecord.tenantId.toLowerCase() !== norm) {
+      throw new Error('Payment record does not belong to this tenant.');
+    }
 
     // For paid checkout, the amount is server-authoritative. Never trust the
     // amount echoed by the browser; it must match the amount used to create
     // the stored Razorpay order.
+    if (type === 'subscription' && (!subscriptionId || !pendingSignup || !paymentRecord)) {
+      throw new Error('Subscription payment could not be matched to a server-authorized subscription.');
+    }
+
+    if (type === 'subscription' && pendingSignup && pendingSignup.tenantId.toLowerCase() !== norm) {
+      throw new Error('Subscription does not belong to this tenant.');
+    }
+
     if (type === 'initial_checkout') {
       if (!orderId || !pendingSignup) {
         throw new Error('Payment order could not be matched to a server-side checkout.');
+      }
+      if (pendingSignup.tenantId.toLowerCase() !== norm) {
+        throw new Error('Payment order does not belong to this tenant.');
       }
       const expectedAmount = pendingSignup.totalDueToday;
       if (typeof expectedAmount !== 'number' || expectedAmount <= 0) {
@@ -1899,8 +2013,10 @@ export class BillingService {
       params.amount = expectedAmount;
     }
 
-    const authoritativePaymentAmount = (type === 'initial_checkout' && pendingSignup)
-      ? pendingSignup.totalDueToday
+    const authoritativePaymentAmount = pendingSignup
+      ? (type === 'initial_checkout'
+          ? pendingSignup.totalDueToday
+          : (pendingSignup.recurring_total_amount ?? pendingSignup.subscription_total ?? pendingSignup.monthlyFee))
       : amount;
 
     const provider = this.getProvider(providerName);
@@ -2038,6 +2154,8 @@ export class BillingService {
       updatedAt: new Date().toISOString()
     };
     this.subscriptionRecordsStore.set(norm, subscriptionRecord);
+    // Keep the subscription identity inside the durable tenant billing snapshot as well.
+    currentBilling.providerSubscriptionId = subscriptionRecord.providerSubscriptionId || currentBilling.providerSubscriptionId;
 
     // 3. Transactionally Provision Customer Tenant (Business, AI Agent, Isolated Knowledge Base)
     let provisionedBusiness: any = null;
@@ -2153,6 +2271,8 @@ export class BillingService {
         : `Monthly Subscription Platform Access (${planName})`
     });
     this.tenantTransactionsStore.set(norm, txList);
+    const latestTransaction = txList[0];
+    if (latestTransaction) await this.persistTransaction(latestTransaction);
 
     // Record Invoices / Commercial Receipts
     const invList = this.getInvoices(norm);
@@ -2253,8 +2373,12 @@ export class BillingService {
       });
     }
     this.tenantInvoicesStore.set(norm, invList);
-    const latestInvoice = invList[0];
-    if (latestInvoice) await this.persistInvoice(latestInvoice);
+    const newlyCreatedInvoices = type === 'initial_checkout'
+      ? invList.slice(0, 2)
+      : invList.slice(0, 1);
+    for (const invoice of newlyCreatedInvoices) {
+      await this.persistInvoice(invoice);
+    }
 
     // Register safe payment method if passed
     if (paymentMethodData) {

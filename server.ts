@@ -239,7 +239,6 @@ function isCsrfExempt(req: Request): boolean {
   // Public embeddable widget routes intentionally do not use AgentDesk
   // session cookies and must remain callable cross-origin.
   if (fullPath.startsWith('/api/widget/') || subPath.startsWith('/widget/')) return true;
-  if (fullPath.startsWith('/api/chat') || subPath.startsWith('/chat')) return true;
 
   return false;
 }
@@ -2088,9 +2087,15 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
         timestamp: new Date().toISOString()
       });
 
-      conversationStore.persistConversationAsync(record).catch(err => {
-        console.warn('[ConversationStore:AsyncPersistError]', err.message);
-      });
+      try {
+        await conversationStore.persistConversationAsync(record);
+      } catch (persistError: any) {
+        console.error('[ChatLeadCapturePersistError]', persistError?.message || persistError);
+        return res.status(503).json({
+          success: false,
+          error: 'Conversation storage is temporarily unavailable. Please try again.'
+        });
+      }
 
       return res.json({
         success: true,
@@ -2156,9 +2161,15 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     // Pipeline Stage 7: Conversation State & Memory Update
     const updatedRecord = updateConversationMemory(record, safeMessage, validatedReply, extracted);
-    conversationStore.persistConversationAsync(updatedRecord).catch(err => {
-      console.warn('[ConversationStore:AsyncPersistError]', err.message);
-    });
+    try {
+      await conversationStore.persistConversationAsync(updatedRecord);
+    } catch (persistError: any) {
+      console.error('[WidgetConversationPersistError]', persistError?.message || persistError);
+      return res.status(503).json({
+        success: false,
+        error: 'Conversation storage is temporarily unavailable. Please try again.'
+      });
+    }
 
     console.log(`[Widget Chat Engine] Processed request for tenant (${currentBusiness.id})`);
 
@@ -2602,9 +2613,15 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
     // Pipeline Stage 7: Conversation State & Memory Update
     const updatedRecord = updateConversationMemory(record, safeMessage, validatedReply, extracted);
-    conversationStore.persistConversationAsync(updatedRecord).catch(err => {
-      console.warn('[ConversationStore:AsyncPersistError]', err.message);
-    });
+    try {
+      await conversationStore.persistConversationAsync(updatedRecord);
+    } catch (persistError: any) {
+      console.error('[ConversationPersistError]', persistError?.message || persistError);
+      return res.status(503).json({
+        success: false,
+        error: 'Conversation storage is temporarily unavailable. Please try again.'
+      });
+    }
 
     console.log(`[Conversation Intelligence] Processed request for tenant (${currentBusiness.id}) with intent "${classifiedIntent.primaryType}"`);
 
@@ -2649,7 +2666,8 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
     if (authUser && authUser.role !== 'PLATFORM_ADMIN' && authUser.tenantId.toLowerCase() !== resolvedTenantId) {
       return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant voice access is not allowed.' });
     }
-    const record = await conversationStore.getOrCreateConversationAsync(conversationId, business.id);
+    const safeVoiceConversationId = canonicalizePublicConversationId(business.id, conversationId);
+    const record = await conversationStore.getOrCreateConversationAsync(safeVoiceConversationId, business.id);
 
     const normInput = normalizeInput(transcript);
     const classifiedIntent = classifyConversationIntent(normInput, record, business.name);
@@ -2693,6 +2711,16 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
 
     const validatedReply = validateAnswer(rawResult.reply, extracted, business, record);
     const updatedRecord = updateConversationMemory(record, transcript, validatedReply, extracted);
+
+    try {
+      await conversationStore.persistConversationAsync(updatedRecord);
+    } catch (persistError: any) {
+      console.error('[VoiceConversationPersistError]', persistError?.message || persistError);
+      return res.status(503).json({
+        success: false,
+        error: 'Conversation storage is temporarily unavailable. Please try again.'
+      });
+    }
 
     const assistantName = business.agentSettings?.agentName || `${business.name} AI Assistant`;
 
@@ -2845,7 +2873,12 @@ async function startServer() {
           if (!userText || !userText.trim()) return;
 
           if (!currentConvRecord) {
-            currentConvRecord = await conversationStore.getOrCreateConversationAsync(payload.conversationId, currentBusiness.id);
+            if (!currentBusiness) {
+              ws.send(JSON.stringify({ type: 'error', error: 'Voice session is not initialized.' }));
+              return;
+            }
+            const safeVoiceConversationId = canonicalizePublicConversationId(currentBusiness.id, payload.conversationId);
+            currentConvRecord = await conversationStore.getOrCreateConversationAsync(safeVoiceConversationId, currentBusiness.id);
           }
 
           ws.send(JSON.stringify({ type: 'status', status: 'thinking' }));
