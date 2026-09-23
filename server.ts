@@ -40,6 +40,7 @@ import {
 import { runConversationTestSuite, runMultiTenantIsolationTestSuite, runBusinessResolutionSafetyTests } from './src/lib/testSuite.js';
 import { runProductionSmokeTests } from './src/server/tests/smokeTests.js';
 import { billingRouter } from './src/server/billing/billingRouter.js';
+import { billingService } from './src/server/billing/billingService.js';
 import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTenantAccess, extractTokenFromRequest } from './src/server/auth/authRouter.js';
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
@@ -68,7 +69,8 @@ import {
   setTenant,
   persistLeadToPostgres,
   getLeadsFromPostgres,
-  syncAllTenantDataFromPostgres
+  syncAllTenantDataFromPostgres,
+  deleteTenantDataFromPostgres
 } from './src/server/tenantRegistry.js';
 
 // Safe environment directory resolver for both dev (tsx/ESM) and prod (esbuild/CJS)
@@ -1567,30 +1569,36 @@ app.post('/api/admin/onboard-business', requirePlatformAdmin, async (req: Reques
 // DELETE Business Tenant Endpoint (Platform Admin - Strict Tenant Isolation)
 app.delete('/api/admin/businesses/:businessId', requirePlatformAdmin, async (req: Request, res: Response) => {
   const { businessId } = req.params;
-  const { actorEmail } = req.body || {};
   const normBiz = (businessId || '').trim().toLowerCase();
 
-  if (!normBiz) {
-    return res.status(400).json({ error: 'Valid businessId is required.' });
+  if (!normBiz) return res.status(400).json({ error: 'Valid businessId is required.' });
+
+  try {
+    await deleteTenantDataFromPostgres(normBiz);
+    serverBusinessesStore.delete(normBiz);
+    serverKnowledgeStore.delete(normBiz);
+    serverTenantUsageStore.delete(normBiz);
+
+    for (const [agentId, agent] of serverAgentsStore.entries()) {
+      if (String(agent?.tenantId || '').toLowerCase() === normBiz) serverAgentsStore.delete(agentId);
+    }
+
+    billingService.deleteTenantData(normBiz);
+    console.log('[Admin Tenant Management] Deleted all tenant-owned data for ' + normBiz);
+
+    return res.json({
+      success: true,
+      message: 'Business tenant ' + normBiz + ' and all tenant-owned persistent data were erased.',
+      businessId: normBiz
+    });
+  } catch (err: any) {
+    console.error('[Admin Tenant Management] Tenant deletion failed:', err.message);
+    return res.status(503).json({
+      success: false,
+      error: 'Tenant deletion could not be completed. No success state was reported.'
+    });
   }
-
-  // 1. Wipe all conversation records from PostgreSQL-authoritative store and memory cache
-  const deletedCount = await conversationStore.deleteConversationsByBusinessAsync(normBiz);
-
-  // 2. Wipe from server businesses and knowledge stores
-  serverBusinessesStore.delete(normBiz);
-  serverKnowledgeStore.delete(normBiz);
-
-  console.log(`[Admin Tenant Management] Business (${normBiz}) and ${deletedCount} conversation records deleted by authenticated admin`);
-
-  return res.json({
-    success: true,
-    message: `Business tenant ${normBiz} and all associated conversation history erased from persistent storage.`,
-    businessId: normBiz,
-    deletedConversationRecords: deletedCount
-  });
 });
-
 // GET Admin Live Conversation Records with Intelligence Metadata
 app.get('/api/admin/conversations/:businessId', requirePlatformAdmin, async (req: Request, res: Response) => {
   const { businessId } = req.params;
