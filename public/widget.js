@@ -35,7 +35,7 @@
 
   var agentId = (scriptTag && (scriptTag.getAttribute('data-agent-id') || scriptTag.getAttribute('data-agent'))) || '';
   var businessId = (scriptTag && (scriptTag.getAttribute('data-business-id') || scriptTag.getAttribute('data-tenant-id'))) || '';
-  var initialTarget = agentId || businessId || 'platform-admin-agent';
+  var initialTarget = agentId || businessId || '';
   var position = (scriptTag && scriptTag.getAttribute('data-position')) || 'right'; // 'right' | 'left'
   var themeColor = (scriptTag && scriptTag.getAttribute('data-theme')) || '';
   var autoOpenDelay = parseInt(scriptTag && scriptTag.getAttribute('data-delay') || '0', 10);
