@@ -327,7 +327,13 @@ app.get('/api/storage/files/:fileKey', async (req: Request, res: Response) => {
 app.get('/api/conversations', requireAuth, requireTenantAccess, async (req: Request, res: Response) => {
   try {
     const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
-    const conversations = await conversationStore.getConversationsByBusinessAsync(tenantId);
+    const records = await conversationStore.getConversationsByBusinessAsync(tenantId);
+    const conversations = records.map(record => ({
+      ...record,
+      id: record.conversationId,
+      tenantId,
+      businessId: record.businessId || tenantId
+    }));
     return res.json({ success: true, conversations });
   } catch (err: any) {
     console.error('[ConversationListError]', err);
@@ -350,7 +356,15 @@ app.patch('/api/conversations/:conversationId', requireAuth, requireTenantAccess
       status as any
     );
     if (!updated) return res.status(404).json({ success: false, error: 'Conversation not found.' });
-    return res.json({ success: true, conversation: updated });
+    return res.json({
+      success: true,
+      conversation: {
+        ...updated,
+        id: updated.conversationId,
+        tenantId,
+        businessId: updated.businessId || tenantId
+      }
+    });
   } catch (err: any) {
     console.error('[ConversationUpdateError]', err);
     return res.status(500).json({ success: false, error: 'Unable to update conversation.' });
