@@ -1816,8 +1816,8 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     // the lead-capture flow, persist the lead immediately and keep the AI
     // response focused on capture. Do not expose the client's own phone/email
     // or redirect the visitor to contact the client themselves.
-    const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);
-    const phoneMatch = safeMessage.match(/(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b(?:\\+?\\d{1,4}[-.\\s]?)?\\d{10}\\b/);
+    const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    const phoneMatch = safeMessage.match(/(?:\+91[-.\s]?)?[6-9]\d{9}\b|\b(?:\+?\d{1,4}[-.\s]?)?\d{10}\b/);
     const lastAssistantText = [...record.messages].reverse().find(m => m.role === 'assistant')?.content || '';
     const isLeadCaptureContactStep =
       record.state.conversationStage === 'BOOKING' &&
