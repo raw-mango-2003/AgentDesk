@@ -163,6 +163,12 @@ class PostgresClient {
       return this.initPromise;
     }
 
+    const now = Date.now();
+    if (now - this.lastAttemptAt < this.retryCooldownMs) {
+      return false;
+    }
+    this.lastAttemptAt = now;
+
     this.initPromise = (async () => {
       if (this.pool) {
         try {
@@ -170,6 +176,7 @@ class PostgresClient {
           try {
             await client.query('SELECT 1');
             this.lastError = null;
+            this.lastAttemptAt = 0;
 
             await runDatabaseMigrations(client);
             this.isConnected = true;
