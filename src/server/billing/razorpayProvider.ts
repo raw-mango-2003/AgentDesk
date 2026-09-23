@@ -670,8 +670,18 @@ export class RazorpayProvider implements PaymentProvider {
     rawBody?: string | Buffer
   ): Promise<WebhookResult> {
     const signature = headers['x-razorpay-signature'] as string;
-    
-    // Verify signature if secret is present
+
+    // Payment webhooks are security-critical. Never accept unsigned webhooks
+    // in production because they can activate tenants or mutate billing state.
+    if (process.env.NODE_ENV === 'production' && !this.webhookSecret) {
+      return {
+        handled: false,
+        event: body?.event || 'unknown',
+        message: 'RAZORPAY_WEBHOOK_SECRET is required for production webhook processing.'
+      };
+    }
+
+    // Verify signature when a webhook secret is configured.
     if (this.webhookSecret) {
       if (!signature) {
         return {
