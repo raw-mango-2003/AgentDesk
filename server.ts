@@ -1853,6 +1853,9 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     }
 
     const safeConvId = canonicalizePublicConversationId(currentBusiness.id, suppliedConversationId);
+    const publicConversationId = typeof suppliedConversationId === 'string' && suppliedConversationId.trim()
+      ? suppliedConversationId.trim().slice(0, 100)
+      : safeConvId;
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
 
     if (!checkRateLimit('widget:' + currentBusiness.id.toLowerCase() + ':' + clientIp, 30, 60000)) {
@@ -1879,7 +1882,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
       return res.json({
         success: true,
         reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
-        conversationId: safeConvId,
+        conversationId: publicConversationId,
         isClosing: true,
         needsHumanHandoff: true,
         suggestedActions: ['Contact Support']
@@ -1942,7 +1945,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
         score: 85,
         scoreCategory: 'new',
         requirement: record.state.currentTopic || 'Website enquiry',
-        conversationId: safeConvId,
+        conversationId: publicConversationId,
         details: {
           capturedBy: 'AI Receptionist',
           latestMessage: safeMessage
