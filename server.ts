@@ -2823,7 +2823,7 @@ async function startServer() {
             let geminiVoiceReply: string | null = null;
             if (targetedKnowledge.length > 0) {
               geminiVoiceReply = await generateGroundedGeminiResponse(
-                currentBusiness,
+                 sanitizePublicBusinessForAI(currentBusiness),
                 targetedKnowledge,
                 normInput.raw,
                 currentConvRecord.state.currentTopic
