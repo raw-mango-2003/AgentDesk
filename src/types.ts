@@ -162,6 +162,8 @@ export interface Business {
   description: string;
   website: string;
   supportEmail: string;
+  leadNotificationEmail?: string;
+  leadNotificationPhone?: string;
   phone?: string;
   whatsapp?: string;
   address?: string;
