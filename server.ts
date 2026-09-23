@@ -2399,18 +2399,6 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     const safeMessage = message.trim().slice(0, 600);
     const safeConvId = (conversationId || `conv_${Date.now()}`).toString().trim().slice(0, 100);
 
-    // Loop prevention check
-    if (!(await checkAndIncrementConversationTurns(safeConvId, 35))) {
-      return res.json({
-        success: true,
-        reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
-        conversationId: safeConvId,
-        isClosing: true,
-        needsHumanHandoff: true,
-        suggestedActions: ['Contact Support']
-      });
-    }
-
     const targetIdentifier = agentId || tenantId || businessId || businessInfo?.id;
     const { business: currentBusiness, knowledge: effectiveKnowledge, agent } = resolveBusinessAndKnowledge(
       targetIdentifier,
@@ -2431,7 +2419,18 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant chat access is not allowed.' });
     }
 
-    const record = getOrCreateConversation(safeConvId, currentBusiness.id);
+    if (!(await checkAndIncrementConversationTurns(resolvedTenantId + ':' + safeConvId, 35))) {
+      return res.json({
+        success: true,
+        reply: "You have reached the maximum conversation limit for this session. Please refresh or contact our team directly.",
+        conversationId: safeConvId,
+        isClosing: true,
+        needsHumanHandoff: true,
+        suggestedActions: ['Contact Support']
+      });
+    }
+
+    const record = await conversationStore.getOrCreateConversationAsync(safeConvId, currentBusiness.id);
 
     // If record was empty, populate from frontend history
     if (record.messages.length === 0 && Array.isArray(historyList) && historyList.length > 0) {
@@ -2548,7 +2547,7 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
     if (authUser && authUser.role !== 'PLATFORM_ADMIN' && authUser.tenantId.toLowerCase() !== resolvedTenantId) {
       return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant voice access is not allowed.' });
     }
-    const record = getOrCreateConversation(conversationId, business.id);
+    const record = await conversationStore.getOrCreateConversationAsync(conversationId, business.id);
 
     const normInput = normalizeInput(transcript);
     const classifiedIntent = classifyConversationIntent(normInput, record, business.name);
@@ -2679,14 +2678,22 @@ async function startServer() {
             ws.close(1008, 'Missing businessId');
             return;
           }
-          const resolved = resolveBusinessAndKnowledge(currentBusinessId, payload.knowledgeBase);
+          // Voice is a public-facing surface in the current widget architecture.
+          // Resolve only an explicitly public customer/demo agent and never accept
+          // caller-supplied knowledge as an authority source.
+          const resolved = resolvePublicWidgetTarget(currentBusinessId);
           if (!resolved.business || !resolved.agent) {
-            ws.send(JSON.stringify({ type: 'error', error: 'Business or agent not found.' }));
-            ws.close(1008, 'Unknown tenant');
+            ws.send(JSON.stringify({ type: 'error', error: 'Public voice is not available for this agent.' }));
+            ws.close(1008, 'Unavailable voice target');
             return;
           }
           currentBusiness = resolved.business;
-          currentKnowledge = resolved.knowledge;
+          currentKnowledge = resolved.knowledge.filter((k: any) =>
+            k?.active !== false &&
+            (!k?.status || k.status === 'active') &&
+            k?.visibility !== 'internal' &&
+            k?.visibility !== 'restricted'
+          );
           sessionStartTime = Date.now();
           currentConvRecord = getOrCreateConversation(payload.conversationId, currentBusiness.id);
 
@@ -2713,7 +2720,7 @@ async function startServer() {
           if (!userText || !userText.trim()) return;
 
           if (!currentConvRecord) {
-            currentConvRecord = getOrCreateConversation(payload.conversationId, currentBusiness.id);
+            currentConvRecord = await conversationStore.getOrCreateConversationAsync(payload.conversationId, currentBusiness.id);
           }
 
           ws.send(JSON.stringify({ type: 'status', status: 'thinking' }));
@@ -2734,7 +2741,7 @@ async function startServer() {
             extracted = extractIntentsAndEntities(normInput, currentConvRecord, currentBusiness.name);
           } else {
             extracted = extractIntentsAndEntities(normInput, currentConvRecord, currentBusiness.name);
-            const targetedKnowledge = retrieveTargetedKnowledge(currentBusiness, currentKnowledge, extracted);
+            const targetedKnowledge = retrieveTargetedKnowledge(currentBusiness, currentKnowledge, extracted, { publicOnly: true });
 
             let geminiVoiceReply: string | null = null;
             if (targetedKnowledge.length > 0) {
