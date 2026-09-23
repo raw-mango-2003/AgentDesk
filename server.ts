@@ -2063,8 +2063,8 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       ? conversationId.trim().slice(0, 100)
       : `conv_${Date.now()}`;
 
-    const validEmail = !safeEmail || /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(safeEmail);
-    const validPhone = !safePhone || /^[+\\d][\\d\\s().-]{6,30}$/.test(safePhone);
+    const validEmail = !safeEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(safeEmail);
+    const validPhone = !safePhone || /^[+\d][\d\s().-]{6,30}$/.test(safePhone);
     if (!safeName) {
       return res.status(400).json({ success: false, error: 'Please provide your name.' });
     }
