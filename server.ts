@@ -67,7 +67,8 @@ import {
   deleteKnowledgeFromPostgres,
   setTenant,
   persistLeadToPostgres,
-  getLeadsFromPostgres
+  getLeadsFromPostgres,
+  syncAllTenantDataFromPostgres
 } from './src/server/tenantRegistry.js';
 
 // Safe environment directory resolver for both dev (tsx/ESM) and prod (esbuild/CJS)
