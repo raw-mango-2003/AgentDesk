@@ -2630,8 +2630,6 @@ export class BillingService {
           currency: paymentCurrency,
           status: 'PAID',
           provider: providerName,
-          providerPaymentId: paymentId,
-          webhookEventId: eventId,
           invoiceType: 'RECURRING_SUBSCRIPTION',
           subscription_fee: billing.subscription_fee ?? billing.monthlyFee ?? paymentAmount,
           subscription_tax: billing.subscription_tax ?? 0,
@@ -2648,7 +2646,6 @@ export class BillingService {
             taxAmount: billing.subscription_tax ?? 0,
             total: paymentAmount
           }],
-          paymentId,
           pdfUrl: '#'
         });
         this.tenantInvoicesStore.set(norm, existingInvoices);
