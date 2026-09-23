@@ -1329,6 +1329,54 @@ app.post('/api/knowledge/detect-conflicts', requireTenantAccess, async (req: Req
   });
 });
 
+// TENANT-SCOPED BUSINESS SETTINGS
+app.put('/api/tenants/:businessId/settings', requireTenantAccess, async (req: Request, res: Response) => {
+  const businessId = String(req.params.businessId || '').trim().toLowerCase();
+  const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+
+  if (!businessId || businessId !== tenantId) {
+    return res.status(403).json({ success: false, error: 'Forbidden: Tenant context mismatch.' });
+  }
+
+  const existing = serverBusinessesStore.get(tenantId);
+  if (!existing) return res.status(404).json({ success: false, error: 'Business tenant not found.' });
+
+  const allowed = [
+    'name', 'industry', 'website', 'supportEmail', 'phone',
+    'leadNotificationEmail', 'leadNotificationPhone',
+    'primaryColor', 'secondaryColor', 'agentSettings'
+  ];
+
+  const updates: any = {};
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, key)) updates[key] = req.body[key];
+  }
+
+  if (updates.name !== undefined && (typeof updates.name !== 'string' || !updates.name.trim())) {
+    return res.status(400).json({ success: false, error: 'Business name must be a non-empty string.' });
+  }
+
+  const updated = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    tenantId: existing.tenantId,
+    tenant_id: existing.tenant_id,
+    updatedAt: new Date().toISOString()
+  };
+
+  serverBusinessesStore.set(tenantId, updated);
+
+  try {
+    await persistTenantToPostgres(updated);
+    return res.json({ success: true, business: updated });
+  } catch (error: any) {
+    // Roll back the in-memory mutation if the authoritative store rejected it.
+    serverBusinessesStore.set(tenantId, existing);
+    return res.status(503).json({ success: false, error: 'Business settings could not be persisted.' });
+  }
+});
+
 // ==========================================
 // TENANT-SCOPED KNOWLEDGE CRUD ENDPOINTS
 // ==========================================
