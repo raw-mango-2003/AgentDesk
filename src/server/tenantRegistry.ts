@@ -194,6 +194,7 @@ export async function persistLeadToPostgres(lead: ServerLeadRecord): Promise<boo
         name=EXCLUDED.name, email=EXCLUDED.email, phone=EXCLUDED.phone,
         source=EXCLUDED.source, status=EXCLUDED.status, score=EXCLUDED.score,
         details=EXCLUDED.details, updated_at=EXCLUDED.updated_at
+      WHERE agentdesk_leads.tenant_id = EXCLUDED.tenant_id
     `, [
       lead.id, lead.tenantId, lead.name, lead.email || null, lead.phone || null,
       lead.source || 'website_chat', lead.status || 'NEW', Number(lead.score) || 0,
@@ -243,6 +244,7 @@ export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<b
         active = EXCLUDED.active,
         metadata = EXCLUDED.metadata,
         updated_at = EXCLUDED.updated_at
+      WHERE agentdesk_knowledge.tenant_id = EXCLUDED.tenant_id
     `, [
       item.id,
       item.tenantId,
@@ -264,11 +266,14 @@ export async function persistKnowledgeToPostgres(item: KnowledgeItem): Promise<b
   }
 }
 
-export async function deleteKnowledgeFromPostgres(itemId: string): Promise<boolean> {
+export async function deleteKnowledgeFromPostgres(itemId: string, tenantId: string): Promise<boolean> {
   try {
     const isReady = await postgresClient.initialize();
     if (!isReady) return false;
-    await postgresClient.query(`DELETE FROM agentdesk_knowledge WHERE id = $1`, [itemId]);
+    await postgresClient.query(
+      `DELETE FROM agentdesk_knowledge WHERE id = $1 AND tenant_id = $2`,
+      [itemId, tenantId]
+    );
     return true;
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresDeleteKnowledgeWarning]', err.message);
@@ -488,7 +493,7 @@ export function deleteKnowledgeItem(tenantId: string, itemId: string): boolean {
   const filtered = existing.filter(k => k.id !== itemId);
   if (filtered.length !== existing.length) {
     serverKnowledgeStore.set(norm, filtered);
-    deleteKnowledgeFromPostgres(itemId).catch(() => {});
+    deleteKnowledgeFromPostgres(itemId, norm).catch(() => {});
     return true;
   }
   return false;
