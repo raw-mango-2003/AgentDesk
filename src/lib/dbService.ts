@@ -410,6 +410,28 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
 export async function saveBusiness(business: Business): Promise<void> {
   const validTenant = validateTenantContext(business.id || business.tenantId, 'businesses', 'SAVE_BUSINESS');
   const guardedBiz = tenantValidateEntityMutation(business, validTenant, 'businesses');
+
+  if (typeof window !== 'undefined' && isProductionRuntime()) {
+    const data = await safeFetchJson('/api/tenants/' + encodeURIComponent(validTenant) + '/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        name: guardedBiz.name,
+        industry: guardedBiz.industry,
+        website: guardedBiz.website,
+        supportEmail: guardedBiz.supportEmail,
+        phone: guardedBiz.phone,
+        leadNotificationEmail: guardedBiz.leadNotificationEmail,
+        leadNotificationPhone: guardedBiz.leadNotificationPhone,
+        primaryColor: guardedBiz.primaryColor,
+        secondaryColor: guardedBiz.secondaryColor,
+        agentSettings: guardedBiz.agentSettings
+      })
+    });
+    if (!data?.success) throw new Error(data?.error || 'Unable to persist business settings.');
+    return;
+  }
+
   const list = await getAllBusinesses();
   const index = list.findIndex(b => normalizeTenantId(b.id) === validTenant);
   if (index >= 0) {
