@@ -493,15 +493,20 @@ export function extractIntentsAndEntities(
 export function retrieveTargetedKnowledge(
   business: any,
   knowledge: KnowledgeItem[],
-  extracted: ExtractedIntentsAndEntities
+  extracted: ExtractedIntentsAndEntities,
+  options: { publicOnly?: boolean } = {}
 ): KnowledgeItem[] {
   const normBizId = (business.id || '').trim().toLowerCase();
 
   // Strict tenant filter: NEVER return items from another tenant
   const tenantKnowledge = (knowledge || []).filter(k => {
     if (!k) return false;
-    const kBiz = (k.businessId || '').trim().toLowerCase();
-    return kBiz === normBizId;
+    const kBiz = (k.businessId || k.tenantId || '').trim().toLowerCase();
+    if (kBiz !== normBizId) return false;
+    if (k.active === false) return false;
+    if (k.status && k.status !== 'active') return false;
+    if (options.publicOnly && (k.visibility === 'internal' || k.visibility === 'restricted')) return false;
+    return true;
   });
 
   if (tenantKnowledge.length === 0) {
