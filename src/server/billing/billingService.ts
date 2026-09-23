@@ -1873,6 +1873,42 @@ export class BillingService {
       });
 
       const orderId = payment.orderId || payment.id;
+      const intentNow = new Date().toISOString();
+      const implementationSignup: PendingSignup = {
+        id: `signup_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        tenantId: normalizedTenantId,
+        businessName: businessName || businessId,
+        customerName: customerName || 'Valued Customer',
+        customerEmail: customerEmail || 'billing@customer.com',
+        customerPhone: customerPhone || '',
+        planId,
+        planName: calc.planName,
+        currency,
+        display_currency: displayCurrency || currency,
+        display_amount: displayAmount !== undefined ? displayAmount : calc.totalDueToday,
+        payment_currency: currency,
+        payment_amount: calc.totalDueToday,
+        monthlyFee: calc.monthlyFee,
+        setupFee: calc.setupFee,
+        subtotal: calc.subtotal,
+        setup_fee: calc.setup_fee,
+        setup_discount: calc.setup_discount,
+        setup_tax: calc.setup_tax,
+        setup_total: calc.setup_total,
+        totalDueToday: calc.totalDueToday,
+        total_due_today: calc.total_due_today,
+        base_amount: calc.subtotal,
+        discount_amount: calc.discountAmount,
+        tax_amount: calc.taxAmount,
+        final_amount: calc.totalDueToday,
+        provider: providerName,
+        payment_provider: providerName,
+        provider_order_id: orderId,
+        razorpayOrderId: orderId,
+        status: 'PENDING',
+        createdAt: intentNow,
+        updatedAt: intentNow
+      };
       const paymentRecord: PaymentRecord = {
         id: orderId,
         userId: customerEmail || normalizedTenantId,
@@ -1886,7 +1922,9 @@ export class BillingService {
         updatedAt: new Date().toISOString(),
         metadata: { planId, type: 'implementation_fee', breakdown: calc }
       };
+      this.pendingSignupsStore.set(orderId, implementationSignup);
       this.paymentRecordsStore.set(orderId, paymentRecord);
+      await this.persistPaymentIntent(orderId, implementationSignup, paymentRecord);
 
       const razorpayProvider = provider as RazorpayProvider;
       return {
@@ -2093,11 +2131,11 @@ export class BillingService {
       throw new Error('Subscription does not belong to this tenant.');
     }
 
-    if (type === 'initial_checkout') {
-      if (!orderId || !pendingSignup) {
+    if (type === 'initial_checkout' || type === 'implementation_fee') {
+      if (!orderId || !pendingSignup || !paymentRecord) {
         throw new Error('Payment order could not be matched to a server-side checkout.');
       }
-      if (pendingSignup.tenantId.toLowerCase() !== norm) {
+      if (pendingSignup.tenantId.toLowerCase() !== norm || paymentRecord.tenantId.toLowerCase() !== norm) {
         throw new Error('Payment order does not belong to this tenant.');
       }
       const expectedAmount = pendingSignup.totalDueToday;
@@ -2111,7 +2149,7 @@ export class BillingService {
     }
 
     const authoritativePaymentAmount = pendingSignup
-      ? (type === 'initial_checkout'
+      ? ((type === 'initial_checkout' || type === 'implementation_fee')
           ? pendingSignup.totalDueToday
           : (pendingSignup.recurring_total_amount ?? pendingSignup.subscription_total ?? pendingSignup.monthlyFee))
       : amount;
