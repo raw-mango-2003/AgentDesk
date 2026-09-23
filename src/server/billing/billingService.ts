@@ -1447,7 +1447,7 @@ export class BillingService {
     nextDate.setDate(nextDate.getDate() + 30);
     const nextBillingDateFormatted = nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const promoOrderId = 'promo_' + cleanCoupon + '_' + Date.now();
-    const provResult = provisionCustomerTenant({
+    const provResult = await provisionCustomerTenant({
       tenantId: norm, businessName: businessName.trim(), customerName: customerName.trim(),
       customerEmail: customerEmail.trim(), customerPhone: customerPhone?.trim(), planId, currency, orderId: promoOrderId
     });
@@ -2004,7 +2004,7 @@ export class BillingService {
 
     if (type === 'initial_checkout' || !serverBusinessesStore.has(norm)) {
       try {
-        const provResult = provisionCustomerTenant({
+        const provResult = await provisionCustomerTenant({
           tenantId: norm,
           businessName: businessName || (pendingSignup ? pendingSignup.businessName : norm),
           customerEmail: customerEmail || (pendingSignup ? pendingSignup.customerEmail : 'billing@customer.com'),
@@ -2543,7 +2543,7 @@ export class BillingService {
     const email = signup?.customerEmail || (payment?.userId as string) || 'billing@customer.com';
     const bizName = signup?.businessName || tenantId;
 
-    const provResult = provisionCustomerTenant({
+    const provResult = await provisionCustomerTenant({
       tenantId,
       businessName: bizName,
       customerEmail: email,
