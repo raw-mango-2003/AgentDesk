@@ -46,6 +46,7 @@ export const KnowledgeBaseDashboard: React.FC<KnowledgeBaseDashboardProps> = ({ 
   const [formContent, setFormContent] = useState('');
   const [formCategory, setFormCategory] = useState('');
   const [formStatus, setFormStatus] = useState<KnowledgeStatus>('active');
+  const [formVisibility, setFormVisibility] = useState<KnowledgeItem['visibility']>('public');
 
   // Async Operation States
   const [isSaving, setIsSaving] = useState(false);
@@ -97,6 +98,7 @@ export const KnowledgeBaseDashboard: React.FC<KnowledgeBaseDashboardProps> = ({ 
       setFormContent(item.content);
       setFormCategory(item.category || 'General');
       setFormStatus(item.status || (item.active ? 'active' : 'draft'));
+      setFormVisibility(item.visibility || 'public');
     } else {
       setEditingItem(null);
       setFormTitle('');
@@ -104,6 +106,7 @@ export const KnowledgeBaseDashboard: React.FC<KnowledgeBaseDashboardProps> = ({ 
       setFormContent('');
       setFormCategory('General');
       setFormStatus('active');
+      setFormVisibility('public');
     }
     setShowModal(true);
   };
@@ -144,6 +147,7 @@ export const KnowledgeBaseDashboard: React.FC<KnowledgeBaseDashboardProps> = ({ 
             category: categoryTrimmed,
             status: formStatus,
             active: formStatus === 'active',
+            visibility: formVisibility,
             tenantId: activeTenantId,
             businessId: activeTenantId
           },
@@ -159,7 +163,8 @@ export const KnowledgeBaseDashboard: React.FC<KnowledgeBaseDashboardProps> = ({ 
           content: contentTrimmed,
           category: categoryTrimmed,
           status: formStatus,
-          active: formStatus === 'active'
+          active: formStatus === 'active',
+          visibility: formVisibility
         });
         setActionSuccess(`Knowledge item "${titleTrimmed}" created and persisted successfully.`);
       }
