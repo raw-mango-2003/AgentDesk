@@ -1393,7 +1393,7 @@ app.post('/api/knowledge', requireTenantAccess, async (req: Request, res: Respon
 app.put('/api/knowledge/:id', requireTenantAccess, async (req: Request, res: Response) => {
   const { id } = req.params;
   const normTenantId = ((req as any).tenantId || '').trim().toLowerCase();
-  const { title, content, type, category, status, active } = req.body;
+  const { title, content, type, category, status, active, visibility } = req.body;
 
   if (!normTenantId) {
     return res.status(400).json({ error: 'Tenant context could not be determined.' });
