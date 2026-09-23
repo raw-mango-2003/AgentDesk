@@ -448,7 +448,7 @@ export class BillingService {
     );
   }
 
-  private async persistPaymentIntent(orderId: string, pendingSignup: PendingSignup, paymentRecord: PaymentRecord): Promise<void>
+  private async persistPaymentIntent(orderId: string, pendingSignup: PendingSignup, paymentRecord: PaymentRecord): Promise<void> {
     const connected = await postgresClient.initialize();
     if (!connected) {
       if (process.env.NODE_ENV === 'production') throw new Error('Payment intent persistence is unavailable.');
