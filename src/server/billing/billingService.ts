@@ -2516,6 +2516,15 @@ export class BillingService {
     return true;
   }
 
+  public deleteTenantData(businessId: string): void {
+    const norm = businessId.trim().toLowerCase();
+    this.tenantBillingStore.delete(norm);
+    this.tenantPaymentMethodsStore.delete(norm);
+    this.tenantInvoicesStore.delete(norm);
+    this.tenantTransactionsStore.delete(norm);
+    this.subscriptionRecordsStore.delete(norm);
+  }
+
   public getPendingSignups(): PendingSignup[] {
     return Array.from(this.pendingSignupsStore.values());
   }
