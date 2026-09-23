@@ -2657,7 +2657,10 @@ async function startServer() {
   const server = createServer(app);
   const wss = new WebSocketServer({ server, path: '/ws/live-voice' });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', (ws: WebSocket, req: Request) => {
+    const wsIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress || '127.0.0.1';
+    let wsMessageCount = 0;
+    const wsWindowStartedAt = Date.now();
     console.log('[WebSocket] Client connected to Voice AI Receptionist');
     let currentBusinessId: string | null = null;
     let currentBusiness: any = null;
@@ -2668,6 +2671,19 @@ async function startServer() {
     ws.on('message', async (data: Buffer | string) => {
       try {
         const messageStr = data.toString();
+        if (messageStr.length > 10000) {
+          ws.send(JSON.stringify({ type: 'error', error: 'Voice message is too large.' }));
+          return;
+        }
+        const now = Date.now();
+        if (now - wsWindowStartedAt > 60000) {
+          wsMessageCount = 0;
+        }
+        wsMessageCount += 1;
+        if (wsMessageCount > 60 || !checkRateLimit('voice-ws:' + wsIp, 60, 60000)) {
+          ws.send(JSON.stringify({ type: 'error', error: 'Voice session rate limit exceeded. Please wait a moment.' }));
+          return;
+        }
         let payload: any = {};
         try { payload = JSON.parse(messageStr); } catch (e) { return; }
 
