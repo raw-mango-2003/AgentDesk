@@ -154,42 +154,30 @@ function isAllowedOrigin(origin: string, req: Request): boolean {
   return false;
 }
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Note: `req` can be accessed via closure if needed, but here callback(null, isAllowed)
-    if (!origin) return callback(null, true);
-    
-    // Quick origin check
-    if (
-      !isProductionEnv &&
-      (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))
-    ) {
-      return callback(null, true);
-    }
+const corsOptionsDelegate = (req: Request, callback: (err: Error | null, options?: any) => void) => {
+  // The embeddable widget runs on customer websites and does not use AgentDesk
+  // credentials. Allow browser preflight from any origin for these public routes.
+  if (req.path.startsWith('/api/widget/')) {
+    return callback(null, {
+      origin: '*',
+      credentials: false,
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Accept']
+    });
+  }
 
-    if (
-      origin === 'https://agentdesk.ai.studio' ||
-      origin === 'https://ai.studio' ||
-      origin === 'https://aistudio.google.com'
-    ) {
-      return callback(null, true);
-    }
+  return callback(null, {
+    origin: (origin: string | undefined, originCallback: (err: Error | null, value?: boolean) => void) => {
+      if (!origin) return originCallback(null, true);
+      return originCallback(null, isAllowedOrigin(origin, req));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-business-id', 'x-csrf-token']
+  });
+};
 
-    if (process.env.APP_URL) {
-      try {
-        if (origin === new URL(process.env.APP_URL).origin) {
-          return callback(null, true);
-        }
-      } catch {}
-    }
-
-    // Do NOT throw an uncaught Error (which triggers 500 error in Express)
-    return callback(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id', 'x-business-id', 'x-csrf-token']
-}));
+app.use(cors(corsOptionsDelegate));
 app.use(express.json({
   verify: (req: any, _res, buf) => {
     req.rawBody = buf;
