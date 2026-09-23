@@ -1902,7 +1902,7 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
 });
 
 // GET Agent Widget Config for Embeds
-app.get('/api/agent/:agentId/widget-config', (req: Request, res: Response) => {
+app.get('/api/agent/:agentId/widget-config', requireAuth, requireTenantAccess, (req: Request, res: Response) => {
   const { agentId } = req.params;
   const { business, agent, knowledge } = resolveBusinessAndKnowledge(agentId);
   if (!business || !agent) return res.status(404).json({ success: false, error: 'Agent or business not found.' });
@@ -2003,7 +2003,7 @@ app.get(['/api/test/production-smoke-tests', '/api/test/smoke-tests'], requirePl
 });
 
 // GET Business Widget Config
-app.get('/api/business/:businessId/widget-config', (req: Request, res: Response) => {
+app.get('/api/business/:businessId/widget-config', requireAuth, requireTenantAccess, (req: Request, res: Response) => {
   const { businessId } = req.params;
   const { business, agent } = resolveBusinessAndKnowledge(businessId);
   if (!business || !agent) return res.status(404).json({ success: false, error: 'Business not found.' });
