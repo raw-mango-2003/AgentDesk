@@ -1453,10 +1453,12 @@ app.delete(['/api/knowledge/:tenantId/:id', '/api/knowledge/:id'], requireTenant
   }
 
   serverKnowledgeStore.set(normTenantId, filtered);
-  deleteKnowledgeFromPostgres(id, normTenantId).catch((error) => {
-    console.warn('[Knowledge Engine] PostgreSQL deletion failed:', error?.message || error);
-  });
-  console.log(`[Knowledge Engine] Deleted knowledge item (${id}) for tenant. Remaining: ${filtered.length}`);
+   try {
+     const deleted = await deleteKnowledgeFromPostgres(id, normTenantId);
+     if (!deleted && process.env.NODE_ENV === 'production') return res.status(503).json({ success: false, error: 'Knowledge deletion could not be persisted.' });
+   } catch (error: any) {
+     return res.status(503).json({ success: false, error: 'Knowledge deletion could not be persisted.' });
+   }
 
   return res.json({
     success: true,
