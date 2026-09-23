@@ -42,7 +42,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
   }, [business.id]);
 
   const handleStatusChange = async (convId: string, newStatus: ConversationStatus) => {
-    await updateConversationStatus(convId, newStatus);
+    await updateConversationStatus(convId, newStatus, business.id);
     if (selectedConv && selectedConv.id === convId) {
       setSelectedConv({ ...selectedConv, status: newStatus });
     }
