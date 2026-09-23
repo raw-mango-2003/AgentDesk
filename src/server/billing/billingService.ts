@@ -2670,8 +2670,9 @@ export class BillingService {
     const signature = headers['x-razorpay-signature'] as string;
 
     // Handle payment.captured / order.paid for Razorpay pending signups
-    if (result.event === 'payment.captured' || result.event === 'order.paid') {
-      if (orderId && this.pendingSignupsStore.has(orderId)) {
+    if ((result.event === 'payment.captured' || result.event === 'order.paid') && orderId) {
+      await this.hydratePaymentIntent(orderId);
+      if (this.pendingSignupsStore.has(orderId)) {
         const signup = this.pendingSignupsStore.get(orderId)!;
         if (signup.status === 'PENDING') {
           try {
