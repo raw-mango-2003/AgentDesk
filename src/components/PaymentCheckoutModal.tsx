@@ -112,7 +112,8 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
       });
 
       const sessionData = await sessionRes.json();
-      if (!sessionRes.ok || !sessionData.orderId) {
+      const isSubscriptionCheckout = type === 'subscription' || Boolean(sessionData.subscription?.providerSubscriptionId);
+      if (!sessionRes.ok || (!sessionData.orderId && !sessionData.subscription?.providerSubscriptionId)) {
         throw new Error(
           getPaymentErrorMessage(
             sessionData,
@@ -122,6 +123,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
       }
 
       const orderId = sessionData.orderId;
+      const subscriptionId = sessionData.subscription?.providerSubscriptionId || sessionData.subscription?.id;
       const rzpKey = sessionData.keyId || sessionData.payment?.raw?.key || '';
 
       const rzpReady = await ensureRazorpayLoaded();
@@ -131,8 +133,13 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
 
       const options = {
         key: rzpKey,
-        amount: Math.round(Number(sessionData.amount ?? amount) * 100),
-        currency: sessionData.currency || currency,
+        ...(isSubscriptionCheckout
+          ? { subscription_id: subscriptionId }
+          : {
+              amount: Math.round(Number(sessionData.amount ?? amount) * 100),
+              currency: sessionData.currency || currency,
+              order_id: orderId
+            }),
         name: 'AgentDesk',
         description: type === 'implementation_fee' 
           ? `${planName} Implementation Setup Fee` 
@@ -167,7 +174,8 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         },
         handler: async (response: {
           razorpay_payment_id: string;
-          razorpay_order_id: string;
+          razorpay_order_id?: string;
+          razorpay_subscription_id?: string;
           razorpay_signature: string;
         }) => {
           try {
@@ -180,6 +188,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 provider: 'razorpay',
                 paymentId: response.razorpay_payment_id,
                 orderId: response.razorpay_order_id || orderId,
+                subscriptionId: response.razorpay_subscription_id || subscriptionId,
                 signature: response.razorpay_signature,
                 type: type === 'add_payment_method' ? 'subscription' : type,
                 planId,
