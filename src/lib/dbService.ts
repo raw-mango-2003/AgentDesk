@@ -1,7 +1,8 @@
 import { 
   Business, 
   AIAgent,
-  Lead, 
+  Lead,
+  LeadStatus,
   Contact, 
   Company, 
   Deal, 
