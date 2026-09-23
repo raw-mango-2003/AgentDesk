@@ -1814,6 +1814,100 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     const record = getOrCreateConversation(safeConvId, currentBusiness.id);
 
+    // Lead-capture guardrail: once the visitor provides a phone/email during
+    // the lead-capture flow, persist the lead immediately and keep the AI
+    // response focused on capture. Do not expose the client's own phone/email
+    // or redirect the visitor to contact the client themselves.
+    const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);
+    const phoneMatch = safeMessage.match(/(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b(?:\\+?\\d{1,4}[-.\\s]?)?\\d{10}\\b/);
+    const lastAssistantText = [...record.messages].reverse().find(m => m.role === 'assistant')?.content || '';
+    const isLeadCaptureContactStep =
+      record.state.conversationStage === 'BOOKING' &&
+      record.state.bookingState?.stage === 'COLLECTING_CONTACT';
+    const isContactAfterLeadPrompt =
+      /phone number|email|contact details|contact number/i.test(lastAssistantText) &&
+      Boolean(emailMatch || phoneMatch);
+
+    if ((isLeadCaptureContactStep || isContactAfterLeadPrompt) && (emailMatch || phoneMatch)) {
+      const capturedEmail = emailMatch?.[0] || '';
+      const capturedPhone = phoneMatch?.[0] || '';
+      const capturedName = record.customerName || record.state.bookingState?.name || 'Website Visitor';
+
+      record.customerEmail = capturedEmail || record.customerEmail;
+      record.customerPhone = capturedPhone || record.customerPhone;
+      record.leadCaptured = true;
+      record.state.bookingState.contact = capturedEmail || capturedPhone;
+      record.state.bookingState.stage = 'CONFIRMED';
+      record.state.conversationStage = 'COURSE_DISCUSSION';
+
+      const lead = {
+        id: 'lead-' + crypto.randomBytes(16).toString('hex'),
+        tenantId: currentBusiness.id,
+        businessId: currentBusiness.id,
+        name: capturedName,
+        email: capturedEmail,
+        phone: capturedPhone,
+        company: '',
+        source: 'AI Chat Widget',
+        status: 'new',
+        score: 85,
+        scoreCategory: 'new',
+        requirement: record.state.currentTopic || 'Website enquiry',
+        conversationId: safeConvId,
+        details: {
+          capturedBy: 'AI Receptionist',
+          latestMessage: safeMessage
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        const persisted = await persistLeadToPostgres(lead);
+        if (!persisted && process.env.NODE_ENV === 'production') {
+          return res.status(503).json({
+            success: false,
+            error: 'Lead storage is temporarily unavailable. Please try again.'
+          });
+        }
+      } catch (leadError: any) {
+        console.error('[ChatLeadCaptureError]', leadError?.message || leadError);
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(503).json({
+            success: false,
+            error: 'Lead storage is temporarily unavailable. Please try again.'
+          });
+        }
+      }
+
+      const capturedContact = capturedPhone ? 'phone number' : 'email address';
+      const leadReply = `Thanks ${capturedName}! I've captured your ${capturedContact}. Our team will reach out shortly. Is there anything else you'd like to know?`;
+      record.messages.push({
+        id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        conversationId: record.conversationId,
+        businessId: record.businessId,
+        role: 'assistant',
+        content: leadReply,
+        timestamp: new Date().toISOString()
+      });
+
+      conversationStore.persistConversationAsync(record).catch(err => {
+        console.warn('[ConversationStore:AsyncPersistError]', err.message);
+      });
+
+      return res.json({
+        success: true,
+        reply: leadReply,
+        conversationId: record.conversationId,
+        conversationState: record.state,
+        isClosing: false,
+        needsHumanHandoff: false,
+        suggestedActions: ['Ask Another Question'],
+        businessId: currentBusiness.id,
+        agentId: agent.id
+      });
+    }
+
     // Pipeline Stage 1: Input Normalization
     const normInput = normalizeInput(safeMessage);
 
