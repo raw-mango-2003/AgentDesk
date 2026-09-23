@@ -44,6 +44,15 @@ function safePaymentError(error: any, fallback: string): string {
   return fallback;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function logBillingError(context: string, error: any) {
   const message = typeof error?.message === 'string' ? error.message : String(error || 'Unknown error');
   console.error(`[Billing API] ${context}: ${message}`);
@@ -100,6 +109,40 @@ billingRouter.get('/tenant/:businessId', requireTenantAccess, (req: Request, res
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
+  }
+});
+
+// Printable tenant-scoped invoice. This is intentionally HTML/printable so it does not
+// pretend a PDF exists when the provider has not supplied a PDF/hosted URL.
+billingRouter.get('/tenant/:businessId/invoices/:invoiceId/print', requireTenantAccess, (req: Request, res: Response) => {
+  try {
+    const businessId = String(req.params.businessId || '').trim().toLowerCase();
+    const invoiceId = String(req.params.invoiceId || '').trim();
+    const requestTenant = String((req as any).tenantId || '').trim().toLowerCase();
+
+    if (!businessId || requestTenant !== businessId) {
+      return res.status(403).send('Forbidden');
+    }
+
+    const invoice = billingService.getInvoiceById(businessId, invoiceId);
+    if (!invoice) return res.status(404).send('Invoice not found');
+
+    const amount = Number(invoice.amount || 0).toFixed(2);
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.type('html').send(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Invoice ${escapeHtml(invoice.invoiceNumber)}</title>
+<style>body{font-family:Arial,sans-serif;max-width:760px;margin:48px auto;padding:0 24px;color:#111}h1{margin-bottom:8px}.muted{color:#666}.row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #ddd}.total{font-size:20px;font-weight:700}</style>
+</head><body>
+<h1>AgentDesk Invoice</h1>
+<p class="muted">Invoice: ${escapeHtml(invoice.invoiceNumber)}<br>Date: ${escapeHtml(invoice.date)}</p>
+<div class="row"><span>Description</span><strong>${escapeHtml(invoice.description)}</strong></div>
+<div class="row"><span>Status</span><strong>${escapeHtml(invoice.status)}</strong></div>
+<div class="row total"><span>Total</span><span>${escapeHtml(invoice.currency)} ${amount}</span></div>
+<p class="muted">Provider: ${escapeHtml(invoice.provider)}</p>
+<p class="muted">Use your browser's Print command to save this invoice as PDF.</p>
+</body></html>`);
+  } catch {
+    return res.status(500).send('Unable to render invoice.');
   }
 });
 
