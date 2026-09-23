@@ -215,7 +215,7 @@ export function classifyConversationIntent(
               primaryType: 'BOOKING',
               secondaryTypes: ['LEAD_REQUEST'],
               requiresKnowledgeRetrieval: false,
-              directReply: `Thanks ${formattedName}! What phone number or email should we use for the confirmation?`,
+              directReply: `Thanks ${formattedName}! What phone number or email should I use to capture your enquiry?`,
               isClosing: false,
               needsHumanHandoff: false,
               suggestedActions: []
@@ -242,7 +242,7 @@ export function classifyConversationIntent(
             primaryType: 'BOOKING',
             secondaryTypes: ['CONFIRMATION'],
             requiresKnowledgeRetrieval: false,
-            directReply: `All set, ${customerName}! We have confirmed your registration with ${contact}. Our admissions team will reach out shortly. Is there anything else I can help you with?`,
+            directReply: `Thanks ${customerName}! I've captured your details. Our team will reach out shortly. Is there anything else you'd like to know?`,
             isClosing: false,
             needsHumanHandoff: false,
             suggestedActions: ['View Class Timings', 'Check Course Syllabus', 'Course Pricing']
