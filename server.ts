@@ -1776,7 +1776,7 @@ app.get('/api/agents/:agentId', requireTenantAccess, (req: Request, res: Respons
 });
 
 // POST / PUT AI Agent (Tenant-Protected)
-app.post('/api/agents', requireTenantAccess, (req: Request, res: Response) => {
+app.post('/api/agents', requireTenantAccess, async (req: Request, res: Response) => {
   const user = (req as any).user;
   const userTenant = ((req as any).tenantId || '').toLowerCase().trim();
   const agentData = req.body;
