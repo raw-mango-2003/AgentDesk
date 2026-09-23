@@ -353,6 +353,19 @@ app.post('/api/leads', async (req: Request, res: Response) => {
     const tenantId = String(body.tenantId || body.businessId || '').trim().toLowerCase();
     const agentId = String(body.agentId || '').trim().toLowerCase();
     const agent = agentId ? serverAgentsStore.get(agentId) : null;
+
+    // Dashboard lead creation is authenticated. Only the intentionally public
+    // AgentDesk demo may create a lead without a session.
+    const token = extractTokenFromRequest(req);
+    const session = await getSession(token);
+    const user = session ? (getUserById(session.userId) || await getUserById(session.userId)) : null;
+    if (!user && tenantId !== PUBLIC_DEMO_TENANT_ID.toLowerCase()) {
+      return res.status(401).json({ success: false, error: 'Authentication required to create leads for this tenant.' });
+    }
+    if (user && user.role !== 'PLATFORM_ADMIN' && user.tenantId.toLowerCase() !== tenantId) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant lead creation is not allowed.' });
+    }
+
     if (!tenantId || !agent || String(agent.tenantId || '').toLowerCase() !== tenantId) {
       return res.status(400).json({ success: false, error: 'Valid tenant and agent context are required.' });
     }
@@ -368,7 +381,8 @@ app.post('/api/leads', async (req: Request, res: Response) => {
 
     const now = new Date().toISOString();
     const lead = {
-      id: typeof body.id === 'string' && body.id.trim() ? body.id.trim().slice(0, 128) : 'lead-' + crypto.randomBytes(10).toString('hex'),
+      // Server-owned ID prevents client-controlled primary-key collisions across tenants.
+      id: 'lead-' + crypto.randomBytes(16).toString('hex'),
       tenantId, businessId: tenantId, name, email, phone,
       company: typeof body.company === 'string' ? body.company.trim().slice(0, 255) : '',
       source: typeof body.source === 'string' ? body.source.slice(0, 128) : 'website_chat',
@@ -411,6 +425,62 @@ app.post('/api/leads', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('[LeadCreateError]', err);
     return res.status(500).json({ success: false, error: 'Unable to save lead.' });
+  }
+});
+
+app.patch('/api/leads/:leadId', requireAuth, requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    const leadId = String(req.params.leadId || '').trim();
+    if (!tenantId || !leadId) return res.status(400).json({ success: false, error: 'Lead and tenant context are required.' });
+
+    const allowedStatuses = new Set(['new', 'contacted', 'qualified', 'converted']);
+    const status = typeof req.body?.status === 'string' ? req.body.status.trim().toLowerCase() : undefined;
+    const notes = typeof req.body?.notes === 'string' ? req.body.notes.trim().slice(0, 5000) : undefined;
+    if (status !== undefined && !allowedStatuses.has(status)) {
+      return res.status(400).json({ success: false, error: 'Invalid lead status.' });
+    }
+    if (status === undefined && notes === undefined) {
+      return res.status(400).json({ success: false, error: 'No supported lead fields were provided.' });
+    }
+
+    const db = await postgresClient.initialize();
+    if (!db) return res.status(503).json({ success: false, error: 'Lead storage is temporarily unavailable.' });
+
+    const existing = await postgresClient.query(
+      'SELECT id, tenant_id, name, email, phone, source, status, score, details, created_at, updated_at FROM agentdesk_leads WHERE id = $1 AND tenant_id = $2 LIMIT 1',
+      [leadId, tenantId]
+    );
+    if (!existing.rows?.length) return res.status(404).json({ success: false, error: 'Lead not found.' });
+
+    const row = existing.rows[0];
+    const details = row.details && typeof row.details === 'object' ? { ...row.details } : {};
+    if (notes !== undefined) details.notes = notes;
+    const updated = await postgresClient.query(
+      'UPDATE agentdesk_leads SET status = COALESCE($3, status), details = $4, updated_at = $5 WHERE id = $1 AND tenant_id = $2 RETURNING id, tenant_id, name, email, phone, source, status, score, details, created_at, updated_at',
+      [leadId, tenantId, status ?? null, JSON.stringify(details), new Date().toISOString()]
+    );
+    const next = updated.rows[0];
+    return res.json({
+      success: true,
+      lead: {
+        id: next.id,
+        tenantId: next.tenant_id,
+        businessId: next.tenant_id,
+        name: next.name,
+        email: next.email || '',
+        phone: next.phone || '',
+        source: next.source || 'website_chat',
+        status: next.status || 'new',
+        score: Number(next.score) || 0,
+        ...(next.details && typeof next.details === 'object' ? next.details : {}),
+        createdAt: next.created_at,
+        updatedAt: next.updated_at
+      }
+    });
+  } catch (err: any) {
+    console.error('[LeadUpdateError]', err);
+    return res.status(500).json({ success: false, error: 'Unable to update lead.' });
   }
 });
 
@@ -2032,6 +2102,19 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     );
     if (!currentBusiness || !agent) return res.status(404).json({ success: false, error: 'Agent or business not found.' });
 
+    // /api/chat is for application workspace traffic. The public demo is the
+    // only unauthenticated exception; customer workspaces are session-bound.
+    const authToken = extractTokenFromRequest(req);
+    const authSession = await getSession(authToken);
+    const authUser = authSession ? (getUserById(authSession.userId) || await getUserById(authSession.userId)) : null;
+    const resolvedTenantId = String(currentBusiness.id || '').trim().toLowerCase();
+    if (!authUser && resolvedTenantId !== PUBLIC_DEMO_TENANT_ID.toLowerCase()) {
+      return res.status(401).json({ success: false, error: 'Authentication required for this workspace.' });
+    }
+    if (authUser && authUser.role !== 'PLATFORM_ADMIN' && authUser.tenantId.toLowerCase() !== resolvedTenantId) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant chat access is not allowed.' });
+    }
+
     const record = getOrCreateConversation(safeConvId, currentBusiness.id);
 
     // If record was empty, populate from frontend history
@@ -2138,6 +2221,17 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
 
     const { business, knowledge } = resolveBusinessAndKnowledge(businessId, knowledgeBase);
     if (!business) return res.status(404).json({ success: false, error: 'Business not found.' });
+
+    const authToken = extractTokenFromRequest(req);
+    const authSession = await getSession(authToken);
+    const authUser = authSession ? (getUserById(authSession.userId) || await getUserById(authSession.userId)) : null;
+    const resolvedTenantId = String(business.id || '').trim().toLowerCase();
+    if (!authUser && resolvedTenantId !== PUBLIC_DEMO_TENANT_ID.toLowerCase()) {
+      return res.status(401).json({ success: false, error: 'Authentication required for this workspace.' });
+    }
+    if (authUser && authUser.role !== 'PLATFORM_ADMIN' && authUser.tenantId.toLowerCase() !== resolvedTenantId) {
+      return res.status(403).json({ success: false, error: 'Forbidden: Cross-tenant voice access is not allowed.' });
+    }
     const record = getOrCreateConversation(conversationId, business.id);
 
     const normInput = normalizeInput(transcript);
