@@ -774,6 +774,12 @@ export class BillingService {
     return this.tenantInvoicesStore.get(norm) || [];
   }
 
+  public getInvoiceById(businessId: string, invoiceId: string): BillingInvoice | null {
+    const norm = businessId.trim().toLowerCase();
+    const invoice = (this.tenantInvoicesStore.get(norm) || []).find(item => item.id === invoiceId);
+    return invoice || null;
+  }
+
   public getAllInvoices(): BillingInvoice[] {
     const all: BillingInvoice[] = [];
     for (const invoices of this.tenantInvoicesStore.values()) {
