@@ -68,6 +68,24 @@ import {
 export const authRouter = Router();
 export const tenantRouter = Router();
 
+function getPublicAppUrl(req: Request): string {
+  const configured = String(process.env.APP_URL || '').trim();
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      // Fall back to the trusted forwarded request origin below.
+    }
+  }
+
+  const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+  const host = forwardedHost || req.get('host') || 'localhost:3000';
+  const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim().toLowerCase();
+  const protocol = forwardedProto === 'https' || req.protocol === 'https' ? 'https' : 'http';
+  return `${protocol}://${host}`;
+}
+
+
 // Re-export PendingTwoFactorChallenge for backward compatibility
 export type { PendingTwoFactorChallenge } from './twoFactorChallengeStore.js';
 
@@ -452,9 +470,7 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
 
     // Generate cryptographically secure token & store SHA-256 hash in DB (24-hour expiration)
     const verifyToken = createEmailVerificationToken(newUser.id);
-    const host = req.get('host') || 'localhost:3000';
-    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-    const verifyUrl = `${protocol}://${host}/verify-email?token=${verifyToken}`;
+    const verifyUrl = `${getPublicAppUrl(req)}/verify-email?token=${verifyToken}`;
 
     // Emit event through internal Automation Engine -> NotificationService -> EmailService -> GmailService
     automationEngine.emit('EMAIL_VERIFICATION_REQUESTED', {
@@ -1032,9 +1048,7 @@ authRouter.post('/resend-verification', authRateLimiter, async (req: Request, re
     const user = getUserByEmail(email.toLowerCase().trim());
     if (user && !user.emailVerified) {
       const newToken = createEmailVerificationToken(user.id);
-      const host = req.get('host') || 'localhost:3000';
-      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-      const verifyUrl = `${protocol}://${host}/verify-email?token=${newToken}`;
+      const verifyUrl = `${getPublicAppUrl(req)}/verify-email?token=${newToken}`;
 
       automationEngine.emit('EMAIL_VERIFICATION_REQUESTED', {
         userId: user.id,
@@ -1278,9 +1292,7 @@ authRouter.post('/forgot-password', passwordResetRateLimiter, async (req: Reques
       // Store SHA-256 hash in database, expiration: 1 hour, single use only
       generatedResetToken = createPasswordResetToken(user.id);
 
-      const host = req.get('host') || 'localhost:3000';
-      const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-      const resetUrl = `${protocol}://${host}/reset-password?token=${generatedResetToken}`;
+      const resetUrl = `${getPublicAppUrl(req)}/reset-password?token=${generatedResetToken}`;
 
       // Dispatch reset email using Gmail API via Automation Engine
       // Never store raw token in DB. Never email user passwords.
@@ -1743,9 +1755,7 @@ authRouter.post(['/platform/businesses', '/platform/businesses/create'], require
     const rawSetupToken = createAccountSetupToken(user.id);
 
     // 4. Send setup email using Gmail API
-    const host = req.get('host') || 'localhost:3000';
-    const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
-    const setupUrl = `${protocol}://${host}/setup-account?token=${rawSetupToken}`;
+    const setupUrl = `${getPublicAppUrl(req)}/setup-account?token=${rawSetupToken}`;
 
     await automationEngine.emit('BUSINESS_OWNER_INVITED', {
       userId: user.id,
