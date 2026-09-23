@@ -837,8 +837,32 @@ export const PlatformIntegrationsManager: React.FC = () => {
                       </div>
                       <p className="text-xs text-slate-400 mt-4 min-h-8">{item.provider === 'gemini_ai' ? 'Optional built-in AI connector. You can also use any client-owned or custom AI API below.' : 'Configure this connector for the selected customer workspace.'}</p>
                       <div className="mt-4 flex gap-2">
-                        <button onClick={() => openTenantIntegration(item.provider)} className="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">{item.configured ? 'Configure' : 'Connect'}</button>
-                        {item.configured && <button onClick={() => deleteTenantIntegration(item.provider, labels[item.provider] || item.provider)} className="px-3 rounded-xl bg-rose-950/30 text-rose-300 border border-rose-900/50 hover:border-rose-700" title="Delete integration"><Trash2 className="w-3.5 h-3.5" /></button>}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            openTenantIntegration(item.provider);
+                          }}
+                          className="relative z-10 pointer-events-auto flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                        >
+                          {item.configured ? 'Configure' : 'Connect'}
+                        </button>
+                        {item.configured && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              deleteTenantIntegration(item.provider, labels[item.provider] || item.provider);
+                            }}
+                            className="relative z-10 pointer-events-auto px-3 rounded-xl bg-rose-950/30 text-rose-300 border border-rose-900/50 hover:border-rose-700 cursor-pointer"
+                            title="Delete integration"
+                            aria-label={`Delete ${labels[item.provider] || item.provider} integration`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -906,6 +930,67 @@ export const PlatformIntegrationsManager: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tenantIntegrationProvider && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto" onMouseDown={(event) => event.stopPropagation()}>
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl p-6 pointer-events-auto" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h3 className="text-base font-bold text-white">{tenantProviderLabels[tenantIntegrationProvider] || tenantIntegrationProvider}</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Configure this integration for <span className="text-blue-300 font-semibold">{tenantOptions.find(t => t.id === selectedTenantId)?.name || selectedTenantId}</span>.
+                </p>
+                <p className="text-[10px] text-slate-500 mt-1">Existing secrets stay stored when a field is left blank.</p>
+              </div>
+              <button type="button" onClick={() => { setTenantIntegrationProvider(null); setTenantIntegrationFields({}); }} className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer" aria-label="Close integration configuration">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              {(tenantProviderFields[tenantIntegrationProvider] || []).map(field => {
+                const sensitive = /(secret|token|key|password|sid)/i.test(field);
+                return (
+                  <label key={field} className="block text-xs text-slate-300">
+                    <span className="block font-semibold mb-1 capitalize">{field.replace(/_/g, ' ')}</span>
+                    <input
+                      type={sensitive ? 'password' : 'text'}
+                      value={tenantIntegrationFields[field] || ''}
+                      onChange={event => setTenantIntegrationFields(prev => ({ ...prev, [field]: event.target.value }))}
+                      placeholder={sensitive ? 'Enter value' : `Enter ${field.replace(/_/g, ' ')}`}
+                      autoComplete="off"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </label>
+                );
+              })}
+            </div>
+            <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-800 pt-4">
+              <div>
+                {tenantIntegrations.some(item => item.provider === tenantIntegrationProvider && item.configured) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const name = tenantProviderLabels[tenantIntegrationProvider] || tenantIntegrationProvider;
+                      deleteTenantIntegration(tenantIntegrationProvider, name);
+                      setTenantIntegrationProvider(null);
+                      setTenantIntegrationFields({});
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-rose-950/40 hover:bg-rose-950/70 text-rose-300 border border-rose-900/60 text-xs font-semibold cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 inline mr-1.5" />Delete Integration
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => { setTenantIntegrationProvider(null); setTenantIntegrationFields({}); }} className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer">Cancel</button>
+                <button type="button" onClick={saveTenantIntegration} disabled={savingTenantIntegration} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold disabled:opacity-50 cursor-pointer">
+                  {savingTenantIntegration ? 'Saving...' : 'Save Integration'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1415,7 +1500,31 @@ export const PlatformIntegrationsManager: React.FC = () => {
                   { name: 'PLATFORM_ADMIN_INITIAL_PASSWORD', desc: 'Initial password (hashed on first boot, never overwritten)' }
                 ].map((item) => {
                   const isConfigured = envReport?.core?.[item.name]?.configured ?? true;
-                  return (
+                  const tenantProviderLabels: Record<string, string> = {
+    google_calendar: 'Google Calendar',
+    twilio_voice: 'Twilio Voice',
+    twilio_sms: 'Twilio SMS',
+    whatsapp_business: 'WhatsApp Business',
+    resend_email: 'Resend Email',
+    gemini_ai: 'Google Gemini',
+    hubspot_crm: 'HubSpot CRM',
+    salesforce_crm: 'Salesforce CRM',
+    custom_webhook: 'Custom Webhook'
+  };
+
+  const tenantProviderFields: Record<string, string[]> = {
+    google_calendar: ['client_id', 'client_secret', 'refresh_token'],
+    twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
+    twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
+    whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
+    resend_email: ['api_key', 'from_email'],
+    gemini_ai: ['api_key', 'model'],
+    hubspot_crm: ['access_token', 'portal_id'],
+    salesforce_crm: ['client_id', 'client_secret', 'refresh_token'],
+    custom_webhook: ['webhook_url', 'signing_secret']
+  };
+
+  return (
                     <div key={item.name} className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800/80">
                       <div className="space-y-0.5">
                         <div className="font-mono text-xs font-bold text-slate-200">{item.name}</div>
