@@ -61,7 +61,7 @@ const lead = await request('/api/widget/lead', {
 });
 assert(lead.success && lead.message === 'Lead captured successfully', 'Lead capture failed.');
 assert(lead.lead && lead.lead.businessId === config.business.id, 'Captured lead is not associated with the resolved tenant.');
-assert(lead.lead.conversationId === conversationId, 'Captured lead is not linked to the customer conversation.');
+assert(lead.lead.conversationId === firstChat.conversationId, 'Captured lead is not linked to the customer conversation.');
 
 console.log(JSON.stringify({
   success: true,
