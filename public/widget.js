@@ -174,7 +174,12 @@
 
   // 4. Fetch Public Widget Configuration
   function loadConfig(targetId) {
-    var url = state.origin + '/api/widget/config?agentId=' + encodeURIComponent(targetId || state.targetId);
+    var resolvedTarget = targetId || state.targetId;
+    if (!resolvedTarget) {
+      console.error('[AgentDesk Widget] Missing data-agent-id or data-business-id. Widget initialization stopped.');
+      return;
+    }
+    var url = state.origin + '/api/widget/config?agentId=' + encodeURIComponent(resolvedTarget);
     fetch(url)
       .then(function (res) { return res.json(); })
       .then(function (data) {
