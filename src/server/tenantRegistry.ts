@@ -334,6 +334,12 @@ export async function deleteTenantDataFromPostgres(tenantId: string): Promise<vo
   await postgresClient.query('DELETE FROM agentdesk_usage WHERE tenant_id = $1', [norm]);
   await postgresClient.query('DELETE FROM agentdesk_invoices WHERE tenant_id = $1', [norm]);
   await postgresClient.query('DELETE FROM agentdesk_delivery_logs WHERE tenant_id = $1', [norm]);
+  await postgresClient.query("DELETE FROM agentdesk_queue_jobs WHERE payload->>'tenantId' = $1 OR payload->>'businessId' = $1", [norm]);
+  await postgresClient.query("DELETE FROM agentdesk_rate_limits WHERE key LIKE $1 OR key LIKE $2", [
+    'agent_ai_hourly:' + norm + '%',
+    'conversation_turns:' + norm + '%'
+  ]);
+  await postgresClient.query("DELETE FROM agentdesk_webhook_events WHERE payload #>> '{payload,payment,entity,notes,businessId}' = $1 OR payload #>> '{payload,subscription,entity,notes,businessId}' = $1", [norm]);
   await postgresClient.query('DELETE FROM agentdesk_users WHERE tenant_id = $1', [norm]);
   await postgresClient.query("DELETE FROM agentdesk_integrations WHERE id LIKE $1 OR id LIKE $2",
     ['tenant_integration_' + norm.replace(/[^a-z0-9_-]/g, '_') + '_%', 'tenant_custom_' + norm.replace(/[^a-z0-9_-]/g, '_') + '_%']);
