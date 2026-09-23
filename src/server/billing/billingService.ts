@@ -2594,6 +2594,95 @@ export class BillingService {
       }
     }
 
+    // A successful recurring charge is a new billable period. Record it as a
+    // transaction and create a fresh invoice exactly once per webhook event.
+    if (result.event === 'subscription.charged' && result.businessId) {
+      const norm = result.businessId.toLowerCase();
+      const billing = this.getTenantBilling(norm);
+      const subscription = result.data || {};
+      const paymentAmount = Number(
+        subscription?.amount_paid ??
+        subscription?.amount ??
+        billing.recurring_total_amount ??
+        billing.monthlyFee ??
+        0
+      ) / 100;
+      const paymentCurrency = (subscription?.currency || billing.currency || 'INR') as CurrencyCode;
+      const paymentId = result.paymentId || subscription?.payment_id || `subpay_${eventId}`;
+      const existingInvoices = this.tenantInvoicesStore.get(norm) || [];
+      const duplicateInvoice = existingInvoices.some((invoice: any) =>
+        invoice.providerPaymentId === paymentId ||
+        invoice.paymentId === paymentId ||
+        invoice.webhookEventId === eventId
+      );
+
+      if (!duplicateInvoice) {
+        const paidAt = new Date().toISOString();
+        const invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-8)}`;
+        existingInvoices.unshift({
+          id: `inv_recurring_${eventId}`,
+          businessId: norm,
+          invoiceNumber,
+          date: paidAt.split('T')[0],
+          createdAt: paidAt,
+          description: `${billing.planName || 'AgentDesk'} Plan - Monthly Platform Subscription`,
+          amount: paymentAmount,
+          currency: paymentCurrency,
+          status: 'PAID',
+          provider: providerName,
+          providerPaymentId: paymentId,
+          webhookEventId: eventId,
+          invoiceType: 'RECURRING_SUBSCRIPTION',
+          subscription_fee: billing.subscription_fee ?? billing.monthlyFee ?? paymentAmount,
+          subscription_tax: billing.subscription_tax ?? 0,
+          total_amount: paymentAmount,
+          tax_rate: billing.subscription_tax_rate ?? 0,
+          taxLabel: (billing.subscription_tax_rate ?? 0) > 0
+            ? `${Math.round((billing.subscription_tax_rate ?? 0) * 100)}% GST`
+            : 'No Tax Applicable',
+          lineItems: [{
+            description: `Monthly AI RevenueOS Platform Subscription (${billing.planName || 'AgentDesk'})`,
+            type: 'RECURRING',
+            baseAmount: billing.subscription_fee ?? billing.monthlyFee ?? paymentAmount,
+            taxRate: billing.subscription_tax_rate ?? 0,
+            taxAmount: billing.subscription_tax ?? 0,
+            total: paymentAmount
+          }],
+          paymentId,
+          pdfUrl: '#'
+        });
+        this.tenantInvoicesStore.set(norm, existingInvoices);
+
+        const txList = this.tenantTransactionsStore.get(norm) || [];
+        txList.unshift({
+          id: `tx_${eventId}`,
+          businessId: norm,
+          date: paidAt.split('T')[0],
+          createdAt: paidAt,
+          amount: paymentAmount,
+          currency: paymentCurrency,
+          provider: providerName,
+          status: 'paid',
+          transactionId: paymentId,
+          type: 'subscription',
+          subscription_fee: billing.subscription_fee ?? billing.monthlyFee ?? paymentAmount,
+          subscription_tax: billing.subscription_tax ?? 0,
+          description: `Monthly Subscription Platform Access (${billing.planName || 'AgentDesk'})`
+        });
+        this.tenantTransactionsStore.set(norm, txList);
+      }
+
+      billing.status = 'active';
+      billing.paymentStatus = 'paid';
+      billing.paymentFailed = false;
+      billing.lastPaymentId = paymentId;
+      const next = new Date();
+      next.setDate(next.getDate() + 30);
+      billing.nextBillingDate = next.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      billing.updatedAt = new Date().toISOString();
+      this.tenantBillingStore.set(norm, billing);
+    }
+
     if (result.businessId) {
       const norm = result.businessId.toLowerCase();
       const billing = this.getTenantBilling(norm);
