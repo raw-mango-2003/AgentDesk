@@ -1363,6 +1363,7 @@ app.post('/api/knowledge', requireTenantAccess, async (req: Request, res: Respon
     content: content.trim(),
     status: status || (active ? 'active' : 'draft'),
     active: status === 'active' || active === true,
+     visibility: ['public', 'internal', 'restricted'].includes(visibility) ? visibility : 'public',
     createdAt: now,
     updatedAt: now
   };
@@ -1376,9 +1377,12 @@ app.post('/api/knowledge', requireTenantAccess, async (req: Request, res: Respon
     list.unshift(newItem);
   }
   serverKnowledgeStore.set(normTenantId, list);
-  persistKnowledgeToPostgres(newItem).catch((error) => {
-    console.warn('[Knowledge Engine] PostgreSQL persistence failed:', error?.message || error);
-  });
+   try {
+     const persisted = await persistKnowledgeToPostgres(newItem);
+     if (!persisted && process.env.NODE_ENV === 'production') return res.status(503).json({ success: false, error: 'Knowledge persistence is temporarily unavailable.' });
+   } catch (error: any) {
+     return res.status(503).json({ success: false, error: 'Knowledge persistence is temporarily unavailable.' });
+   }
 
   console.log(`[Knowledge Engine] Saved item (${newItem.id}) for tenant. Total items: ${list.length}`);
 
@@ -1417,14 +1421,18 @@ app.put('/api/knowledge/:id', requireTenantAccess, async (req: Request, res: Res
     category: category !== undefined ? category.trim() : existing.category,
     status: status !== undefined ? status : (active !== undefined ? (active ? 'active' : 'draft') : existing.status),
     active: active !== undefined ? active : (status ? status === 'active' : existing.active),
+     visibility: ['public', 'internal', 'restricted'].includes(visibility) ? visibility : (existing.visibility || 'public'),
     updatedAt: new Date().toISOString()
   };
 
   list[idx] = updatedItem;
   serverKnowledgeStore.set(normTenantId, list);
-  persistKnowledgeToPostgres(updatedItem).catch((error) => {
-    console.warn('[Knowledge Engine] PostgreSQL persistence failed:', error?.message || error);
-  });
+   try {
+     const persisted = await persistKnowledgeToPostgres(updatedItem);
+     if (!persisted && process.env.NODE_ENV === 'production') return res.status(503).json({ success: false, error: 'Knowledge persistence is temporarily unavailable.' });
+   } catch (error: any) {
+     return res.status(503).json({ success: false, error: 'Knowledge persistence is temporarily unavailable.' });
+   }
 
   console.log(`[Knowledge Engine] Updated knowledge item (${id}) for tenant.`);
 
