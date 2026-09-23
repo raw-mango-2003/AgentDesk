@@ -138,6 +138,7 @@ export async function persistTenantToPostgres(biz: any): Promise<void> {
     ]);
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresPersistTenantWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
   }
 }
 
@@ -166,6 +167,7 @@ export async function persistAgentToPostgres(agent: any): Promise<void> {
     ]);
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresPersistAgentWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
   }
 }
 
@@ -304,6 +306,7 @@ export async function persistUsageToPostgres(usage: TenantUsageRecord): Promise<
     ]);
   } catch (err: any) {
     console.warn('[TenantRegistry:PostgresPersistUsageWarning]', err.message);
+    if (process.env.NODE_ENV === 'production') throw err;
   }
 }
 
