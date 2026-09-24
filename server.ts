@@ -2546,6 +2546,146 @@ app.post('/api/chat', async (req: Request, res: Response) => {
 
     const record = await conversationStore.getOrCreateConversationAsync(safeConvId, currentBusiness.id);
 
+    // Lead-capture guardrail: the application chat surface must behave the
+    // same as the public widget when a visitor supplies contact details after
+    // being asked for them. Never send contact data through the knowledge
+    // retrieval/Gemini path, because that can produce an unrelated business
+    // description instead of confirming the lead.
+    const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);
+    const phoneMatch = safeMessage.match(/(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b(?:\\+?\\d{1,4}[-.\\s]?)?\\d{10}\\b/);
+    const lastAssistantText = [...record.messages].reverse().find(m => m.role === 'assistant')?.content || '';
+    const isLeadCaptureContactStep =
+      record.state.conversationStage === 'BOOKING' &&
+      record.state.bookingState?.stage === 'COLLECTING_CONTACT';
+    const isContactAfterLeadPrompt =
+      /phone number|email|contact details|contact number/i.test(lastAssistantText) &&
+      Boolean(emailMatch || phoneMatch);
+
+    if ((isLeadCaptureContactStep || isContactAfterLeadPrompt) && (emailMatch || phoneMatch)) {
+      const capturedEmail = emailMatch?.[0] || '';
+      const capturedPhone = phoneMatch?.[0] || '';
+      const capturedName = record.customerName || record.state.bookingState?.name || 'Website Visitor';
+
+      record.customerEmail = capturedEmail || record.customerEmail;
+      record.customerPhone = capturedPhone || record.customerPhone;
+      record.leadCaptured = true;
+      record.status = 'HUMAN_REQUIRED';
+      record.state.bookingState.contact = capturedEmail || capturedPhone;
+      record.state.bookingState.stage = 'CONFIRMED';
+      record.state.conversationStage = 'COURSE_DISCUSSION';
+
+      record.messages.push({
+        id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        conversationId: record.conversationId,
+        businessId: record.businessId,
+        role: 'user',
+        content: safeMessage,
+        timestamp: new Date().toISOString()
+      });
+
+      const leadKey = crypto.createHash('sha256')
+        .update(`${String(currentBusiness.id).toLowerCase()}:${safeConvId}`)
+        .digest('hex')
+        .slice(0, 32);
+      const lead = {
+        id: `lead-${leadKey}`,
+        tenantId: currentBusiness.id,
+        businessId: currentBusiness.id,
+        name: capturedName,
+        email: capturedEmail,
+        phone: capturedPhone,
+        company: '',
+        source: 'AI Chat Widget',
+        status: 'new',
+        score: 85,
+        scoreCategory: 'new',
+        requirement: record.state.currentTopic || 'Website enquiry',
+        conversationId: safeConvId,
+        details: {
+          capturedBy: 'AI Receptionist',
+          latestMessage: safeMessage
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        const persisted = await persistLeadToPostgres(lead);
+        if (!persisted && process.env.NODE_ENV === 'production') {
+          return res.status(503).json({
+            success: false,
+            error: 'Lead storage is temporarily unavailable. Please try again.'
+          });
+        }
+      } catch (leadError: any) {
+        console.error('[ChatLeadCaptureError]', leadError?.message || leadError);
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(503).json({
+            success: false,
+            error: 'Lead storage is temporarily unavailable. Please try again.'
+          });
+        }
+      }
+
+      const notifyEmail = typeof currentBusiness.leadNotificationEmail === 'string' && currentBusiness.leadNotificationEmail.trim()
+        ? currentBusiness.leadNotificationEmail.trim()
+        : typeof currentBusiness.supportEmail === 'string' ? currentBusiness.supportEmail.trim() : '';
+      const notifyPhone = typeof currentBusiness.leadNotificationPhone === 'string' && currentBusiness.leadNotificationPhone.trim()
+        ? currentBusiness.leadNotificationPhone.trim()
+        : typeof currentBusiness.phone === 'string' ? currentBusiness.phone.trim() : '';
+
+      try {
+        await notificationService.dispatchEvent('NEW_LEAD_RECEIVED', {
+          tenantId: currentBusiness.id,
+          email: notifyEmail,
+          phone: notifyPhone,
+          leadName: capturedName,
+          leadEmail: capturedEmail,
+          leadPhone: capturedPhone,
+          leadId: lead.id,
+          score: 85,
+          requirement: lead.requirement,
+          source: lead.source,
+          category: 'leads',
+          title: `New Lead: ${capturedName}`,
+          body: `New website enquiry from ${capturedName}. Contact details are available in your AgentDesk dashboard.`
+        });
+      } catch (notifyError: any) {
+        console.error('[ChatLeadNotificationError]', notifyError?.message || notifyError);
+      }
+
+      const capturedContact = capturedPhone ? 'phone number' : 'email address';
+      const leadReply = `Thanks ${capturedName}! I've captured your ${capturedContact}. Our team will reach out shortly. Is there anything else you'd like to know?`;
+      record.messages.push({
+        id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        conversationId: record.conversationId,
+        businessId: record.businessId,
+        role: 'assistant',
+        content: leadReply,
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        await conversationStore.persistConversationAsync(record);
+      } catch (persistError: any) {
+        console.error('[ChatLeadCapturePersistError]', persistError?.message || persistError);
+        return res.status(503).json({
+          success: false,
+          error: 'Conversation storage is temporarily unavailable. Please try again.'
+        });
+      }
+
+      return res.json({
+        success: true,
+        reply: leadReply,
+        conversationId: record.conversationId,
+        conversationState: record.state,
+        isClosing: false,
+        needsHumanHandoff: false,
+        suggestedActions: ['Ask Another Question']
+      });
+    }
+
     // If record was empty, populate from frontend history
     if (record.messages.length === 0 && Array.isArray(historyList) && historyList.length > 0) {
       for (const msg of historyList) {
