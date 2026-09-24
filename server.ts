@@ -2558,7 +2558,12 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     // description instead of confirming the lead.
     const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);
     const phoneMatch = safeMessage.match(/(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b(?:\\+?\\d{1,4}[-.\\s]?)?\\d{10}\\b/);
-    const lastAssistantText = [...record.messages].reverse().find(m => m.role === 'assistant')?.content || '';
+    const lastAssistantText =
+      [...record.messages].reverse().find(m => m.role === 'assistant')?.content ||
+      [...(Array.isArray(recentMessages) && recentMessages.length > 0 ? recentMessages : conversationHistory)].reverse().find((m: any) =>
+        m?.sender === 'agent' || m?.role === 'assistant'
+      )?.text ||
+      '';
     const isLeadCaptureContactStep =
       record.state.conversationStage === 'BOOKING' &&
       record.state.bookingState?.stage === 'COLLECTING_CONTACT';
