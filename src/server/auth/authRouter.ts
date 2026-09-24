@@ -6,7 +6,9 @@ import {
   getUserById, 
   getUserByIdAsync,
   createUser, 
+  createUserAsync,
   updateUser, 
+  updateUserAsync, 
   updateUserEmail,
   updateUserPassword,
   updateUserStatus,
@@ -1465,7 +1467,7 @@ authRouter.get('/platform/credentials', requirePlatformAdmin, (req: Request, res
 /**
  * Create or provision Business Owner login credentials
  */
-authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Request, res: Response) => {
+authRouter.post('/platform/credentials/create', requirePlatformAdmin, async (req: Request, res: Response) => {
   try {
     const adminUser = (req as any).user as UserRecord;
     const { tenantId, ownerName, ownerEmail, temporaryPassword: customTempPassword } = req.body;
@@ -1494,18 +1496,24 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Requ
       ? customTempPassword.trim()
       : generateStrongPassword(14);
 
-    const existingUser = getUserByEmail(cleanEmail);
+    const existingUser = await getUserByEmailAsync(cleanEmail);
 
     let user: UserRecord;
     if (existingUser) {
-      // If user exists and belongs to this tenant, update credentials
+      // If user exists and belongs to this tenant, update credentials in PostgreSQL first.
       if (existingUser.tenantId === cleanTenantId) {
-        user = updateUserPassword(existingUser.id, plainTempPassword, true);
-        updateUser(user.id, {
+        const passwordUpdated = await updateUserAsync(existingUser.id, {
+          passwordHash: hashPassword(plainTempPassword),
+          mustChangePassword: true,
           name: ownerName.trim(),
           role: 'BUSINESS_ADMIN',
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          emailVerified: true
         });
+        if (!passwordUpdated) {
+          throw new Error('Unable to update the existing business login.');
+        }
+        user = passwordUpdated;
       } else {
         return res.status(409).json({
           success: false,
@@ -1513,7 +1521,7 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, (req: Requ
         });
       }
     } else {
-      user = createUser({
+      user = await createUserAsync({
         name: ownerName.trim(),
         email: cleanEmail,
         passwordPlain: plainTempPassword,
