@@ -48,6 +48,41 @@ assert(secondChat.success && secondChat.conversationId === firstChat.conversatio
 assert(typeof secondChat.reply === 'string' && secondChat.reply.trim().length > 0, 'AI did not return a follow-up response.');
 assert(secondChat.conversationState && typeof secondChat.conversationState === 'object', 'Conversation state was not returned.');
 
+const contactConversationId = `e2e_contact_${Date.now()}`;
+const contactReply = await request('/api/chat', {
+  method: 'POST',
+  body: JSON.stringify({
+    agentId,
+    businessId: config.business.id,
+    tenantId: config.business.tenantId || config.business.id,
+    conversationId: contactConversationId,
+    message: 'Samriddhi, jaiswaltest@example.com, 8433154854',
+    conversationHistory: [
+      {
+        id: 'contact-prompt',
+        sender: 'agent',
+        text: 'I would be happy to arrange that for you. Please provide your name, email address, and phone number.',
+        timestamp: new Date().toISOString()
+      }
+    ],
+    recentMessages: [
+      {
+        id: 'contact-prompt',
+        sender: 'agent',
+        text: 'I would be happy to arrange that for you. Please provide your name, email address, and phone number.',
+        timestamp: new Date().toISOString()
+      }
+    ],
+    knowledgeBase: config.knowledge || [],
+    businessInfo: config.business
+  })
+});
+assert(contactReply.success, 'Application chat rejected the contact capture reply.');
+assert(/captured your (phone number|email address)/i.test(contactReply.reply || ''), 'Application chat did not confirm captured contact details.');
+assert(/jaiswaltest@example.com/i.test(contactReply.reply || '') === false, 'Application chat should not echo the visitor email back to the user.');
+assert(/AgentDesk Technologies provides|24\/7 AI Sales Employee/i.test(contactReply.reply || '') === false, 'Application chat incorrectly routed contact details to the business knowledge response.');
+
+
 const lead = await request('/api/widget/lead', {
   method: 'POST',
   body: JSON.stringify({
