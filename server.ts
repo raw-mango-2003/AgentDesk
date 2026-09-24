@@ -1985,7 +1985,15 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     if ((isLeadCaptureContactStep || isContactAfterLeadPrompt) && (emailMatch || phoneMatch)) {
       const capturedEmail = emailMatch?.[0] || '';
       const capturedPhone = phoneMatch?.[0] || '';
-      const capturedName = record.customerName || record.state.bookingState?.name || 'Website Visitor';
+      const inlineName = safeMessage
+        .replace(emailMatch?.[0] || '', '')
+        .replace(phoneMatch?.[0] || '', '')
+        .replace(/[,:;|]+/g, ' ')
+        .replace(/^(my name is|i am|i'm|this is|name is)\\s+/i, '')
+        .trim()
+        .replace(/\\s{2,}/g, ' ');
+      const capturedName = record.customerName || record.state.bookingState?.name ||
+        (inlineName && inlineName.length >= 2 && inlineName.length <= 80 ? inlineName : 'Website Visitor');
 
       record.customerEmail = capturedEmail || record.customerEmail;
       record.customerPhone = capturedPhone || record.customerPhone;
@@ -2551,8 +2559,8 @@ app.post('/api/chat', async (req: Request, res: Response) => {
     // being asked for them. Never send contact data through the knowledge
     // retrieval/Gemini path, because that can produce an unrelated business
     // description instead of confirming the lead.
-    const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);
-    const phoneMatch = safeMessage.match(/(?:\\+91[-.\\s]?)?[6-9]\\d{9}\\b|\\b(?:\\+?\\d{1,4}[-.\\s]?)?\\d{10}\\b/);
+    const emailMatch = safeMessage.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    const phoneMatch = safeMessage.match(/(?:\+91[-.\s]?)?[6-9]\d{9}\b|\b(?:\+?\d{1,4}[-.\s]?)?\d{10}\b/);
     const lastAssistantText =
       [...record.messages].reverse().find(m => m.role === 'assistant')?.content ||
       [...(Array.isArray(recentMessages) && recentMessages.length > 0 ? recentMessages : conversationHistory)].reverse().find((m: any) =>
