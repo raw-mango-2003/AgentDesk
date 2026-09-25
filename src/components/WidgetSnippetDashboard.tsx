@@ -56,28 +56,50 @@ export const WidgetSnippetDashboard: React.FC<WidgetSnippetDashboardProps> = ({
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://agentdesk.ai';
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadAgentsList() {
       const list = await getAllAgents();
       const validList = Array.isArray(list) ? list.filter(a => a && a.id) : [];
+      const tenantId = String(business?.id || '').trim().toLowerCase();
+      const tenantAgents = tenantId
+        ? validList.filter(a => String(a.tenantId || '').trim().toLowerCase() === tenantId)
+        : [];
+      const configuredPrimary = String(business?.primaryAgentId || '').trim().toLowerCase();
+
+      const current =
+        validList.find(a =>
+          String(a.id || '').trim().toLowerCase() === configuredPrimary &&
+          (!tenantId || String(a.tenantId || '').trim().toLowerCase() === tenantId)
+        ) ||
+        tenantAgents.find(a =>
+          String(a.id || '').trim().toLowerCase() === String(selectedAgentId || '').trim().toLowerCase()
+        ) ||
+        tenantAgents[0] ||
+        validList.find(a =>
+          String(a.id || '').trim().toLowerCase() === String(selectedAgentId || '').trim().toLowerCase()
+        );
+
+      if (cancelled) return;
       setAgents(validList);
-      
-      const current = validList.find(a => 
-        (a.id && a.id.toLowerCase() === selectedAgentId.toLowerCase()) || 
-        (a.tenantId && a.tenantId.toLowerCase() === selectedAgentId.toLowerCase())
-      );
+
       if (current) {
+        setSelectedAgentId(current.id);
         setSelectedAgent(current);
         if (current.primaryColor) setThemeColor(current.primaryColor);
-      } else {
-        const ag = await getAgentById(selectedAgentId);
-        if (ag) {
-          setSelectedAgent(ag);
-          if (ag.primaryColor) setThemeColor(ag.primaryColor);
+      } else if (tenantId === 'agentdesk-public-demo') {
+        setSelectedAgentId(PUBLIC_DEMO_AGENT_ID);
+        const publicAgent = await getAgentById(PUBLIC_DEMO_AGENT_ID);
+        if (!cancelled && publicAgent) {
+          setSelectedAgent(publicAgent);
+          if (publicAgent.primaryColor) setThemeColor(publicAgent.primaryColor);
         }
       }
     }
+
     loadAgentsList();
-  }, [selectedAgentId, business?.id, business?.primaryAgentId]);
+    return () => { cancelled = true; };
+  }, [business?.id, business?.primaryAgentId]);
 
   const verifyDeploymentStatus = async () => {
     setPingStatus('checking');
