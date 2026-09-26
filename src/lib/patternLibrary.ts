@@ -250,7 +250,7 @@ export function isGreetingOrSmallTalkIntent(text: string): boolean {
 export function isHumanHandoffIntent(text: string): boolean {
   if (!text) return false;
   const cleaned = text.trim().toLowerCase();
-  return /\b(human|person|agent|representative|support team|operator|real person|speak to someone|talk to someone|connect me to support|call me|customer care|speak with admissions|talk to sales|speak with your team|contact me|connect me|put me through)\b/i.test(cleaned);
+  return /\b(human|person|agent|representative|support team|operator|real person|speak to someone|talk to someone|connect me to support|call me|customer care|speak with admissions|talk to sales|speak with your team|contact me|connect me|put me through|insaan se baat|kisi se baat|kisi person se baat|human se baat|team se baat|sales se baat|aadmi se baat|mujhe kisi se baat|mujhe human chahiye)\b/i.test(cleaned) || /इंसान|व्यक्ति|मानव/.test(cleaned);
 }
 
 export function isComplaintOrFrustrationIntent(text: string): boolean {
@@ -324,7 +324,7 @@ export function isYesNoQuestion(text: string): boolean {
 export function isBookingActionIntent(text: string): boolean {
   if (!text) return false;
   const cleaned = text.trim().toLowerCase();
-  return /\b(book|booking|book it|book the demo|book demo|i want to book|yes book it|register|register me|i want to register|sign me up|sign up|let's do it|lets do it|i'd like the demo|id like the demo|can i book|can i book it|book me|i want to attend|take admission|enroll me|register for demo|book demo class|book class|book a demo|book free demo|book a free demo)\b/i.test(cleaned);
+  return /\b(book|booking|book it|book the demo|book demo|i want to book|yes book it|register|register me|i want to register|sign me up|sign up|let's do it|lets do it|i'd like the demo|id like the demo|can i book|can i book it|book me|i want to attend|take admission|enroll me|register for demo|book demo class|book class|book a demo|book free demo|book a free demo|demo chahiye|demo book karna|demo book karo|demo lena hai|admission lena hai|join karna hai|register karna hai)\b/i.test(cleaned) || /डेमो|रजिस्टर|एडमिशन|जॉइन/.test(cleaned);
 }
 
 export function isSyllabusActionIntent(text: string): boolean {
