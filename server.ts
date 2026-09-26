@@ -445,6 +445,10 @@ app.post('/api/leads', async (req: Request, res: Response) => {
       createdAt: now, updatedAt: now
     };
 
+    const leadQualification = calculateLeadQualification(lead);
+    lead.score = leadQualification.score;
+    lead.scoreCategory = leadQualification.category;
+    lead.details = { ...(lead.details || {}), qualification: { score: leadQualification.score, category: leadQualification.category, explanation: leadQualification.explanation, status: 'new' } };
     const persisted = await persistLeadToPostgres(lead);
     const spreadsheetSync = await syncLeadToSpreadsheet(lead, business);
     if (!persisted && process.env.NODE_ENV === 'production') {
@@ -2299,6 +2303,10 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       updatedAt: now
     };
 
+    const leadQualification = calculateLeadQualification(leadRecord);
+    leadRecord.score = leadQualification.score;
+    leadRecord.scoreCategory = leadQualification.category;
+    leadRecord.details = { ...(leadRecord.details || {}), qualification: { score: leadQualification.score, category: leadQualification.category, explanation: leadQualification.explanation, status: 'new' } };
     const persisted = await persistLeadToPostgres(leadRecord);
     const spreadsheetSync = await syncLeadToSpreadsheet(leadRecord, business, { conversationId: safeConversationId, status: 'HUMAN_REQUIRED' });
     if (!persisted && process.env.NODE_ENV === 'production') {
