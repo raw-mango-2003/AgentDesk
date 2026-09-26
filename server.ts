@@ -2757,7 +2757,8 @@ app.post('/api/chat', async (req: Request, res: Response) => {
           currentBusiness,
           targetedKnowledge,
           normInput.raw,
-          record.state.currentTopic
+          record.state.currentTopic,
+          normInput.language
         );
       }
 
