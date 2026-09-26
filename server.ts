@@ -445,6 +445,7 @@ app.post('/api/leads', async (req: Request, res: Response) => {
     };
 
     const persisted = await persistLeadToPostgres(lead);
+    const spreadsheetSync = await syncLeadToSpreadsheet(lead, business);
     if (!persisted && process.env.NODE_ENV === 'production') {
       return res.status(503).json({ success: false, error: 'Lead storage is temporarily unavailable. Please try again.' });
     }
@@ -2041,6 +2042,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
       try {
         const persisted = await persistLeadToPostgres(lead);
+        const spreadsheetSync = await syncLeadToSpreadsheet(lead, currentBusiness, record);
         if (!persisted && process.env.NODE_ENV === 'production') {
           return res.status(503).json({
             success: false,
@@ -2298,6 +2300,7 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
     };
 
     const persisted = await persistLeadToPostgres(leadRecord);
+    const spreadsheetSync = await syncLeadToSpreadsheet(leadRecord, business, { conversationId: safeConversationId, status: 'HUMAN_REQUIRED' });
     if (!persisted && process.env.NODE_ENV === 'production') {
       return res.status(503).json({
         success: false,
