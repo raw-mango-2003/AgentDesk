@@ -150,7 +150,7 @@ export const PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS: KnowledgeItem[] = [
     title: 'Human Handoff & Booking a Live Demo',
     category: 'Contact & Demo',
     type: 'faq',
-    content: 'If a visitor asks to speak with a human, the website chatbot opens a lead-capture flow and collects the visitor's name plus email or phone and their requirement. The lead is stored in the tenant's AgentDesk Leads dashboard. If the tenant has configured the Lead Spreadsheet Automation webhook, the same lead payload is also delivered to that tenant's automation, which can write it to Google Sheets, Excel, or another spreadsheet system. The spreadsheet automation is an integration, not a promise that every tenant has it enabled by default.',
+    content: "'If a visitor asks to speak with a human, the website chatbot opens a lead-capture flow and collects the visitor's name plus email or phone and their requirement. The lead is stored in the tenant's AgentDesk Leads dashboard. If the tenant has configured the Lead Spreadsheet Automation webhook, the same lead payload is also delivered to that tenant's automation, which can write it to Google Sheets, Excel, or another spreadsheet system. The spreadsheet automation is an integration, not a promise that every tenant has it enabled by default.",
     status: 'active',
     active: true,
     createdAt: new Date().toISOString(),
