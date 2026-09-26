@@ -738,7 +738,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
     try {
       // Call server-side Gemini AI chat route
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/widget/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
         body: JSON.stringify({
