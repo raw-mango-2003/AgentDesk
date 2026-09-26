@@ -155,5 +155,44 @@ export const PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS: KnowledgeItem[] = [
     active: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'k-public-demo-7',
+    businessId: PUBLIC_DEMO_TENANT_ID,
+    tenantId: PUBLIC_DEMO_TENANT_ID,
+    title: 'Lead Capture, Human Handoff and Spreadsheet Automation',
+    category: 'Lead Capture',
+    type: 'faq',
+    content: 'When a visitor asks to talk to a human, the chatbot moves into a structured lead-capture flow. It collects name, email or phone, and requirement. The lead is stored in the AgentDesk Leads dashboard with conversation ID, source, qualification score, score category, and notes. A tenant can configure the Lead Spreadsheet Automation webhook so the same lead payload is sent to an external automation that writes to a spreadsheet. Delivery failures do not delete the website lead.',
+    status: 'active',
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'k-public-demo-8',
+    businessId: PUBLIC_DEMO_TENANT_ID,
+    tenantId: PUBLIC_DEMO_TENANT_ID,
+    title: 'Language, Hinglish and Misspelling Support',
+    category: 'Conversation Intelligence',
+    type: 'faq',
+    content: 'AgentDesk normalizes user input before intent routing. It corrects common spelling errors and uses fuzzy matching for known business and conversation vocabulary. It detects Hindi, Hinglish, and multiple other languages and passes the detected language into grounded AI response generation. Hinglish is handled as natural Roman Hindi mixed with English. Business facts are still answered only from the verified tenant knowledge base.',
+    status: 'active',
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 'k-public-demo-9',
+    businessId: PUBLIC_DEMO_TENANT_ID,
+    tenantId: PUBLIC_DEMO_TENANT_ID,
+    title: 'Knowledge Boundary and Answer Policy',
+    category: 'AI Guardrails',
+    type: 'faq',
+    content: 'The sales agent must answer only from verified AgentDesk knowledge and current configured business data. It must not invent pricing, plan limits, features, integrations, guarantees, customer information, internal identifiers, secrets, or contact details. If the requested fact is unavailable, it should clearly say that the detail is not verified and offer to capture the visitor as a lead for human follow-up.',
+    status: 'active',
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   }
 ];
