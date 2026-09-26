@@ -72,3 +72,5 @@ export * from './interfaces.js';
 export * from './rateLimiter.js';
 export * from './emailTemplates.js';
 export * from './integrationStore.js';
+
+export { syncLeadToSpreadsheet } from './leadSyncService.js';
