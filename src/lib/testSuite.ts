@@ -5,7 +5,8 @@ import {
   retrieveTargetedKnowledge, 
   generateEngineAnswer, 
   validateAnswer, 
-  updateConversationMemory, 
+  updateConversationMemory,
+  calculateLeadQualification,
   ConversationRecord 
 } from './conversationEngine.js';
 import { 
@@ -22,7 +23,7 @@ import {
   PUBLIC_AGENTDESK_DEMO_BUSINESS,
   PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS
 } from '../data/demoBusiness.js';
-import { EXACT_CLOSING_PHRASES } from './patternLibrary.js';
+import { EXACT_CLOSING_PHRASES, detectLanguage } from './patternLibrary.js';
 
 export interface TestResultTurn {
   userQuery: string;
@@ -450,6 +451,54 @@ export function runConversationTestSuite(
       testName: 'Lead Capture Flow and Client Contact Disclosure Protection',
       passed,
       turns
+    });
+  }
+
+  {
+    const typoInput = normalizeInput('wat is the prcing and demo feee?');
+    const hinglishInput = normalizeInput('mujhe human se baat karni hai');
+    const hindiInput = normalizeInput('मुझे इंसान से बात करनी है');
+    const typoIntent = classifyConversationIntent(typoInput, createFreshRecord('TYPO'), business.name);
+    const hinglishIntent = classifyConversationIntent(hinglishInput, createFreshRecord('HINGLISH'), business.name);
+    const qualification = calculateLeadQualification({
+      name: 'Test Visitor',
+      email: 'visitor@example.com',
+      phone: '9876543210',
+      requirement: 'I want to book a demo this week',
+      message: 'Please have a human sales person contact me today'
+    });
+    const passed =
+      typoInput.cleaned.includes('what') &&
+      typoInput.cleaned.includes('pricing') &&
+      typoInput.cleaned.includes('fee') &&
+      hinglishInput.language === 'hinglish' &&
+      hindiInput.language === 'hi' &&
+      detectLanguage('hola, quiero hablar con una persona') === 'es' &&
+      hinglishIntent.needsHumanHandoff === true &&
+      qualification.category === 'HOT' &&
+      qualification.score >= 70;
+
+    testResults.push({
+      testId: 'MULTILINGUAL_TYPO_LEAD_INTELLIGENCE',
+      testName: 'Typo Correction, Hinglish, Multilingual Detection and Lead Qualification',
+      passed,
+      turns: [{
+        userQuery: 'wat is the prcing and mujhe human se baat karni hai',
+        expectedKeywords: ['corrected pricing/fee', 'Hinglish detected', 'human handoff', 'HOT qualification'],
+        actualReply: JSON.stringify({
+          corrected: typoInput.cleaned,
+          language: hinglishInput.language,
+          hindiLanguage: hindiInput.language,
+          spanishLanguage: detectLanguage('hola, quiero hablar con una persona'),
+          humanHandoff: hinglishIntent.needsHumanHandoff,
+          qualification
+        }),
+        resolvedEntity: null,
+        resolvedIntent: hinglishIntent.primaryType,
+        isClosing: false,
+        passed,
+        failureReason: passed ? undefined : 'Typo, language detection, human handoff, or lead qualification regression.'
+      }]
     });
   }
 
