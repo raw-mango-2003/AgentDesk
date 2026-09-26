@@ -27,6 +27,7 @@ import {
 } from './src/data/seedData.js';
 import {
   normalizeInput,
+  calculateLeadQualification,
   classifyConversationIntent,
   extractIntentsAndEntities,
   retrieveTargetedKnowledge,
@@ -2279,8 +2280,8 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       phone: safePhone,
       source: 'AI Chat Widget',
       status: 'new' as const,
-      score: 85,
-      scoreCategory: 'HOT',
+      score: calculateLeadQualification({ name: safeName, email: safeEmail, phone: safePhone, requirement: safeNotes, message: safeNotes }).score,
+      scoreCategory: calculateLeadQualification({ name: safeName, email: safeEmail, phone: safePhone, requirement: safeNotes, message: safeNotes }).category,
       requirement: safeNotes,
       message: safeNotes,
       notes: safeNotes,
@@ -2289,11 +2290,10 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
         notes: safeNotes,
         requirement: safeNotes,
         capturedBy: 'AI Receptionist',
-        qualification: {
-          score: 85,
-          category: 'HOT',
-          status: 'new'
-        }
+        qualification: (() => {
+          const q = calculateLeadQualification({ name: safeName, email: safeEmail, phone: safePhone, requirement: safeNotes, message: safeNotes });
+          return { score: q.score, category: q.category, status: 'new', explanation: q.explanation };
+        })()
       },
       createdAt: now,
       updatedAt: now
