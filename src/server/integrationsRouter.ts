@@ -21,7 +21,8 @@ import {
 } from './integrations/index.js';
 import {
   requireAuth,
-  requirePlatformAdmin
+  requirePlatformAdmin,
+  requireTenantAccess
 } from './auth/authRouter.js';
 import {
   getUserById,
@@ -245,6 +246,86 @@ function publicCustomIntegration(item: { id: string; config: Record<string, stri
 }
 
 
+
+
+// Tenant-owned integration configuration. Business users may configure the
+// lead spreadsheet/custom webhook without receiving access to another tenant.
+integrationsRouter.get('/tenant/integrations/:provider', requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    const provider = String(req.params.provider || '').trim().toLowerCase();
+    const allowedFields = TENANT_INTEGRATION_FIELDS[provider];
+    if (!tenantId || !allowedFields) {
+      return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
+    }
+    await integrationStore.syncWithPostgres();
+    const config = integrationStore.getTenantIntegrationConfig(tenantId, provider);
+    return res.json({
+      success: true,
+      tenantId,
+      provider,
+      configured: Object.keys(config).length > 0,
+      fields: allowedFields,
+      maskedConfig: maskTenantIntegrationConfig(config)
+    });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Failed to load tenant integration.' });
+  }
+});
+
+integrationsRouter.put('/tenant/integrations/:provider', requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    const provider = String(req.params.provider || '').trim().toLowerCase();
+    const allowedFields = TENANT_INTEGRATION_FIELDS[provider];
+    if (!tenantId || !allowedFields) {
+      return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
+    }
+
+    const incoming = req.body && typeof req.body === 'object' ? req.body : {};
+    const existing = integrationStore.getTenantIntegrationConfig(tenantId, provider);
+    const nextConfig: Record<string, string> = { ...existing };
+
+    for (const field of allowedFields) {
+      if (typeof incoming[field] === 'string' && incoming[field].trim()) {
+        nextConfig[field] = incoming[field].trim();
+      }
+    }
+
+    if (provider === 'custom_webhook' && nextConfig.webhook_url) {
+      validateCustomUrl(nextConfig.webhook_url);
+    }
+
+    if (Object.keys(nextConfig).length === 0) {
+      return res.status(400).json({ success: false, error: 'At least one integration value is required.' });
+    }
+
+    integrationStore.saveTenantIntegrationConfig(tenantId, provider, nextConfig);
+    return res.json({
+      success: true,
+      tenantId,
+      provider,
+      configured: true,
+      maskedConfig: maskTenantIntegrationConfig(nextConfig)
+    });
+  } catch (err: any) {
+    return res.status(400).json({ success: false, error: err.message || 'Failed to save tenant integration.' });
+  }
+});
+
+integrationsRouter.delete('/tenant/integrations/:provider', requireTenantAccess, async (req: Request, res: Response) => {
+  try {
+    const tenantId = String((req as any).tenantId || '').trim().toLowerCase();
+    const provider = String(req.params.provider || '').trim().toLowerCase();
+    if (!TENANT_INTEGRATION_FIELDS[provider]) {
+      return res.status(400).json({ success: false, error: 'Unsupported tenant integration provider.' });
+    }
+    const disconnected = integrationStore.deleteTenantIntegration(tenantId, provider);
+    return res.json({ success: true, tenantId, provider, disconnected });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message || 'Failed to disconnect tenant integration.' });
+  }
+});
 
 const TENANT_INTEGRATION_FIELDS: Record<string, string[]> = {
   google_calendar: ['client_id', 'client_secret', 'refresh_token'],
