@@ -2268,8 +2268,8 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
     const now = new Date().toISOString();
     const leadRecord: any = {
       id: leadId,
-      tenantId: business.id,
-      businessId: business.id,
+      tenantId: String(business.id).trim().toLowerCase(),
+      businessId: String(business.id).trim().toLowerCase(),
       conversationId: safeConversationId,
       name: safeName,
       email: safeEmail,
@@ -2277,10 +2277,20 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       source: 'AI Chat Widget',
       status: 'new' as const,
       score: 85,
+      scoreCategory: 'HOT',
+      requirement: safeNotes,
+      message: safeNotes,
+      notes: safeNotes,
       details: {
         conversationId: safeConversationId,
         notes: safeNotes,
-        capturedBy: 'AI Receptionist'
+        requirement: safeNotes,
+        capturedBy: 'AI Receptionist',
+        qualification: {
+          score: 85,
+          category: 'HOT',
+          status: 'new'
+        }
       },
       createdAt: now,
       updatedAt: now
