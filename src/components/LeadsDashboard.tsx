@@ -157,6 +157,15 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ business }) => {
                   </select>
                 </div>
 
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="px-2 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-100 text-[10px] font-extrabold">
+                    {Number(lead.score) || 0}% {lead.scoreCategory || 'QUALIFIED'}
+                  </span>
+                  <span className="px-2 py-1 rounded-lg bg-slate-50 text-slate-600 border border-slate-100 text-[10px] font-semibold">
+                    {lead.source || 'website_chat'}
+                  </span>
+                </div>
+
                 <div className="space-y-1.5 text-xs text-slate-600 mb-3">
                   <div className="flex items-center gap-2">
                     <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
