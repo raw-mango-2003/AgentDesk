@@ -188,6 +188,8 @@ export type ServerLeadRecord = {
 export async function persistLeadToPostgres(lead: ServerLeadRecord): Promise<boolean> {
   try {
     if (!(await postgresClient.initialize())) return false;
+    const normalizedTenantId = String(lead.tenantId || '').trim().toLowerCase();
+    if (!normalizedTenantId) return false;
     await postgresClient.query(`
       INSERT INTO agentdesk_leads
         (id, tenant_id, name, email, phone, source, status, score, details, created_at, updated_at)
@@ -198,7 +200,7 @@ export async function persistLeadToPostgres(lead: ServerLeadRecord): Promise<boo
         details=EXCLUDED.details, updated_at=EXCLUDED.updated_at
       WHERE agentdesk_leads.tenant_id = EXCLUDED.tenant_id
     `, [
-      lead.id, lead.tenantId, lead.name, lead.email || null, lead.phone || null,
+      lead.id, normalizedTenantId, lead.name, lead.email || null, lead.phone || null,
       lead.source || 'website_chat', lead.status || 'NEW', Number(lead.score) || 0,
       JSON.stringify(lead.details || {}), lead.createdAt, lead.updatedAt
     ]);
