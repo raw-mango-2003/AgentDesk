@@ -135,6 +135,44 @@ export interface ExtractedIntentsAndEntities {
   candidateEntities: string[];
 }
 
+export interface LeadQualificationResult {
+  score: number;
+  category: 'HOT' | 'WARM' | 'COLD';
+  explanation: string;
+}
+
+export function calculateLeadQualification(input: {
+  name?: string;
+  email?: string;
+  phone?: string;
+  requirement?: string;
+  message?: string;
+}): LeadQualificationResult {
+  const text = [input.requirement, input.message].filter(Boolean).join(' ').toLowerCase();
+  let score = 10;
+  const reasons: string[] = [];
+  if (String(input.name || '').trim()) { score += 10; reasons.push('name captured'); }
+  if (String(input.email || '').trim()) { score += 15; reasons.push('email captured'); }
+  if (String(input.phone || '').trim()) { score += 15; reasons.push('phone captured'); }
+  if (String(input.requirement || '').trim()) { score += 15; reasons.push('clear requirement'); }
+  if (/\b(book|booking|demo|buy|purchase|ready|start|register|enroll|admission|human|team)\b/i.test(text) || /डेमो|खरीद|रजिस्टर|एडमिशन|इंसान/.test(text)) {
+    score += 15; reasons.push('high intent signal');
+  }
+  if (/\b(budget|price|pricing|cost|fee|fees|₹|\$|usd|inr|lakh|crore)\b/i.test(text)) {
+    score += 10; reasons.push('budget or pricing signal');
+  }
+  if (/\b(today|tomorrow|this week|this month|urgent|immediately|asap|jaldi|abhi|aaj|kal)\b/i.test(text)) {
+    score += 10; reasons.push('near-term timeline');
+  }
+  score = Math.max(0, Math.min(100, score));
+  const category = score >= 70 ? 'HOT' : score >= 40 ? 'WARM' : 'COLD';
+  return {
+    score,
+    category,
+    explanation: reasons.length ? reasons.join(', ') : 'general enquiry'
+  };
+}
+
 export function normalizeInput(raw: string, extraVocabulary: string[] = []): NormalizedInput {
   if (!raw) {
     return { raw: '', cleaned: '', tokens: [], isQuestion: false, hasPunctuation: false, language: 'en' };
