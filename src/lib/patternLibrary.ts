@@ -365,3 +365,130 @@ export function isShortFollowUp(text: string): boolean {
   return false;
 }
 
+
+export type DetectedLanguage =
+  | 'en' | 'hinglish' | 'hi' | 'es' | 'fr' | 'de' | 'pt' | 'ar'
+  | 'bn' | 'ta' | 'te' | 'kn' | 'ml' | 'gu' | 'pa' | 'unknown';
+
+const COMMON_HINGLISH_WORDS = new Set([
+  'kya','hai','hain','ka','ki','ke','ko','se','me','mein','mera','meri','mere','mujhe',
+  'aap','apka','apki','apke','yeh','ye','woh','wo','kab','kahan','kaise','kitna','kitni',
+  'kitne','chahiye','chahta','chahti','karna','kare','karo','karu','mil','milega','paisa',
+  'paise','baat','insaan','aadmi','madad','batao','bataiye','nahi','nahin','haan','ji',
+  'kripya','abhi','phir','aur','bhi','wala','wali','wale'
+]);
+
+const COMMON_SPELLING_ALIASES: Record<string,string> = {
+  wat:'what',wht:'what',hw:'how',hwo:'how',plz:'please',pls:'please',thx:'thanks',
+  thnks:'thanks',pric:'price',prce:'price',prcing:'pricing',pricingg:'pricing',
+  feees:'fees',feee:'fee',cosst:'cost',duraton:'duration',durration:'duration',
+  durtion:'duration',timng:'timing',timming:'timing',timimgs:'timings',
+  schedual:'schedule',shcedule:'schedule',schedul:'schedule',avalable:'available',
+  availble:'available',avilable:'available',availibility:'availability',
+  eligibilty:'eligibility',prerequsite:'prerequisite',registr:'register',
+  regster:'register',registe:'register',enrool:'enroll',enrol:'enroll',
+  admision:'admission',admisson:'admission',cours:'course',coures:'course',
+  corses:'courses',syallbus:'syllabus',sylabus:'syllabus',curiculum:'curriculum',
+  humna:'human',humn:'human',peopel:'people',suport:'support',suppport:'support',
+  custmer:'customer',contcat:'contact',cntact:'contact',emial:'email',phne:'phone',
+  mesage:'message',intergration:'integration',integraton:'integration',
+  integratoin:'integration',subcription:'subscription',subscripton:'subscription',
+  subscribtion:'subscription',conversaton:'conversation',knwoledge:'knowledge',
+  qualifcation:'qualification',qualificaton:'qualification',leades:'leads',
+  leadd:'lead',busines:'business',webiste:'website',chatot:'chatbot',
+  langauge:'language',languge:'language',multilangual:'multilingual',
+  mulitlingual:'multilingual',agentdsk:'agentdesk',agentdek:'agentdesk'
+};
+
+function levenshteinDistance(a:string,b:string,maxDistance=3):number {
+  if (a===b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  if (Math.abs(a.length-b.length)>maxDistance) return maxDistance+1;
+  let previous=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const current=[i]; let rowMin=current[0];
+    for(let j=1;j<=b.length;j++){
+      const cost=a[i-1]===b[j-1]?0:1;
+      const value=Math.min(current[j-1]+1,previous[j]+1,previous[j-1]+cost);
+      current[j]=value; rowMin=Math.min(rowMin,value);
+    }
+    if(rowMin>maxDistance) return maxDistance+1;
+    previous=current;
+  }
+  return previous[b.length];
+}
+
+function buildSpellVocabulary(extraVocabulary:string[]=[]):Set<string>{
+  const vocabulary=new Set<string>([
+    'what','how','when','where','why','which','can','could','would','do','does','is','are',
+    'the','your','you','our','for','with','from','and','or','about','agentdesk','agent','human',
+    'support','team','contact','phone','email','name','pricing','price','fee','fees','cost',
+    'duration','timing','timings','schedule','demo','trial','refund','cancel','apply','enroll',
+    'register','admission','eligibility','courses','course','program','programs','features',
+    'integration','integrations','lead','leads','qualification','conversation','knowledge',
+    'website','chatbot','sales','employee','voice','crm','automation','spreadsheet','webhook',
+    'available','online','offline','weekend','today','tomorrow','please','thanks'
+  ]);
+  for(const rule of PATTERN_RULES){
+    for(const source of [...rule.patterns,...(rule.hinglishPatterns||[]),...(rule.typoPatterns||[])]){
+      for(const token of source.source.match(/[a-z][a-z0-9]{2,}/gi)||[]) vocabulary.add(token.toLowerCase());
+    }
+  }
+  for(const value of extraVocabulary){
+    for(const token of String(value||'').toLowerCase().match(/[a-z][a-z0-9]{2,}/g)||[]) vocabulary.add(token);
+  }
+  return vocabulary;
+}
+
+export function correctMisspellings(text:string,extraVocabulary:string[]=[]):string{
+  if(!text) return '';
+  const vocabulary=buildSpellVocabulary(extraVocabulary);
+  return text.replace(/[A-Za-z][A-Za-z']*/g,token=>{
+    const lower=token.toLowerCase();
+    if(COMMON_SPELLING_ALIASES[lower]) return COMMON_SPELLING_ALIASES[lower];
+    if(COMMON_HINGLISH_WORDS.has(lower)||vocabulary.has(lower)||lower.length<4) return lower;
+    let best=lower; let bestDistance=lower.length>7?2:1;
+    for(const candidate of vocabulary){
+      if(Math.abs(candidate.length-lower.length)>bestDistance) continue;
+      const distance=levenshteinDistance(lower,candidate,bestDistance);
+      if(distance<bestDistance||(distance===bestDistance&&candidate.length===lower.length&&candidate<best)){
+        best=candidate; bestDistance=distance;
+      }
+    }
+    return best;
+  });
+}
+
+export function detectLanguage(text:string):DetectedLanguage{
+  if(!text) return 'en';
+  const value=text.trim();
+  if(/[\u0900-\u097F]/.test(value)) return 'hi';
+  if(/[\u0980-\u09FF]/.test(value)) return 'bn';
+  if(/[\u0B80-\u0BFF]/.test(value)) return 'ta';
+  if(/[\u0C00-\u0C7F]/.test(value)) return 'te';
+  if(/[\u0C80-\u0CFF]/.test(value)) return 'kn';
+  if(/[\u0D00-\u0D7F]/.test(value)) return 'ml';
+  if(/[\u0A80-\u0AFF]/.test(value)) return 'gu';
+  if(/[\u0A00-\u0A7F]/.test(value)) return 'pa';
+  if(/[\u0600-\u06FF]/.test(value)) return 'ar';
+  const lower=value.toLowerCase();
+  const hinglishHits=[...COMMON_HINGLISH_WORDS].filter(w=>new RegExp('\\b'+w+'\\b','i').test(lower)).length;
+  if(hinglishHits>=2) return 'hinglish';
+  if(/\b(hola|precio|cuanto|cuánto|gracias|quiero|hablar|persona|humano|ayuda|curso)\b/i.test(lower)) return 'es';
+  if(/\b(bonjour|prix|combien|merci|je veux|parler|humain|aide|cours)\b/i.test(lower)) return 'fr';
+  if(/\b(hallo|preis|wie viel|danke|ich möchte|sprechen|mensch|hilfe|kurs)\b/i.test(lower)) return 'de';
+  if(/\b(olá|ola|preço|quanto|obrigado|quero|falar|pessoa|humano|ajuda|curso)\b/i.test(lower)) return 'pt';
+  return 'en';
+}
+
+export function getLanguageInstruction(language:DetectedLanguage):string{
+  const labels:Record<DetectedLanguage,string>={
+    en:'English',
+    hinglish:'Hinglish: natural Indian English mixed with Hindi written in Latin script',
+    hi:'Hindi',es:'Spanish',fr:'French',de:'German',pt:'Portuguese',ar:'Arabic',
+    bn:'Bengali',ta:'Tamil',te:'Telugu',kn:'Kannada',ml:'Malayalam',gu:'Gujarati',
+    pa:'Punjabi',unknown:"the user's language"
+  };
+  return labels[language]||labels.en;
+}
