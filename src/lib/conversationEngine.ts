@@ -150,6 +150,17 @@ export function normalizeInput(raw: string, extraVocabulary: string[] = []): Nor
   return { raw, cleaned, tokens, isQuestion, hasPunctuation, language, correctedText };
 }
 
+function localizeReply(
+  language: import('./patternLibrary.js').DetectedLanguage,
+  english: string,
+  hinglish: string,
+  hindi: string
+): string {
+  if (language === 'hi') return hindi;
+  if (language === 'hinglish') return hinglish;
+  return english;
+}
+
 function getLastAssistantMessage(record: ConversationRecord): string | null {
   for (let i = record.messages.length - 1; i >= 0; i--) {
     if (record.messages[i].role === 'assistant') {
@@ -179,7 +190,10 @@ export function classifyConversationIntent(
       primaryType: 'CLOSING_INTENT',
       secondaryTypes: isGoodbyeIntent(q) ? ['GOODBYE'] : [],
       requiresKnowledgeRetrieval: false,
-      directReply: "You're very welcome. Have a great day!",
+      directReply: localizeReply(input.language,
+      "You're very welcome. Have a great day!",
+      "You're very welcome! Aapka din achha rahe.",
+      "आपका स्वागत है। आपका दिन शुभ रहे।"),
       isClosing: true,
       needsHumanHandoff: false,
       suggestedActions: []
@@ -225,7 +239,10 @@ export function classifyConversationIntent(
               primaryType: 'BOOKING',
               secondaryTypes: ['LEAD_REQUEST'],
               requiresKnowledgeRetrieval: false,
-              directReply: `Thanks ${formattedName}! What phone number or email should I use to capture your enquiry?`,
+              directReply: localizeReply(input.language,
+                `Thanks ${formattedName}! What phone number or email should I use to capture your enquiry?`,
+                `Thanks ${formattedName}! Apna phone number ya email share kar dijiye, main aapki enquiry capture kar deta hoon.`,
+                `धन्यवाद ${formattedName}! अपनी enquiry capture करने के लिए phone number या email साझा कर दीजिए।`),
               isClosing: false,
               needsHumanHandoff: false,
               suggestedActions: []
@@ -270,7 +287,10 @@ export function classifyConversationIntent(
       primaryType: 'BOOKING',
       secondaryTypes: ['LEAD_REQUEST'],
       requiresKnowledgeRetrieval: false,
-      directReply: "I'd be glad to help you register! May I know your name please?",
+      directReply: localizeReply(input.language,
+        "I'd be glad to help you register! May I know your name please?",
+        "Bilkul! Registration ke liye aapka naam bata dijiye.",
+        "ज़रूर! Registration के लिए आपका नाम बता दीजिए।"),
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: []
@@ -283,7 +303,10 @@ export function classifyConversationIntent(
       primaryType: 'HUMAN_HANDOFF',
       secondaryTypes: [],
       requiresKnowledgeRetrieval: false,
-      directReply: `I can capture your details here for the team. Please share your contact details or click 'Connect with Human Support' below.`,
+      directReply: localizeReply(input.language,
+        `I can capture your details here for the team. Please share your contact details or click 'Connect with Human Support' below.`,
+        "Main aapki details team ke liye yahin capture kar sakta hoon. Neeche 'Connect with Human Support' par click karein ya apni contact details share karein.",
+        "मैं आपकी details team के लिए यहीं capture कर सकता हूँ। नीचे 'Connect with Human Support' पर click करें या अपनी contact details साझा करें।"),
       isClosing: false,
       needsHumanHandoff: true,
       suggestedActions: ['Connect with Human Support']
@@ -325,7 +348,10 @@ export function classifyConversationIntent(
       primaryType: 'ACKNOWLEDGEMENT',
       secondaryTypes: [],
       requiresKnowledgeRetrieval: false,
-      directReply: "Great! Let me know if you have any questions about our programs, fees, or class schedules.",
+      directReply: localizeReply(input.language,
+      "Great! Let me know if you have any questions about our programs, fees, or class schedules.",
+      "Great! Programs, fees ya class timings ke baare mein koi question ho to bataiye.",
+      "बहुत बढ़िया! Programs, fees या class timings के बारे में कोई सवाल हो तो बताइए।"),
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: []
@@ -339,7 +365,10 @@ export function classifyConversationIntent(
       primaryType: 'IDENTITY_STATEMENT',
       secondaryTypes: ['SMALL_TALK'],
       requiresKnowledgeRetrieval: false,
-      directReply: `I am ${assistantName}, the AI receptionist for ${businessName}. How can I assist you today?`,
+      directReply: localizeReply(input.language,
+        `I am ${assistantName}, the AI receptionist for ${businessName}. How can I assist you today?`,
+        `Main ${assistantName} hoon, ${businessName} ka AI receptionist. Main aapki kaise help kar sakta hoon?`,
+        `मैं ${assistantName} हूँ, ${businessName} का AI receptionist। मैं आज आपकी कैसे मदद कर सकता हूँ?`),
       isClosing: false,
       needsHumanHandoff: false,
       suggestedActions: ['What services do you offer?', 'What are your prices?', 'How can I get started?']
@@ -354,7 +383,10 @@ export function classifyConversationIntent(
         primaryType: 'GREETING',
         secondaryTypes: ['SMALL_TALK'],
         requiresKnowledgeRetrieval: false,
-        directReply: `Hello! I am the AI receptionist for ${businessName}. How can I assist you today?`,
+        directReply: localizeReply(input.language,
+        `Hello! I am the AI receptionist for ${businessName}. How can I assist you today?`,
+        `Hello! Main ${businessName} ka AI receptionist hoon. Aap kis cheez ke baare mein jaana chahte hain?`,
+        `नमस्ते! मैं ${businessName} का AI receptionist हूँ। मैं आपकी किस तरह मदद कर सकता हूँ?`),
         isClosing: false,
         needsHumanHandoff: false,
         suggestedActions: ['What services do you offer?', 'What is your pricing?', 'How can I get started?']
@@ -371,7 +403,10 @@ export function classifyConversationIntent(
         primaryType: 'BOOKING',
         secondaryTypes: ['LEAD_REQUEST'],
         requiresKnowledgeRetrieval: false,
-        directReply: "Wonderful! May I have your full name to get your registration started?",
+        directReply: localizeReply(input.language,
+          "Wonderful! May I have your full name to get your registration started?",
+          "Great! Registration start karne ke liye aapka full name bata dijiye.",
+          "बहुत बढ़िया! Registration शुरू करने के लिए अपना पूरा नाम बता दीजिए।"),
         isClosing: false,
         needsHumanHandoff: false,
         suggestedActions: []
@@ -386,7 +421,10 @@ export function classifyConversationIntent(
       primaryType: 'NEGATION',
       secondaryTypes: ['CLOSING_INTENT'],
       requiresKnowledgeRetrieval: false,
-      directReply: "No problem at all! If you need more details, you can ask me here. Have a wonderful day!",
+      directReply: localizeReply(input.language,
+      "No problem at all! If you need more details, you can ask me here. Have a wonderful day!",
+      "Koi problem nahi! Agar aur details chahiye to yahin pooch sakte hain. Aapka din achha rahe.",
+      "कोई समस्या नहीं! अगर और details चाहिए तो यहीं पूछ सकते हैं। आपका दिन शुभ रहे।"),
       isClosing: true,
       needsHumanHandoff: false,
       suggestedActions: []
