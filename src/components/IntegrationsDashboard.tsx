@@ -25,6 +25,12 @@ import { Business, AuditLog, IntegrationStatus, IntegrationProvider } from '../t
 import { getAuditLogs, getBusinesses, getAllBusinesses, getIntegrations, saveIntegrations, saveBusiness, resetDatabaseToSeed, addNotification } from '../lib/dbService';
 import { formatDateTime } from '../lib/localization';
 
+const getCsrfHeader = (): Record<string, string> => {
+  if (typeof document === 'undefined') return {};
+  const match = document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/);
+  return match ? { 'x-csrf-token': decodeURIComponent(match[1]) } : {};
+};
+
 interface IntegrationsDashboardProps {
   business: Business;
   onBusinessUpdated: (updated: Business) => void;
@@ -48,14 +54,38 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
     { id: 'gemini_ai', name: 'Google Gemini', category: 'AI', description: 'AI reasoning, RAG and conversation intelligence.', fields: ['api_key', 'model'] },
     { id: 'hubspot_crm', name: 'HubSpot CRM', category: 'CRM', description: 'Contact and deal synchronization.', fields: ['access_token', 'portal_id'] },
     { id: 'salesforce_crm', name: 'Salesforce CRM', category: 'CRM', description: 'Contact and opportunity synchronization.', fields: ['client_id', 'client_secret', 'refresh_token'] },
-    { id: 'custom_webhook', name: 'Custom Webhook', category: 'Webhooks', description: 'Inbound or outbound JSON event delivery.', fields: ['webhook_url', 'signing_secret'] }
+    { id: 'custom_webhook', name: 'Lead Spreadsheet Automation', category: 'Webhooks', description: 'Sends every qualified website lead to your spreadsheet automation through a signed JSON webhook.', fields: ['webhook_url', 'signing_secret'] }
   ];
 
   const getIntegrationFor = (provider: IntegrationProvider) =>
     integrationRecords.find(item => item.id === provider && (item.tenantId || item.businessId) === business.id);
 
   const loadIntegrationWorkspace = async () => {
-    setIntegrationRecords(await getIntegrations(business.id));
+    const localRecords = await getIntegrations(business.id);
+    try {
+      const response = await fetch('/api/tenant/integrations/custom_webhook', {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.configured) {
+        const remoteRecord: IntegrationStatus = {
+          id: 'custom_webhook',
+          name: 'Lead Spreadsheet Automation',
+          category: 'Webhooks',
+          description: 'Sends every qualified website lead to your spreadsheet automation through a signed JSON webhook.',
+          status: 'CONNECTED',
+          lastSync: new Date().toISOString(),
+          tenantId: business.id,
+          businessId: business.id,
+          config: {}
+        };
+        setIntegrationRecords([...localRecords.filter(item => item.id !== 'custom_webhook'), remoteRecord]);
+        return;
+      }
+    } catch {
+      // Local state remains available in preview/development.
+    }
+    setIntegrationRecords(localRecords);
   };
 
   const openIntegrationConfig = (provider: IntegrationProvider) => {
@@ -70,6 +100,18 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
     if (!catalogItem) return;
     setIsSavingIntegration(true);
     try {
+      if (configuringProvider === 'custom_webhook') {
+        const remoteResponse = await fetch('/api/tenant/integrations/custom_webhook', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', ...getCsrfHeader() },
+          body: JSON.stringify(configFields)
+        });
+        const remoteData = await remoteResponse.json().catch(() => null);
+        if (!remoteResponse.ok || !remoteData?.success) {
+          throw new Error(remoteData?.error || 'Unable to save the lead spreadsheet automation.');
+        }
+      }
+
       const next: IntegrationStatus = {
         id: configuringProvider,
         name: catalogItem.name,
@@ -94,6 +136,16 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
   };
 
   const disconnectIntegration = async (provider: IntegrationProvider) => {
+    if (provider === 'custom_webhook') {
+      try {
+        await fetch('/api/tenant/integrations/custom_webhook', {
+          method: 'DELETE',
+          headers: { 'Accept': 'application/json', ...getCsrfHeader() }
+        });
+      } catch {
+        // Continue clearing the local integration state.
+      }
+    }
     const next = integrationRecords.map(item =>
       item.id === provider ? { ...item, status: 'NOT_CONNECTED' as const, config: undefined } : item
     );
