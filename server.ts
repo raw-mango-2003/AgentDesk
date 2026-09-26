@@ -45,7 +45,7 @@ import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTen
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
-import { storageService, gmailService, integrationStore, notificationService } from './src/server/integrations/index.js';
+import { storageService, gmailService, integrationStore, notificationService, syncLeadToSpreadsheet } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
@@ -2120,7 +2120,7 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
     }
 
     // Pipeline Stage 1: Input Normalization
-    const normInput = normalizeInput(safeMessage);
+    const normInput = normalizeInput(safeMessage, effectiveKnowledge.map(k => k.title));
 
     // Pipeline Stage 2: Intent Classification Router
     const classifiedIntent = classifyConversationIntent(normInput, record, currentBusiness.name);
@@ -2148,7 +2148,8 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
           currentBusiness,
           targetedKnowledge,
           normInput.raw,
-          record.state.currentTopic
+          record.state.currentTopic,
+          normInput.language
         );
       }
 
@@ -2833,7 +2834,7 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
     const safeVoiceConversationId = canonicalizePublicConversationId(business.id, conversationId);
     const record = await conversationStore.getOrCreateConversationAsync(safeVoiceConversationId, business.id);
 
-    const normInput = normalizeInput(transcript);
+    const normInput = normalizeInput(transcript, knowledge.map(k => k.title));
     const classifiedIntent = classifyConversationIntent(normInput, record, business.name);
 
     let rawResult;
@@ -2857,7 +2858,8 @@ app.post('/api/voice/process', async (req: Request, res: Response) => {
           business,
           targetedKnowledge,
           normInput.raw,
-          record.state.currentTopic
+          record.state.currentTopic,
+          normInput.language
         );
       }
 
@@ -3047,7 +3049,7 @@ async function startServer() {
 
           ws.send(JSON.stringify({ type: 'status', status: 'thinking' }));
 
-          const normInput = normalizeInput(userText);
+          const normInput = normalizeInput(userText, effectiveKnowledge.map(k => k.title));
           const classifiedIntent = classifyConversationIntent(normInput, currentConvRecord, currentBusiness.name);
 
           let rawResult;
