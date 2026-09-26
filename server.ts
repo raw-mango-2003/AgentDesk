@@ -3061,7 +3061,7 @@ async function startServer() {
 
           ws.send(JSON.stringify({ type: 'status', status: 'thinking' }));
 
-          const normInput = normalizeInput(userText, effectiveKnowledge.map(k => k.title));
+          const normInput = normalizeInput(userText);
           const classifiedIntent = classifyConversationIntent(normInput, currentConvRecord, currentBusiness.name);
 
           let rawResult;
