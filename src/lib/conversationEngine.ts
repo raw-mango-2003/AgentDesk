@@ -8,6 +8,8 @@ import {
   isThankYouIntent,
   isAcknowledgementIntent,
   isGreetingOrSmallTalkIntent,
+  detectLanguage,
+  correctMisspellings,
   isIdentityIntent,
   isHumanHandoffIntent,
   isComplaintOrFrustrationIntent,
@@ -115,6 +117,8 @@ export interface NormalizedInput {
   tokens: string[];
   isQuestion: boolean;
   hasPunctuation: boolean;
+  language: import('./patternLibrary.js').DetectedLanguage;
+  correctedText?: string;
 }
 
 export interface ExtractedIntentsAndEntities {
@@ -131,13 +135,19 @@ export interface ExtractedIntentsAndEntities {
   candidateEntities: string[];
 }
 
-export function normalizeInput(raw: string): NormalizedInput {
-  if (!raw) return { raw: '', cleaned: '', tokens: [], isQuestion: false, hasPunctuation: false };
-  const cleaned = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+export function normalizeInput(raw: string, extraVocabulary: string[] = []): NormalizedInput {
+  if (!raw) {
+    return { raw: '', cleaned: '', tokens: [], isQuestion: false, hasPunctuation: false, language: 'en' };
+  }
+  const language = detectLanguage(raw);
+  const correctedText = correctMisspellings(raw, extraVocabulary);
+  const cleaned = correctedText.trim().toLowerCase().replace(/\s+/g, ' ');
   const tokens = cleaned.replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
-  const isQuestion = raw.includes('?') || /^(what|how|when|where|why|which|can|could|is|are|do|does)\b/i.test(cleaned);
+  const isQuestion =
+    raw.includes('?') ||
+    /^(what|how|when|where|why|which|can|could|is|are|do|does|please|kya|kaise|kab|kahan)\b/i.test(cleaned);
   const hasPunctuation = /[?.!,]/.test(raw);
-  return { raw, cleaned, tokens, isQuestion, hasPunctuation };
+  return { raw, cleaned, tokens, isQuestion, hasPunctuation, language, correctedText };
 }
 
 function getLastAssistantMessage(record: ConversationRecord): string | null {
