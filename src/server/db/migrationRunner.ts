@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import * as baselineMigration from './migrations/001_baseline.js';
+import * as leadDeduplicationMigration from './migrations/002_lead_deduplication.js';
 
 export interface DbMigration {
   version: string;
@@ -8,7 +9,8 @@ export interface DbMigration {
 }
 
 const MIGRATIONS: DbMigration[] = [
-  baselineMigration
+  baselineMigration,
+  leadDeduplicationMigration
 ];
 
 export async function runDatabaseMigrations(client: pg.PoolClient): Promise<void> {
