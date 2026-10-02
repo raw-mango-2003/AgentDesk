@@ -10,13 +10,10 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
-// Periodic local memory cleanup every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [key, record] of rateLimitStore.entries()) {
-    if (now > record.resetAt) {
-      rateLimitStore.delete(key);
-    }
+    if (now > record.resetAt) rateLimitStore.delete(key);
   }
 }, 5 * 60 * 1000);
 
@@ -39,7 +36,7 @@ export async function checkSharedRateLimit(
            END,
            reset_at = CASE
              WHEN agentdesk_rate_limits.reset_at <= $3 THEN $2
-             ELSE agentdesk_limits.reset_at
+             ELSE agentdesk_rate_limits.reset_at
            END
          RETURNING count, reset_at`,
         [key, resetAt, now]
@@ -48,15 +45,11 @@ export async function checkSharedRateLimit(
         const count = Number(result.rows[0].count || 1);
         const rowReset = Number(result.rows[0].reset_at || resetAt);
         const resetSeconds = Math.max(1, Math.ceil((rowReset - now) / 1000));
-        return {
-          allowed: count <= limit,
-          currentCount: count,
-          resetSeconds
-        };
+        return { allowed: count <= limit, currentCount: count, resetSeconds };
       }
     }
-  } catch (err: any) {
-    // Non-fatal warning; fall back to local in-memory store
+  } catch {
+    // Fall through to the local non-authoritative fallback.
   }
 
   const now = Date.now();
@@ -68,20 +61,14 @@ export async function checkSharedRateLimit(
     record.count += 1;
   }
   const resetSeconds = Math.max(1, Math.ceil((record.resetAt - now) / 1000));
-  return {
-    allowed: record.count <= limit,
-    currentCount: record.count,
-    resetSeconds
-  };
+  return { allowed: record.count <= limit, currentCount: record.count, resetSeconds };
 }
 
 export function getClientIp(req: Request): string {
   const cfConnectingIp = req.headers['cf-connecting-ip'] as string;
   if (cfConnectingIp) return cfConnectingIp.trim();
-
   const xForwardedFor = req.headers['x-forwarded-for'] as string;
   if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
-
   return req.ip || req.socket.remoteAddress || '127.0.0.1';
 }
 
@@ -96,10 +83,7 @@ function extractSessionToken(req: Request): string | undefined {
   const cookieHeader = typeof req.headers.cookie === 'string' ? req.headers.cookie : '';
   const cookieMatch = cookieHeader.match(/(?:^|;\s*)agentdesk_session=([^;]+)/);
   if (cookieMatch?.[1]) return decodeURIComponent(cookieMatch[1]);
-
-  const authorization = typeof req.headers.authorization === 'string'
-    ? req.headers.authorization.trim()
-    : '';
+  const authorization = typeof req.headers.authorization === 'string' ? req.headers.authorization.trim() : '';
   const match = authorization.match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
   return match?.[1];
 }
@@ -139,9 +123,7 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (keyPrefix === 'api' && !(await enforcePlatformAdminIntegrationAccess(req, res))) {
-        return;
-      }
+      if (keyPrefix === 'api' && !(await enforcePlatformAdminIntegrationAccess(req, res))) return;
 
       const ip = getClientIp(req);
       const isPublicLeadEndpoint = keyPrefix === 'api' && (
@@ -154,7 +136,6 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
       const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, effectiveLimit, windowMs);
       const remaining = Math.max(0, effectiveLimit - currentCount);
-
       res.setHeader('X-RateLimit-Limit', effectiveLimit.toString());
       res.setHeader('X-RateLimit-Remaining', remaining.toString());
       res.setHeader('X-RateLimit-Reset', resetSeconds.toString());
@@ -163,9 +144,7 @@ export function createRateLimiter(options: RateLimiterOptions) {
         res.setHeader('Retry-After', resetSeconds.toString());
         return res.status(429).json({
           success: false,
-          error: isPublicLeadEndpoint
-            ? 'Lead submission rate limit exceeded. Please wait a moment.'
-            : message,
+          error: isPublicLeadEndpoint ? 'Lead submission rate limit exceeded. Please wait a moment.' : message,
           retryAfter: resetSeconds
         });
       }
@@ -178,65 +157,12 @@ export function createRateLimiter(options: RateLimiterOptions) {
   };
 }
 
-export const authRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  maxRequests: 15,
-  message: 'Too many authentication attempts. For security reasons, please try again in a few minutes.',
-  keyPrefix: 'auth'
-});
-
-export const passwordResetRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000,
-  maxRequests: 5,
-  message: 'Too many password reset requests. Please check your inbox or try again in an hour.',
-  keyPrefix: 'pw_reset'
-});
-
-export const otpRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  maxRequests: 5,
-  message: 'Too many verification code requests. Please wait a few minutes before trying again.',
-  keyPrefix: 'otp'
-});
-
-export const paymentRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000,
-  maxRequests: 20,
-  message: 'Payment requests are currently rate-limited. Please retry shortly.',
-  keyPrefix: 'pay'
-});
-
-export const generalApiRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000,
-  maxRequests: 120,
-  message: 'API rate limit exceeded.',
-  keyPrefix: 'api'
-});
-
-export const clientErrorRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000,
-  maxRequests: 10,
-  message: 'Client error telemetry rate limit exceeded.',
-  keyPrefix: 'client_error'
-});
-
-export const embedApiRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000,
-  maxRequests: 60,
-  message: 'Embed assistant query rate limit exceeded. Please wait a moment before sending another message.',
-  keyPrefix: 'embed'
-});
-
-export const aiGenerationRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000,
-  maxRequests: 40,
-  message: 'AI generation capacity reached. Please wait a moment.',
-  keyPrefix: 'ai_gen'
-});
-
-export const exportRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000,
-  maxRequests: 10,
-  message: 'Data export rate limit reached. Please wait before generating another export.',
-  keyPrefix: 'export'
-});
+export const authRateLimiter = createRateLimiter({ windowMs: 15 * 60 * 1000, maxRequests: 15, message: 'Too many authentication attempts. For security reasons, please try again in a few minutes.', keyPrefix: 'auth' });
+export const passwordResetRateLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, maxRequests: 5, message: 'Too many password reset requests. Please check your inbox or try again in an hour.', keyPrefix: 'pw_reset' });
+export const otpRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, maxRequests: 5, message: 'Too many verification code requests. Please wait a few minutes before trying again.', keyPrefix: 'otp' });
+export const paymentRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 20, message: 'Payment requests are currently rate-limited. Please retry shortly.', keyPrefix: 'pay' });
+export const generalApiRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 120, message: 'API rate limit exceeded.', keyPrefix: 'api' });
+export const clientErrorRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 10, message: 'Client error telemetry rate limit exceeded.', keyPrefix: 'client_error' });
+export const embedApiRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 60, message: 'Embed assistant query rate limit exceeded. Please wait a moment before sending another message.', keyPrefix: 'embed' });
+export const aiGenerationRateLimiter = createRateLimiter({ windowMs: 60 * 1000, maxRequests: 40, message: 'AI generation capacity reached. Please wait a moment.', keyPrefix: 'ai_gen' });
+export const exportRateLimiter = createRateLimiter({ windowMs: 10 * 60 * 1000, maxRequests: 10, message: 'Data export rate limit reached. Please wait before generating another export.', keyPrefix: 'export' });
