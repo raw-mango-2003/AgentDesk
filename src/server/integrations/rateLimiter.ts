@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { postgresClient } from '../db/postgresClient.js';
+import { getSession } from '../auth/sessionStore.js';
+import { getUserById } from '../auth/userRegistry.js';
 
 interface RateLimitRecord {
   count: number;
@@ -37,7 +39,7 @@ export async function checkSharedRateLimit(
            END,
            reset_at = CASE
              WHEN agentdesk_rate_limits.reset_at <= $3 THEN $2
-             ELSE agentdesk_rate_limits.reset_at
+             ELSE agentdesk_limits.reset_at
            END
          RETURNING count, reset_at`,
         [key, resetAt, now]
@@ -57,7 +59,6 @@ export async function checkSharedRateLimit(
     // Non-fatal warning; fall back to local in-memory store
   }
 
-  // Local fallback (in-memory non-authoritative fallback for dev or transient PG disconnects)
   const now = Date.now();
   let record = rateLimitStore.get(key);
   if (!record || now > record.resetAt) {
@@ -75,17 +76,11 @@ export async function checkSharedRateLimit(
 }
 
 export function getClientIp(req: Request): string {
-  // Cloudflare header takes highest priority
   const cfConnectingIp = req.headers['cf-connecting-ip'] as string;
-  if (cfConnectingIp) {
-    return cfConnectingIp.trim();
-  }
+  if (cfConnectingIp) return cfConnectingIp.trim();
 
-  // Standard reverse proxy forwarded header
   const xForwardedFor = req.headers['x-forwarded-for'] as string;
-  if (xForwardedFor) {
-    return xForwardedFor.split(',')[0].trim();
-  }
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
 
   return req.ip || req.socket.remoteAddress || '127.0.0.1';
 }
@@ -97,6 +92,43 @@ export interface RateLimiterOptions {
   keyPrefix?: string;
 }
 
+function extractSessionToken(req: Request): string | undefined {
+  const cookieHeader = typeof req.headers.cookie === 'string' ? req.headers.cookie : '';
+  const cookieMatch = cookieHeader.match(/(?:^|;\s*)agentdesk_session=([^;]+)/);
+  if (cookieMatch?.[1]) return decodeURIComponent(cookieMatch[1]);
+
+  const authorization = typeof req.headers.authorization === 'string'
+    ? req.headers.authorization.trim()
+    : '';
+  const match = authorization.match(/^Bearer\s+([A-Za-z0-9_.-]+)$/i);
+  return match?.[1];
+}
+
+async function enforcePlatformAdminIntegrationAccess(req: Request, res: Response): Promise<boolean> {
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  if (!path.includes('/api/tenant/integrations/')) return true;
+
+  const token = extractSessionToken(req);
+  if (!token) {
+    res.status(401).json({ success: false, error: 'Unauthorized: Platform Administrator authentication required.' });
+    return false;
+  }
+
+  const session = await getSession(token);
+  const user = session ? getUserById(session.userId) : null;
+  if (!user) {
+    res.status(401).json({ success: false, error: 'Unauthorized: Valid authentication session required.' });
+    return false;
+  }
+
+  if (user.role !== 'PLATFORM_ADMIN') {
+    res.status(403).json({ success: false, error: 'Forbidden: Tenant integrations are managed by the Platform Administrator.' });
+    return false;
+  }
+
+  return true;
+}
+
 export function createRateLimiter(options: RateLimiterOptions) {
   const {
     windowMs,
@@ -106,20 +138,20 @@ export function createRateLimiter(options: RateLimiterOptions) {
   } = options;
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    const ip = getClientIp(req);
-
-    // The public lead endpoint must have a distributed limit, not only the
-    // legacy in-memory guard in server.ts. This applies to every Render
-    // instance because checkSharedRateLimit persists the counter in Postgres.
-    const isPublicLeadEndpoint = keyPrefix === 'api' && (
-      req.path === '/widget/lead' ||
-      req.originalUrl.split('?')[0].endsWith('/api/widget/lead')
-    );
-    const effectiveLimit = isPublicLeadEndpoint ? 10 : maxRequests;
-    const effectiveKeyPrefix = isPublicLeadEndpoint ? 'lead_shared' : keyPrefix;
-    const key = `${effectiveKeyPrefix}:${ip}`;
-
     try {
+      if (keyPrefix === 'api' && !(await enforcePlatformAdminIntegrationAccess(req, res))) {
+        return;
+      }
+
+      const ip = getClientIp(req);
+      const isPublicLeadEndpoint = keyPrefix === 'api' && (
+        req.path === '/widget/lead' ||
+        req.originalUrl.split('?')[0].endsWith('/api/widget/lead')
+      );
+      const effectiveLimit = isPublicLeadEndpoint ? 10 : maxRequests;
+      const effectiveKeyPrefix = isPublicLeadEndpoint ? 'lead_shared' : keyPrefix;
+      const key = `${effectiveKeyPrefix}:${ip}`;
+
       const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, effectiveLimit, windowMs);
       const remaining = Math.max(0, effectiveLimit - currentCount);
 
@@ -146,7 +178,6 @@ export function createRateLimiter(options: RateLimiterOptions) {
   };
 }
 
-// Preset rate limiters for production security
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   maxRequests: 15,
