@@ -40,6 +40,47 @@ USING ranked
 WHERE lead.ctid = ranked.ctid
   AND ranked.rn > 1;
 
+-- If application code submits the same contact again, redirect the insert to
+-- the existing tenant lead so the existing ON CONFLICT(id) update path remains
+-- safe without creating a second contact record.
+CREATE OR REPLACE FUNCTION agentdesk_merge_duplicate_lead()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  existing_id VARCHAR(128);
+  existing_created_at VARCHAR(64);
+BEGIN
+  SELECT id, created_at
+    INTO existing_id, existing_created_at
+  FROM agentdesk_leads
+  WHERE tenant_id = NEW.tenant_id
+    AND (
+      (NEW.email IS NOT NULL AND BTRIM(NEW.email) <> ''
+       AND email IS NOT NULL AND LOWER(BTRIM(email)) = LOWER(BTRIM(NEW.email)))
+      OR
+      (NEW.phone IS NOT NULL AND REGEXP_REPLACE(NEW.phone, '[^0-9]+', '', 'g') <> ''
+       AND phone IS NOT NULL
+       AND REGEXP_REPLACE(phone, '[^0-9]+', '', 'g') = REGEXP_REPLACE(NEW.phone, '[^0-9]+', '', 'g'))
+    )
+  ORDER BY updated_at DESC, created_at DESC
+  LIMIT 1;
+
+  IF existing_id IS NOT NULL THEN
+    NEW.id := existing_id;
+    NEW.created_at := existing_created_at;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_agentdesk_merge_duplicate_lead ON agentdesk_leads;
+CREATE TRIGGER trg_agentdesk_merge_duplicate_lead
+BEFORE INSERT ON agentdesk_leads
+FOR EACH ROW
+EXECUTE FUNCTION agentdesk_merge_duplicate_lead();
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_agentdesk_leads_tenant_email_norm
   ON agentdesk_leads (tenant_id, LOWER(BTRIM(email)))
   WHERE email IS NOT NULL AND BTRIM(email) <> '';
