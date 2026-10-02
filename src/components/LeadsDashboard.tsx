@@ -14,7 +14,7 @@ import {
   Sparkles 
 } from 'lucide-react';
 import { Business, Lead, LeadStatus } from '../types';
-import { getLeads, updateLeadStatus } from '../lib/dbService';
+import { getLeads, updateLeadStatus, safeFetchJson } from '../lib/dbService';
 
 interface LeadsDashboardProps {
   business: Business;
@@ -30,9 +30,27 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ business }) => {
 
   const loadData = async () => {
     setLoading(true);
-    const data = await getLeads(business.id);
-    setLeads(data);
-    setLoading(false);
+    try {
+      // Platform Admin can switch tenant context. The lead API must receive
+      // the selected tenant explicitly instead of silently querying the admin
+      // tenant. Business users remain protected by the server-side tenant guard.
+      const data = await safeFetchJson(`/api/leads?businessId=${encodeURIComponent(business.id)}`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Tenant-ID': business.id
+        }
+      });
+      if (data?.success && Array.isArray(data.leads)) {
+        setLeads(data.leads as Lead[]);
+      } else {
+        // Preserve the existing data-service fallback behavior if the API
+        // response shape is unavailable.
+        const fallback = await getLeads(business.id);
+        setLeads(fallback);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
