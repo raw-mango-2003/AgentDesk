@@ -48,6 +48,24 @@ assert(secondChat.success && secondChat.conversationId === firstChat.conversatio
 assert(typeof secondChat.reply === 'string' && secondChat.reply.trim().length > 0, 'AI did not return a follow-up response.');
 assert(secondChat.conversationState && typeof secondChat.conversationState === 'object', 'Conversation state was not returned.');
 
+// Regression coverage for the exact human-handoff path used by the widget UI.
+const handoffConversationId = `e2e_handoff_${Date.now()}`;
+const handoffReply = await request('/api/widget/chat', {
+  method: 'POST',
+  body: JSON.stringify({
+    agentId,
+    conversationId: handoffConversationId,
+    message: 'I want to talk to a human'
+  })
+});
+assert(handoffReply.success, 'Human handoff request was rejected.');
+assert(handoffReply.conversationState && typeof handoffReply.conversationState === 'object', 'Human handoff did not return conversation state.');
+assert(
+  handoffReply.conversationState.needsHumanHandoff === true ||
+  /name|details|human|team/i.test(handoffReply.reply || ''),
+  'Human handoff did not enter the lead collection flow.'
+);
+
 const contactConversationId = `e2e_contact_${Date.now()}`;
 const contactReply = await request('/api/chat', {
   method: 'POST',
@@ -82,14 +100,14 @@ assert(/captured your (phone number|email address)/i.test(contactReply.reply || 
 assert(/jaiswaltest@example.com/i.test(contactReply.reply || '') === false, 'Application chat should not echo the visitor email back to the user.');
 assert(/AgentDesk Technologies provides|24\/7 AI Sales Employee/i.test(contactReply.reply || '') === false, 'Application chat incorrectly routed contact details to the business knowledge response.');
 
-
+const leadEmail = `e2e-${Date.now()}@agentdesk.internal`;
 const lead = await request('/api/widget/lead', {
   method: 'POST',
   body: JSON.stringify({
     agentId,
     conversationId,
     name: 'E2E Test Customer',
-    email: `e2e-${Date.now()}@agentdesk.internal`,
+    email: leadEmail,
     phone: '+10000000000',
     notes: 'Automated end-to-end customer journey test'
   })
@@ -98,9 +116,24 @@ assert(lead.success && lead.message === 'Lead captured successfully', 'Lead capt
 assert(lead.lead && lead.lead.businessId === config.business.id, 'Captured lead is not associated with the resolved tenant.');
 assert(lead.lead.conversationId === firstChat.conversationId, 'Captured lead is not linked to the customer conversation.');
 
+// Duplicate submission regression: the same contact must not create a second
+// database lead. The database migration collapses this to the existing record.
+const duplicateLead = await request('/api/widget/lead', {
+  method: 'POST',
+  body: JSON.stringify({
+    agentId,
+    conversationId,
+    name: 'E2E Test Customer Updated',
+    email: leadEmail,
+    phone: '+10000000000',
+    notes: 'Duplicate submission regression test'
+  })
+});
+assert(duplicateLead.success && duplicateLead.message === 'Lead captured successfully', 'Duplicate lead submission should remain idempotent.');
+
 console.log(JSON.stringify({
   success: true,
-  journey: ['widget-config', 'customer-message', 'conversation-continuation', 'lead-capture'],
+  journey: ['widget-config', 'customer-message', 'conversation-continuation', 'human-handoff', 'lead-capture', 'duplicate-lead-idempotency'],
   agentId,
   businessId: config.business.id,
   conversationId,
