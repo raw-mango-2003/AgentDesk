@@ -1,9 +1,11 @@
 import crypto from 'crypto';
 import { integrationStore } from './integrationStore.js';
+import { queueService } from './queueService.js';
 
 export interface LeadSpreadsheetSyncResult {
   configured: boolean;
   delivered: boolean;
+  queued?: boolean;
   status?: number;
   error?: string;
 }
@@ -23,7 +25,16 @@ function validateWebhookUrl(value: string): URL | null {
   }
 }
 
-export async function syncLeadToSpreadsheet(
+async function getTenantWebhookConfig(tenantId: string): Promise<Record<string, string>> {
+  try {
+    await integrationStore.syncWithPostgres();
+  } catch {
+    // The in-memory integration store may still have a valid tenant configuration.
+  }
+  return integrationStore.getTenantIntegrationConfig(tenantId, 'custom_webhook');
+}
+
+export async function deliverLeadToSpreadsheet(
   lead: Record<string, any>,
   business: Record<string, any>,
   conversation?: Record<string, any>
@@ -31,18 +42,11 @@ export async function syncLeadToSpreadsheet(
   const tenantId = String(lead.tenantId || lead.businessId || business.id || '').trim().toLowerCase();
   if (!tenantId) return { configured: false, delivered: false };
 
-  try {
-    await integrationStore.syncWithPostgres();
-  } catch {
-    // The in-memory integration store may still have a valid configuration.
-  }
-
-  const configured = integrationStore.getTenantIntegrationConfig(tenantId, 'custom_webhook');
+  const configured = await getTenantWebhookConfig(tenantId);
+  // Never fall back to a global spreadsheet webhook. A customer lead must only
+  // be delivered through that tenant's explicitly configured integration.
   const webhookUrl = String(
-    configured.webhook_url ||
-    configured.lead_webhook_url ||
-    process.env.LEAD_SPREADSHEET_WEBHOOK_URL ||
-    ''
+    configured.webhook_url || configured.lead_webhook_url || ''
   ).trim();
 
   const url = validateWebhookUrl(webhookUrl);
@@ -113,6 +117,26 @@ export async function syncLeadToSpreadsheet(
     if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 300));
   }
 
-  console.warn('[LeadSpreadsheetSync] Delivery failed:', lastError);
   return { configured: true, delivered: false, error: lastError };
+}
+
+export async function syncLeadToSpreadsheet(
+  lead: Record<string, any>,
+  business: Record<string, any>,
+  conversation?: Record<string, any>
+): Promise<LeadSpreadsheetSyncResult> {
+  const result = await deliverLeadToSpreadsheet(lead, business, conversation);
+  if (!result.configured || result.delivered) return result;
+
+  try {
+    await queueService.enqueue(
+      'sync_lead_spreadsheet',
+      { lead, business, conversation },
+      { maxAttempts: 5, delayMs: 15000 }
+    );
+    return { ...result, queued: true };
+  } catch (error: any) {
+    console.error('[LeadSpreadsheetSync] Failed to enqueue retry:', error?.message || error);
+    return result;
+  }
 }
