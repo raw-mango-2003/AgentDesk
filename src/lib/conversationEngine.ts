@@ -208,7 +208,6 @@ function getLastAssistantMessage(record: ConversationRecord): string | null {
   return null;
 }
 
-// 1. CLASSIFY CONVERSATION INTENT (Router)
 export function classifyConversationIntent(
   input: NormalizedInput,
   record: ConversationRecord,
@@ -217,11 +216,9 @@ export function classifyConversationIntent(
   const q = input.cleaned;
   const lastAssistantMsg = getLastAssistantMessage(record);
 
-  // Initialize defaults for memory safety
   if (!record.state.conversationStage) record.state.conversationStage = 'COURSE_DISCUSSION';
   if (!record.state.bookingState) record.state.bookingState = { stage: 'IDLE' };
 
-  // 1. CLOSING_INTENT (Explicit phrases like "No, that's all", "That's all", "I'm good", "All set")
   if (isExplicitClosingIntent(q)) {
     record.state.conversationStage = 'CLOSED';
     return {
@@ -238,7 +235,6 @@ export function classifyConversationIntent(
     };
   }
 
-  // 2. GOODBYE INTENT
   if (isGoodbyeIntent(q) && !isBookingActionIntent(q)) {
     record.state.conversationStage = 'CLOSED';
     return {
@@ -252,27 +248,21 @@ export function classifyConversationIntent(
     };
   }
 
-  // 3. ACTIVE BOOKING FLOW STATE MACHINE
   if (record.state.conversationStage === 'BOOKING') {
     const stage = record.state.bookingState.stage || 'COLLECTING_NAME';
-    
-    // Check if user asked an explicit new course question or non-name response
     const isExplicitNewQuestion = /\b(fee|fees|cost|price|duration|timing|timings|schedule|course|courses|program|analytics|marketing|development|full stack|syllabus|refund|discount|online|offline|class|classes|demo|location|where|when|what|how|why|which)\b/i.test(q) && !isBookingActionIntent(q);
 
     if (!isExplicitNewQuestion) {
       if (stage === 'COLLECTING_NAME') {
         const isNotNameResponse = /\b(fee|fees|cost|price|duration|timing|timings|schedule|course|courses|program|analytics|marketing|development|full stack|syllabus|refund|discount|online|offline|class|classes|demo|location|where|when|what|how|why|which|can|could|would|will|is|are|do|does|yes|no|hi|hello|hey|thanks|thank)\b/i.test(q) || q.length > 35 || q.split(/\s+/).length > 4;
-
         if (!isNotNameResponse || /^(my name is|i'm|i am|this is|call me)\s+/i.test(q)) {
           const rawName = q.replace(/^(my name is|i'm|i am|this is|call me)\s*/i, '').trim();
           const words = rawName.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
           const formattedName = words.join(' ');
-
           if (formattedName && formattedName.length >= 2) {
             record.state.bookingState.name = formattedName;
             record.state.bookingState.stage = 'COLLECTING_CONTACT';
             record.customerName = formattedName;
-
             return {
               primaryType: 'BOOKING',
               secondaryTypes: ['LEAD_REQUEST'],
@@ -292,7 +282,6 @@ export function classifyConversationIntent(
       if (stage === 'COLLECTING_CONTACT') {
         const emailMatch = q.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
         const phoneMatch = q.match(/(\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9})/);
-
         if (emailMatch || phoneMatch) {
           const contact = emailMatch ? emailMatch[0] : phoneMatch ? phoneMatch[0] : q;
           record.state.bookingState.contact = contact;
@@ -301,7 +290,6 @@ export function classifyConversationIntent(
           if (emailMatch) record.customerEmail = emailMatch[0];
           if (phoneMatch) record.customerPhone = phoneMatch[0];
           record.leadCaptured = true;
-
           const customerName = record.state.bookingState.name || 'there';
           return {
             primaryType: 'BOOKING',
@@ -317,7 +305,6 @@ export function classifyConversationIntent(
     }
   }
 
-  // 4. BOOKING / DEMO INITIATION INTENT
   if (isBookingActionIntent(q)) {
     record.state.conversationStage = 'BOOKING';
     record.state.bookingState = { stage: 'COLLECTING_NAME' };
@@ -335,36 +322,40 @@ export function classifyConversationIntent(
     };
   }
 
-  // 5. HUMAN HANDOFF INTENT
   if (isHumanHandoffIntent(q)) {
+    record.state.conversationStage = 'BOOKING';
+    record.state.bookingState = { stage: 'COLLECTING_NAME' };
     return {
       primaryType: 'HUMAN_HANDOFF',
-      secondaryTypes: [],
+      secondaryTypes: ['LEAD_REQUEST'],
       requiresKnowledgeRetrieval: false,
       directReply: localizeReply(input.language,
-        `I can capture your details here for the team. Please share your contact details or click 'Connect with Human Support' below.`,
-        "Main aapki details team ke liye yahin capture kar sakta hoon. Neeche 'Connect with Human Support' par click karein ya apni contact details share karein.",
-        "मैं आपकी details team के लिए यहीं capture कर सकता हूँ। नीचे 'Connect with Human Support' पर click करें या अपनी contact details साझा करें।"),
+        `Absolutely. I can collect your details for the team. May I have your name first?`,
+        `Bilkul. Main team ke liye aapki details capture kar leta hoon. Sabse pehle aapka naam bata dijiye.`,
+        `बिल्कुल। मैं team के लिए आपकी details capture कर लेता हूँ। सबसे पहले अपना नाम बता दीजिए।`),
       isClosing: false,
       needsHumanHandoff: true,
       suggestedActions: ['Connect with Human Support']
     };
   }
 
-  // 6. COMPLAINT / FRUSTRATION INTENT
   if (isComplaintOrFrustrationIntent(q)) {
+    record.state.conversationStage = 'BOOKING';
+    record.state.bookingState = { stage: 'COLLECTING_NAME' };
     return {
       primaryType: 'COMPLAINT',
-      secondaryTypes: ['HUMAN_HANDOFF'],
+      secondaryTypes: ['HUMAN_HANDOFF', 'LEAD_REQUEST'],
       requiresKnowledgeRetrieval: false,
-      directReply: "I apologize for the frustration. I can capture your details here so our team can follow up.",
+      directReply: localizeReply(input.language,
+        `I apologize for the frustration. I can capture your details so our team can follow up. May I have your name?`,
+        `Sorry for the inconvenience. Main team ke follow-up ke liye aapki details capture kar sakta hoon. Aapka naam bata dijiye.`,
+        `असुविधा के लिए क्षमा करें। मैं team के follow-up के लिए आपकी details capture कर सकता हूँ। अपना नाम बता दीजिए।`),
       isClosing: false,
       needsHumanHandoff: true,
       suggestedActions: ['Connect with Human Support']
     };
   }
 
-  // 7. THANK YOU INTENT
   if (isThankYouIntent(q)) {
     const isAlsoAskingQuestion = /\b(fee|cost|price|duration|timing|syllabus|refund|discount|admission|courses)\b/i.test(q);
     if (!isAlsoAskingQuestion) {
@@ -380,7 +371,6 @@ export function classifyConversationIntent(
     }
   }
 
-  // 8. ACKNOWLEDGEMENT / OKAY / SURE INTENT
   if (isAcknowledgementIntent(q) && q.split(/\s+/).length <= 3) {
     return {
       primaryType: 'ACKNOWLEDGEMENT',
@@ -396,7 +386,6 @@ export function classifyConversationIntent(
     };
   }
 
-  // 9. IDENTITY / "WHO ARE YOU" / "WHAT IS YOUR NAME" / "WHO DO YOU WORK FOR"
   if (isIdentityIntent(q)) {
     const assistantName = (businessName ? `${businessName} AI Assistant` : 'AI Assistant');
     return {
@@ -413,7 +402,6 @@ export function classifyConversationIntent(
     };
   }
 
-  // 10. PURE GREETING OR SMALL TALK INTENT
   if (isGreetingOrSmallTalkIntent(q) && q.split(/\s+/).length <= 4) {
     const isAlsoQuestion = /\b(fee|cost|price|duration|timing|syllabus|course|program)\b/i.test(q);
     if (!isAlsoQuestion) {
@@ -432,9 +420,14 @@ export function classifyConversationIntent(
     }
   }
 
-  // 11. AFFIRMATIVE / YES RESPONSE TO PREVIOUS ASSISTANT OFFER
+  // Context-aware affirmative response: if the assistant just offered to capture/contact the visitor for a human,
+  // "yes", "sure", "haan", etc. must enter the lead-capture state instead of falling back to generic acknowledgement.
   if (isAffirmativeResponse(q) && lastAssistantMsg && q.split(/\s+/).length <= 3) {
-    if (lastAssistantMsg.toLowerCase().includes('demo') || lastAssistantMsg.toLowerCase().includes('register')) {
+    const lastAssistantLower = lastAssistantMsg.toLowerCase();
+    const acceptedLeadCaptureOffer = /capture (your|the) details|capture your contact|share your contact|contact details|connect with human|human support|team (can|will) (reach|follow)|reach out to you|follow up with you/.test(lastAssistantLower);
+    const acceptedBookingOffer = lastAssistantLower.includes('demo') || lastAssistantLower.includes('register');
+
+    if (acceptedLeadCaptureOffer || acceptedBookingOffer) {
       record.state.conversationStage = 'BOOKING';
       record.state.bookingState = { stage: 'COLLECTING_NAME' };
       return {
@@ -442,17 +435,16 @@ export function classifyConversationIntent(
         secondaryTypes: ['LEAD_REQUEST'],
         requiresKnowledgeRetrieval: false,
         directReply: localizeReply(input.language,
-          "Wonderful! May I have your full name to get your registration started?",
-          "Great! Registration start karne ke liye aapka full name bata dijiye.",
-          "बहुत बढ़िया! Registration शुरू करने के लिए अपना पूरा नाम बता दीजिए।"),
+          "Great. May I have your full name to get your enquiry started?",
+          "Great. Aapka full name bata dijiye, main aapki enquiry capture kar deta hoon.",
+          "बहुत बढ़िया। अपनी enquiry शुरू करने के लिए अपना पूरा नाम बता दीजिए।"),
         isClosing: false,
-        needsHumanHandoff: false,
-        suggestedActions: []
+        needsHumanHandoff: acceptedLeadCaptureOffer,
+        suggestedActions: acceptedLeadCaptureOffer ? ['Connect with Human Support'] : []
       };
     }
   }
 
-  // 12. NEGATION / "NO" RESPONSE (Without closing phrase)
   if (isNegativeResponse(q) && q.split(/\s+/).length <= 2) {
     record.state.conversationStage = 'CLOSED';
     return {
@@ -462,14 +454,13 @@ export function classifyConversationIntent(
       directReply: localizeReply(input.language,
       "No problem at all! If you need more details, you can ask me here. Have a wonderful day!",
       "Koi problem nahi! Agar aur details chahiye to yahin pooch sakte hain. Aapka din achha rahe.",
-      "कोई समस्या नहीं! अगर और details चाहिए तो यहीं पूछ सकते हैं। आपका दिन शुभ रहे।"),
+      "कोई समस्या नहीं! अगर और details चाहिए तो यहीं पूछ सकते हैं। आपका दिन शुभ रहे."),
       isClosing: true,
       needsHumanHandoff: false,
       suggestedActions: []
     };
   }
 
-  // Default: Requires knowledge retrieval
   return {
     primaryType: 'INFORMATION_REQUEST',
     secondaryTypes: [],
@@ -480,7 +471,6 @@ export function classifyConversationIntent(
   };
 }
 
-// 2. EXTRACT INTENTS AND ENTITIES (Context-Aware Multi-Tenant Entity Extractor)
 export function extractIntentsAndEntities(
   input: NormalizedInput,
   record: ConversationRecord,
@@ -490,7 +480,6 @@ export function extractIntentsAndEntities(
   const intents: string[] = [];
   const attributes: string[] = [];
 
-  // Match intent categories from pattern library
   if (matchesPatternCategory(q, 'pricing')) { intents.push('pricing'); attributes.push('fee'); }
   if (matchesPatternCategory(q, 'duration')) { intents.push('duration'); attributes.push('duration'); }
   if (matchesPatternCategory(q, 'schedule')) { intents.push('schedule'); attributes.push('timings'); }
@@ -503,28 +492,20 @@ export function extractIntentsAndEntities(
   if (matchesPatternCategory(q, 'thanks')) { intents.push('thanks'); }
   if (matchesPatternCategory(q, 'goodbye')) { intents.push('goodbye'); }
 
-  // Detect course entities mentioned in query
   const candidateEntities: string[] = [];
-  
-  // Tech entities
   if (/\b(data analytics|analytics|data analysis|power bi|tableau|sql)\b/i.test(q)) candidateEntities.push('Data Analytics');
   if (/\b(python|machine learning|ai|artificial intelligence)\b/i.test(q)) candidateEntities.push('Python for AI');
   if (/\b(full stack|web development|frontend|backend|mern)\b/i.test(q)) candidateEntities.push('Full Stack Development');
   if (/\b(digital marketing|seo|sem|social media marketing)\b/i.test(q)) candidateEntities.push('Digital Marketing');
-
-  // Healthcare / Medical Coding entities
   if (/\b(cpc|certified professional coder|medical coding|coding exam|cpc exam)\b/i.test(q)) candidateEntities.push('CPC Exam Prep');
   if (/\b(medical billing|billing|insurance reimbursement)\b/i.test(q)) candidateEntities.push('Medical Billing');
   if (/\b(icd-10|inpatient|inpatient coding|hospital coding)\b/i.test(q)) candidateEntities.push('Inpatient ICD-10 Coding');
-
-  // Trade / Vocational entities
   if (/\b(hvac|hvac technician|air conditioning|heating|epa 608)\b/i.test(q)) candidateEntities.push('HVAC Technician');
   if (/\b(electrical|electrician|electrical apprenticeship)\b/i.test(q)) candidateEntities.push('Electrical Apprenticeship');
   if (/\b(phlebotomy|phlebotomist|blood draw)\b/i.test(q)) candidateEntities.push('Phlebotomy');
 
   let resolvedEntity: string | null = null;
   let resolvedEntityType: 'course' | 'demo' | 'policy' | 'admissions' | 'general' = 'course';
-
   if (candidateEntities.length === 1) {
     resolvedEntity = candidateEntities[0];
     record.state.currentTopic = resolvedEntity;
@@ -532,7 +513,6 @@ export function extractIntentsAndEntities(
   } else if (candidateEntities.length > 1) {
     resolvedEntity = candidateEntities[0];
   } else {
-    // Check if query is about demo, refund, or admissions
     if (intents.includes('demo') || /\b(demo|trial|sample)\b/i.test(q)) {
       resolvedEntity = 'Demo';
       resolvedEntityType = 'demo';
@@ -546,7 +526,6 @@ export function extractIntentsAndEntities(
       resolvedEntity = 'General';
       resolvedEntityType = 'general';
     } else if (isShortFollowUp(q) && record.state.currentTopic) {
-      // Memory resolution: inherit active topic from session memory
       resolvedEntity = record.state.currentTopic;
       resolvedEntityType = record.state.currentEntityType || 'course';
     } else if (record.state.currentTopic) {
@@ -575,7 +554,6 @@ export function extractIntentsAndEntities(
   };
 }
 
-// 3. TARGETED KNOWLEDGE RETRIEVAL (STRICT TENANT ISOLATION)
 export function retrieveTargetedKnowledge(
   business: any,
   knowledge: KnowledgeItem[],
@@ -583,8 +561,6 @@ export function retrieveTargetedKnowledge(
   options: { publicOnly?: boolean } = {}
 ): KnowledgeItem[] {
   const normBizId = (business.id || '').trim().toLowerCase();
-
-  // Strict tenant filter: NEVER return items from another tenant
   const tenantKnowledge = (knowledge || []).filter(k => {
     if (!k) return false;
     const kBiz = (k.businessId || k.tenantId || '').trim().toLowerCase();
@@ -594,27 +570,19 @@ export function retrieveTargetedKnowledge(
     if (options.publicOnly && (k.visibility === 'internal' || k.visibility === 'restricted')) return false;
     return true;
   });
-
-  if (tenantKnowledge.length === 0) {
-    return [];
-  }
-
+  if (tenantKnowledge.length === 0) return [];
   const { resolvedEntity, attributes, intents } = extracted;
-
-  // Filter and score knowledge items for this tenant
   const scored = tenantKnowledge.map(k => {
     let score = 0;
     const title = (k.title || '').toLowerCase();
     const content = (k.content || '').toLowerCase();
     const category = (k.category || '').toLowerCase();
-
     if (resolvedEntity && resolvedEntity !== 'General') {
       const entLower = resolvedEntity.toLowerCase();
       if (title.includes(entLower)) score += 10;
       if (content.includes(entLower)) score += 5;
       if (category.includes(entLower)) score += 3;
     }
-
     for (const attr of attributes) {
       if (title.includes(attr)) score += 6;
       if (content.includes(attr)) score += 4;
@@ -622,50 +590,37 @@ export function retrieveTargetedKnowledge(
       if (attr === 'duration' && (content.includes('week') || content.includes('month') || content.includes('duration'))) score += 5;
       if (attr === 'timings' && (content.includes('pm') || content.includes('am') || content.includes('timing') || content.includes('schedule') || content.includes('batch'))) score += 5;
     }
-
     for (const intent of intents) {
       if (title.includes(intent)) score += 4;
       if (content.includes(intent)) score += 2;
     }
-
     return { item: k, score };
   });
-
   scored.sort((a, b) => b.score - a.score);
-
-  if (scored.length > 0 && scored[0].score > 0) {
-    return scored.filter(s => s.score > 0).map(s => s.item);
-  }
-
+  if (scored.length > 0 && scored[0].score > 0) return scored.filter(s => s.score > 0).map(s => s.item);
   return tenantKnowledge;
 }
 
-// Dynamic Fact Extraction Helpers from Knowledge Items
 function extractFact(items: KnowledgeItem[], attribute: 'fee' | 'duration' | 'timing' | 'syllabus' | 'refund' | 'demo' | 'courses', entityName?: string | null): string | null {
   for (const item of items) {
     const text = `${item.title}\n${item.content}`;
     const cleanText = text.replace(/Question:.*?\n/gi, '').trim();
-
     if (attribute === 'fee') {
       const priceMatch = cleanText.match(/(₹\s*[\d,]+|\$\s*[\d,]+|\b\d+,\d+\s*(rupees|inr|usd)?\b)/i);
       if (priceMatch) return priceMatch[0].trim();
     }
-
     if (attribute === 'duration') {
       const durMatch = cleanText.match(/(\b\d+\s*(weeks|months|days|hours)\b)/i);
       if (durMatch) return durMatch[0].trim();
     }
-
     if (attribute === 'timing') {
       const timingMatch = cleanText.match(/(Monday.*?PM|Tuesday.*?PM|Saturday.*?PM|Saturday.*?AM|\b\d{1,2}(?::\d{2})?\s*(?:AM|PM)\s*to\s*\d{1,2}(?::\d{2})?\s*(?:AM|PM)\b|live online classes run.*?\.)/i);
       if (timingMatch) return timingMatch[0].trim();
     }
-
     if (attribute === 'refund') {
       const refundMatch = cleanText.match(/(refund requests can be submitted within \d+ days.*?\.|refund policy.*?\.)/i);
       if (refundMatch) return refundMatch[0].trim();
     }
-
     if (attribute === 'demo') {
       const demoMatch = cleanText.match(/(free live interactive demo.*?\.|demo sessions are.*?\.)/i);
       if (demoMatch) return demoMatch[0].trim();
@@ -678,28 +633,18 @@ function extractDistinctOfferings(items: KnowledgeItem[]): string[] {
   const titles = new Set<string>();
   for (const item of items) {
     const t = item.title.replace(/(Course Details|Course Syllabus|Fee & Duration|Class Timings|Program|Course)/gi, '').trim();
-    if (t && t.length > 2 && !t.toLowerCase().includes('demo') && !t.toLowerCase().includes('refund') && !t.toLowerCase().includes('faq')) {
-      titles.add(t);
-    }
+    if (t && t.length > 2 && !t.toLowerCase().includes('demo') && !t.toLowerCase().includes('refund') && !t.toLowerCase().includes('faq')) titles.add(t);
   }
   return Array.from(titles);
 }
 
-// 4. DYNAMIC ANSWER GENERATION ENGINE
 export function generateEngineAnswer(
   business: any,
   extracted: ExtractedIntentsAndEntities,
   retrievedKnowledge: KnowledgeItem[],
   record: ConversationRecord
-): {
-  reply: string;
-  isClosing: boolean;
-  needsHumanHandoff: boolean;
-  suggestedActions: string[];
-} {
+): { reply: string; isClosing: boolean; needsHumanHandoff: boolean; suggestedActions: string[]; } {
   const bizName = business.name || 'our business';
-
-  // A. Human Handoff Intent
   if (extracted.intents.includes('human_support')) {
     return {
       reply: `I can capture your details here for the team. Please share your contact details or click 'Connect with Human Support' below.`,
@@ -708,8 +653,6 @@ export function generateEngineAnswer(
       suggestedActions: ['Connect with Human Support']
     };
   }
-
-  // B. Small Talk / Identity
   if ((extracted.intents.includes('small_talk') || extracted.intents.includes('identity')) && !extracted.resolvedEntity) {
     const assistantName = business.agentSettings?.agentName || `${bizName} AI Assistant`;
     return {
@@ -719,273 +662,93 @@ export function generateEngineAnswer(
       suggestedActions: ['Learn More', 'Services', 'Get Started']
     };
   }
-
-  // C. Course List / Offerings Intent ("What courses do you offer?")
   if (extracted.intents.includes('list') || extracted.resolvedEntity === 'General') {
-    // Extract courses strictly from this business's knowledge items
     let offerings = extractDistinctOfferings(retrievedKnowledge);
-    
-    // Check if there is an explicit "Courses Offered" FAQ in retrieved knowledge
     const listFaq = retrievedKnowledge.find(k => k.title.toLowerCase().includes('offered') || k.title.toLowerCase().includes('programs') || k.category?.toLowerCase() === 'courses');
     if (listFaq && listFaq.content) {
       const match = listFaq.content.match(/Answer:\s*([\s\S]+)/i);
-      if (match && match[1]) {
-        return {
-          reply: match[1].trim(),
-          isClosing: false,
-          needsHumanHandoff: false,
-          suggestedActions: offerings.length > 0 ? offerings : ['Pricing', 'Services']
-        };
-      }
+      if (match && match[1]) return { reply: match[1].trim(), isClosing: false, needsHumanHandoff: false, suggestedActions: offerings.length > 0 ? offerings : ['Pricing', 'Services'] };
     }
-
     if (offerings.length > 0) {
       const listStr = offerings.length === 1 ? offerings[0] : offerings.slice(0, -1).join(', ') + ' and ' + offerings[offerings.length - 1];
-      return {
-        reply: `At ${bizName}, we offer ${listStr}. Which one would you like to explore?`,
-        isClosing: false,
-        needsHumanHandoff: false,
-        suggestedActions: offerings
-      };
+      return { reply: `At ${bizName}, we offer ${listStr}. Which one would you like to explore?`, isClosing: false, needsHumanHandoff: false, suggestedActions: offerings };
     }
-
-    return {
-      reply: `Welcome to ${bizName}! What product, service, or topic would you like to know more about?`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['Pricing', 'Schedule']
-    };
+    return { reply: `Welcome to ${bizName}! What product, service, or topic would you like to know more about?`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Pricing', 'Schedule'] };
   }
-
-  // D. Demo / Trial Questions
   if (extracted.resolvedEntity === 'Demo' || extracted.intents.includes('demo')) {
     const demoFaq = retrievedKnowledge.find(k => k.category?.toLowerCase() === 'demo' || k.title.toLowerCase().includes('demo'));
     if (demoFaq) {
       const match = demoFaq.content.match(/Answer:\s*([\s\S]+)/i);
-      if (match && match[1]) {
-        return {
-          reply: match[1].trim(),
-          isClosing: false,
-          needsHumanHandoff: false,
-          suggestedActions: ['Learn More', 'Get Started']
-        };
-      }
+      if (match && match[1]) return { reply: match[1].trim(), isClosing: false, needsHumanHandoff: false, suggestedActions: ['Learn More', 'Get Started'] };
     }
-    return {
-      reply: `I don't have confirmed demo details in the knowledge base yet. I can capture your enquiry for the team if you'd like.`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['Request a Demo']
-    };
+    return { reply: `I don't have confirmed demo details in the knowledge base yet. I can capture your enquiry for the team if you'd like.`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Request a Demo'] };
   }
-
-  // E. Refund Policy Questions
   if (extracted.resolvedEntity === 'Refund' || extracted.intents.includes('refund')) {
     const refundFact = extractFact(retrievedKnowledge, 'refund');
-    if (refundFact) {
-      return {
-        reply: refundFact,
-        isClosing: false,
-        needsHumanHandoff: false,
-        suggestedActions: []
-      };
-    }
+    if (refundFact) return { reply: refundFact, isClosing: false, needsHumanHandoff: false, suggestedActions: [] };
     const refundFaq = retrievedKnowledge.find(k => k.title.toLowerCase().includes('refund') || k.content.toLowerCase().includes('refund'));
     if (refundFaq) {
       const match = refundFaq.content.match(/Answer:\s*([\s\S]+)/i);
-      if (match && match[1]) {
-        return {
-          reply: match[1].trim(),
-          isClosing: false,
-          needsHumanHandoff: false,
-          suggestedActions: []
-        };
-      }
+      if (match && match[1]) return { reply: match[1].trim(), isClosing: false, needsHumanHandoff: false, suggestedActions: [] };
     }
-    return {
-      reply: `I don't have confirmed refund-policy details in the knowledge base for ${bizName}. I can capture your enquiry for the team if you'd like.`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: []
-    };
+    return { reply: `I don't have confirmed refund-policy details in the knowledge base for ${bizName}. I can capture your enquiry for the team if you'd like.`, isClosing: false, needsHumanHandoff: false, suggestedActions: [] };
   }
-
-  // F. Admissions / Eligibility / Prerequisites
   if (extracted.resolvedEntity === 'Admissions' || extracted.intents.includes('eligibility')) {
     const admFaq = retrievedKnowledge.find(k => k.title.toLowerCase().includes('prerequisite') || k.title.toLowerCase().includes('eligibility') || k.category?.toLowerCase() === 'admissions');
     if (admFaq) {
       const match = admFaq.content.match(/Answer:\s*([\s\S]+)/i);
-      if (match && match[1]) {
-        return {
-          reply: match[1].trim(),
-          isClosing: false,
-          needsHumanHandoff: false,
-          suggestedActions: ['Get Started', 'Pricing']
-        };
-      }
+      if (match && match[1]) return { reply: match[1].trim(), isClosing: false, needsHumanHandoff: false, suggestedActions: ['Get Started', 'Pricing'] };
     }
-    return {
-      reply: `I don't have confirmed eligibility or admissions details in the knowledge base for ${bizName}. I can capture your enquiry for the team if you'd like.`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['Get Started', 'Ask Another Question']
-    };
+    return { reply: `I don't have confirmed eligibility or admissions details in the knowledge base for ${bizName}. I can capture your enquiry for the team if you'd like.`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Get Started', 'Ask Another Question'] };
   }
-
-  // G. Dynamic Fact-Based Entity Queries (Fee, Duration, Timing, Syllabus, Pricing, Services)
   const entity = extracted.resolvedEntity;
-  const targetItems = retrievedKnowledge.filter(k => 
-    !entity || k.title.toLowerCase().includes(entity.toLowerCase()) || k.content.toLowerCase().includes(entity.toLowerCase())
-  );
+  const targetItems = retrievedKnowledge.filter(k => !entity || k.title.toLowerCase().includes(entity.toLowerCase()) || k.content.toLowerCase().includes(entity.toLowerCase()));
   const itemsToUse = targetItems.length > 0 ? targetItems : retrievedKnowledge;
-
-  // Direct FAQ Answer check if a knowledge item has an explicit Answer:
   if (itemsToUse.length > 0) {
     const topItem = itemsToUse[0];
     const answerMatch = topItem.content.match(/Answer:\s*([\s\S]+)/i);
-    if (answerMatch && answerMatch[1]) {
-      return {
-        reply: answerMatch[1].trim(),
-        isClosing: false,
-        needsHumanHandoff: false,
-        suggestedActions: ['More Details', 'Get Started']
-      };
-    }
+    if (answerMatch && answerMatch[1]) return { reply: answerMatch[1].trim(), isClosing: false, needsHumanHandoff: false, suggestedActions: ['More Details', 'Get Started'] };
   }
-
   const fee = extractFact(itemsToUse, 'fee', entity);
   const duration = extractFact(itemsToUse, 'duration', entity);
   const timing = extractFact(itemsToUse, 'timing', entity);
-
   const isFeeAsked = extracted.attributes.includes('fee');
   const isDurationAsked = extracted.attributes.includes('duration');
   const isTimingAsked = extracted.attributes.includes('timings');
-
-  // Multi-intent: Fee and Duration
   if (isFeeAsked && isDurationAsked && (fee || duration)) {
     const entityLabel = entity || 'program';
-    return {
-      reply: `For ${entityLabel}, the available details are ${fee ? `a fee of ${fee}` : 'a fee not specified'}${duration ? ` and a duration of ${duration}` : ''}.`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['Schedule', 'More Details', 'Get Started']
-    };
+    return { reply: `For ${entityLabel}, the available details are ${fee ? `a fee of ${fee}` : 'a fee not specified'}${duration ? ` and a duration of ${duration}` : ''}.`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Schedule', 'More Details', 'Get Started'] };
   }
-
-  // Single: Fee / Pricing Overview
   if (isFeeAsked) {
-    if (itemsToUse.length > 0 && (itemsToUse[0].category === 'Pricing' || !entity || itemsToUse[0].content.includes('Starter'))) {
-      return {
-        reply: itemsToUse[0].content,
-        isClosing: false,
-        needsHumanHandoff: false,
-        suggestedActions: ['Get Started', 'Book a Demo', 'Features Overview']
-      };
-    }
-
+    if (itemsToUse.length > 0 && (itemsToUse[0].category === 'Pricing' || !entity || itemsToUse[0].content.includes('Starter'))) return { reply: itemsToUse[0].content, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Get Started', 'Book a Demo', 'Features Overview'] };
     if (fee) {
       const entityLabel = entity || 'program';
-      if (extracted.isYesNo) {
-        return {
-          reply: `No, the ${entityLabel} is not free. The fee is ${fee}. We also provide live demo sessions and flexible options.`,
-          isClosing: false,
-          needsHumanHandoff: false,
-          suggestedActions: ['Schedule', 'More Details']
-        };
-      }
-      return {
-        reply: `The ${entityLabel} fee is ${fee}.`,
-        isClosing: false,
-        needsHumanHandoff: false,
-        suggestedActions: ['Duration', 'Schedule', 'More Details']
-      };
+      if (extracted.isYesNo) return { reply: `No, the ${entityLabel} is not free. The fee is ${fee}. We also provide live demo sessions and flexible options.`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Schedule', 'More Details'] };
+      return { reply: `The ${entityLabel} fee is ${fee}.`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Duration', 'Schedule', 'More Details'] };
     }
   }
-
-  // Single: Duration
   if (isDurationAsked && duration) {
     const entityLabel = entity || 'program';
-    return {
-      reply: `The ${entityLabel} duration is ${duration}.`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['Pricing', 'Schedule']
-    };
+    return { reply: `The ${entityLabel} duration is ${duration}.`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Pricing', 'Schedule'] };
   }
-
-  // Single: Timings / Schedule
-  if (isTimingAsked && timing) {
-    return {
-      reply: `Class timings: ${timing}`,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['Pricing', 'Get Started']
-    };
-  }
-
-  // Fallback to highest scored FAQ item answer in retrieved knowledge
-  if (itemsToUse.length > 0) {
-    const topItem = itemsToUse[0];
-    return {
-      reply: topItem.content,
-      isClosing: false,
-      needsHumanHandoff: false,
-      suggestedActions: ['More Details']
-    };
-  }
-
-  // Safe Unknown Handler for this tenant - NEVER mention other businesses
-  return {
-    reply: `I don't have that specific information in the knowledge base for ${bizName}. Would you like me to connect you with our support team?`,
-    isClosing: false,
-    needsHumanHandoff: true,
-    suggestedActions: ['Connect with Human Support']
-  };
+  if (isTimingAsked && timing) return { reply: `Class timings: ${timing}`, isClosing: false, needsHumanHandoff: false, suggestedActions: ['Pricing', 'Get Started'] };
+  if (itemsToUse.length > 0) return { reply: itemsToUse[0].content, isClosing: false, needsHumanHandoff: false, suggestedActions: ['More Details'] };
+  return { reply: `I don't have that specific information in the knowledge base for ${bizName}. Would you like me to connect you with our support team?`, isClosing: false, needsHumanHandoff: true, suggestedActions: ['Connect with Human Support'] };
 }
 
-// 5. ANSWER VALIDATION (Ensures no hallucination or premature goodbye, and strict identity safeguarding)
-export function validateAnswer(
-  reply: string,
-  extracted: ExtractedIntentsAndEntities,
-  business: any,
-  record?: ConversationRecord
-): string {
+export function validateAnswer(reply: string, extracted: ExtractedIntentsAndEntities, business: any, record?: ConversationRecord): string {
   if (!reply) return `How can I help you with ${business?.name || 'our business'} today?`;
-
   let cleaned = reply.trim();
-
-  // If not closing turn, remove any stray goodbye or closing phrases
-  if (!extracted.intents.includes('goodbye') && !extracted.intents.includes('closing')) {
-    cleaned = cleaned.replace(/\b(Goodbye!|Have a great day!|Bye!|Farewell!)\b/gi, '').trim();
-  }
-
-  // Public receptionist safeguard: never expose direct client contact details.
-  // Leads are captured inside AgentDesk and the client follows up from the dashboard.
+  if (!extracted.intents.includes('goodbye') && !extracted.intents.includes('closing')) cleaned = cleaned.replace(/\b(Goodbye!|Have a great day!|Bye!|Farewell!)\b/gi, '').trim();
   const responseEmailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
   const responsePhonePattern = /(?:\+[\d\s().-]{7,20}\d)|(?:\b[6-9]\d{9}\b)|(?:\b\d{3}[-.\s]\d{3}[-.\s]\d{4}\b)|(?:\b\d{3}[-.\s]\d{4}\b)/;
   const responseContactLinkPattern = /\b(?:mailto:|tel:|whatsapp:|sms:)/i;
   const responseSensitiveMetaPattern = /\b(?:tenant[_-]?id|business[_-]?id|agent[_-]?id|api[_-]?key|session[_-]?secret|system\s+prompt|developer\s+prompt|internal\s+instructions?)\b/i;
-  const containsConfiguredContact = [
-    business?.supportEmail,
-    business?.leadNotificationEmail,
-    business?.phone,
-    business?.leadNotificationPhone
-  ].filter(Boolean).some((value: any) => {
+  const containsConfiguredContact = [business?.supportEmail, business?.leadNotificationEmail, business?.phone, business?.leadNotificationPhone].filter(Boolean).some((value: any) => {
     const normalizedValue = String(value).trim().toLowerCase();
     return normalizedValue.length > 3 && cleaned.toLowerCase().includes(normalizedValue);
   });
-
-  if (
-    containsConfiguredContact ||
-    responseEmailPattern.test(cleaned) ||
-    responsePhonePattern.test(cleaned) ||
-    responseContactLinkPattern.test(cleaned) ||
-    responseSensitiveMetaPattern.test(cleaned)
-  ) {
-    return "I can capture your details here for our team, and they will follow up with you shortly.";
-  }
-
-  // Strict Safeguard: Prevent customer from ever seeing raw tenantId / businessId / UUID slugs
+  if (containsConfiguredContact || responseEmailPattern.test(cleaned) || responsePhonePattern.test(cleaned) || responseContactLinkPattern.test(cleaned) || responseSensitiveMetaPattern.test(cleaned)) return "I can capture your details here for our team, and they will follow up with you shortly.";
   if (business?.id) {
     const rawId = String(business.id).trim();
     if (rawId.length >= 4) {
@@ -994,64 +757,23 @@ export function validateAnswer(
       cleaned = cleaned.replace(idPattern, business.name || 'our business');
     }
   }
-
-  // Strip generic UUID patterns if present
   cleaned = cleaned.replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '').replace(/\s{2,}/g, ' ').trim();
-
   return cleaned;
 }
 
-// 6. UPDATE CONVERSATION MEMORY (Session Consistency & Active Topic Tracking)
-export function updateConversationMemory(
-  record: ConversationRecord,
-  userMessage: string,
-  assistantReply: string,
-  extracted: ExtractedIntentsAndEntities
-): ConversationRecord {
+export function updateConversationMemory(record: ConversationRecord, userMessage: string, assistantReply: string, extracted: ExtractedIntentsAndEntities): ConversationRecord {
   const timestamp = new Date().toISOString();
-
-  // Push user message
-  record.messages.push({
-    id: `m-u-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    conversationId: record.conversationId,
-    businessId: record.businessId,
-    role: 'user',
-    content: userMessage,
-    timestamp
-  });
-
-  // Push assistant reply
-  record.messages.push({
-    id: `m-a-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    conversationId: record.conversationId,
-    businessId: record.businessId,
-    role: 'assistant',
-    content: assistantReply,
-    timestamp
-  });
-
-  // Update conversation state topic & entity
+  record.messages.push({ id: `m-u-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`, conversationId: record.conversationId, businessId: record.businessId, role: 'user', content: userMessage, timestamp });
+  record.messages.push({ id: `m-a-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`, conversationId: record.conversationId, businessId: record.businessId, role: 'assistant', content: assistantReply, timestamp });
   if (extracted.resolvedEntity && extracted.resolvedEntity !== 'General') {
     record.state.currentTopic = extracted.resolvedEntity;
-    record.state.currentEntity = {
-      name: extracted.resolvedEntity,
-      type: extracted.resolvedEntityType
-    };
-    if (!record.state.recentEntities.includes(extracted.resolvedEntity)) {
-      record.state.recentEntities.push(extracted.resolvedEntity);
-    }
+    record.state.currentEntity = { name: extracted.resolvedEntity, type: extracted.resolvedEntityType };
+    if (!record.state.recentEntities.includes(extracted.resolvedEntity)) record.state.recentEntities.push(extracted.resolvedEntity);
   }
-
-  if (extracted.intents.length > 0) {
-    record.state.lastIntent = extracted.intents[0];
-  }
-  if (extracted.attributes.length > 0) {
-    record.state.lastRequestedAttribute = extracted.attributes[0];
-  }
-
+  if (extracted.intents.length > 0) record.state.lastIntent = extracted.intents[0];
+  if (extracted.attributes.length > 0) record.state.lastRequestedAttribute = extracted.attributes[0];
   record.state.lastAnswer = assistantReply;
   record.state.updatedAt = timestamp;
   record.updatedAt = timestamp;
-
   return record;
 }
