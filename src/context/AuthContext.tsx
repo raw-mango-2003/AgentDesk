@@ -42,6 +42,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveBusinessIdState(id);
   };
 
+  const enforceRoleScopedRoutes = (user: UserProfile | null) => {
+    if (typeof window === 'undefined') return;
+    const path = window.location.pathname.toLowerCase();
+    if (path !== '/dashboard/integrations') return;
+
+    if (!user) {
+      window.history.replaceState({ ...(window.history.state || {}), agentDeskRoute: true, agentDeskView: 'login', agentDeskTab: undefined, agentDeskScrollY: 0 }, '', '/login');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+      return;
+    }
+
+    if (user.role !== 'PLATFORM_ADMIN') {
+      window.history.replaceState({ ...(window.history.state || {}), agentDeskRoute: true, agentDeskView: 'dashboard', agentDeskTab: 'overview', agentDeskScrollY: 0 }, '', '/dashboard');
+      window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+    }
+  };
+
   const fetchSessionUser = async () => {
     try {
       const res = await safeFetchJson('/api/auth/me');
@@ -53,16 +70,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (res.user.tenantId && res.user.tenantId !== 'platform') {
           setActiveBusinessIdState(res.user.tenantId);
         }
+        enforceRoleScopedRoutes(res.user);
         return;
       }
-      // Invalid session. Authentication is held by the HttpOnly session cookie.
       setCurrentUser(null);
       setCurrentTenant(null);
       setActiveBusinessIdState('');
+      enforceRoleScopedRoutes(null);
     } catch (err) {
       console.warn('Failed to verify authentication session:', err);
-      // Do not silently fallback to admin on error
       setCurrentUser(null);
+      enforceRoleScopedRoutes(null);
     }
   };
 
@@ -98,7 +116,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
-      // Authoritative verification: Ensure the backend session exists and is recognized via HttpOnly cookie
       const meRes = await safeFetchJson('/api/auth/me');
       if (!meRes.success || !meRes.user) {
         setCurrentUser(null);
@@ -117,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (meRes.user?.tenantId) {
         setActiveBusinessIdState(meRes.user.tenantId);
       }
+      enforceRoleScopedRoutes(meRes.user);
 
       return {
         success: true,
@@ -136,7 +154,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginPlatformAdmin = async (email: string, pass: string) => {
     setLoading(true);
     try {
-      // Support both /api/auth/platform/login and legacy /api/auth/platform-login
       let res = await safeFetchJson('/api/auth/platform/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,7 +173,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: errorMsg };
       }
 
-      // Authoritative verification: Ensure the backend session exists and is recognized via HttpOnly cookie
       const meRes = await safeFetchJson('/api/auth/me');
       if (!meRes.success || !meRes.user || meRes.user.role !== 'PLATFORM_ADMIN') {
         setCurrentUser(null);
@@ -171,6 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setCurrentUser(meRes.user);
       setCurrentTenant(null);
       setActiveBusinessIdState('platform');
+      enforceRoleScopedRoutes(meRes.user);
 
       return {
         success: true,
@@ -199,10 +216,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (res.user) {
-        // If an automatic session was issued on signup, verify via /api/auth/me
         const meRes = await safeFetchJson('/api/auth/me');
         if (meRes.success && meRes.user) {
           setCurrentUser(meRes.user);
+          enforceRoleScopedRoutes(meRes.user);
         }
       }
 
@@ -220,19 +237,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const saveBusinessDetails = async (details: {
-    businessName: string;
-    industry?: string;
-    teamSize?: string;
-    phone?: string;
-    website?: string;
-  }) => {
+  const saveBusinessDetails = async (details: { businessName: string; industry?: string; teamSize?: string; phone?: string; website?: string }) => {
     try {
       const res = await safeFetchJson('/api/auth/onboarding/business-details', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(details)
       });
 
@@ -242,18 +251,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const tenantId = (res as any).tenantId;
-      if (tenantId) {
-        setActiveBusinessIdState(tenantId);
-      }
-      if (res.tenant) {
-        setCurrentTenant(res.tenant);
-      }
+      if (tenantId) setActiveBusinessIdState(tenantId);
+      if (res.tenant) setCurrentTenant(res.tenant);
       if (currentUser && tenantId) {
-        setCurrentUser({
-          ...currentUser,
-          tenantId,
-          businessId: tenantId
-        });
+        setCurrentUser({ ...currentUser, tenantId, businessId: tenantId });
       }
 
       return { success: true, tenantId };
@@ -266,9 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await safeFetchJson('/api/auth/change-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
       });
 
@@ -278,11 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (res.user && currentUser) {
-        setCurrentUser({
-          ...currentUser,
-          mustChangePassword: false,
-          ...res.user
-        });
+        setCurrentUser({ ...currentUser, mustChangePassword: false, ...res.user });
       }
       return { success: true, message: res.message || 'Password updated successfully.' };
     } catch (err: any) {
@@ -294,9 +289,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await safeFetchJson('/api/auth/update-profile', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email })
       });
 
@@ -305,12 +298,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, error: errorMsg };
       }
 
-      if (res.user && currentUser) {
-        setCurrentUser({
-          ...currentUser,
-          ...res.user
-        });
-      }
+      if (res.user && currentUser) setCurrentUser({ ...currentUser, ...res.user });
       return { success: true, message: res.message || 'Profile updated successfully.' };
     } catch (err: any) {
       return { success: false, error: err.message || 'Failed to update profile.' };
@@ -318,27 +306,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    // Clear the client session immediately so a slow or unavailable logout
-    // endpoint can never leave the UI stuck in the authenticated state.
     setCurrentUser(null);
     setCurrentTenant(null);
     setActiveBusinessIdState('');
     localStorage.removeItem('agentdesk_auth_user');
     localStorage.removeItem('agentdesk_active_tenant_id');
 
-    // Revoke the server-side HttpOnly session as well, but do not block the UI
-    // indefinitely if the API is unavailable.
     try {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 5000);
-      await safeFetchJson('/api/auth/logout', {
-        method: 'POST',
-        signal: controller.signal
-      });
+      await safeFetchJson('/api/auth/logout', { method: 'POST', signal: controller.signal });
       window.clearTimeout(timeoutId);
     } catch (e) {
-      // The local auth state is already cleared. A later auth refresh will
-      // re-establish the authoritative state if the server session remains.
+      // Local auth state is already cleared.
     }
   };
 
