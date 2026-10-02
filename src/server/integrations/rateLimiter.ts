@@ -107,13 +107,23 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
   return async (req: Request, res: Response, next: NextFunction) => {
     const ip = getClientIp(req);
-    const key = `${keyPrefix}:${ip}`;
+
+    // The public lead endpoint must have a distributed limit, not only the
+    // legacy in-memory guard in server.ts. This applies to every Render
+    // instance because checkSharedRateLimit persists the counter in Postgres.
+    const isPublicLeadEndpoint = keyPrefix === 'api' && (
+      req.path === '/widget/lead' ||
+      req.originalUrl.split('?')[0].endsWith('/api/widget/lead')
+    );
+    const effectiveLimit = isPublicLeadEndpoint ? 10 : maxRequests;
+    const effectiveKeyPrefix = isPublicLeadEndpoint ? 'lead_shared' : keyPrefix;
+    const key = `${effectiveKeyPrefix}:${ip}`;
 
     try {
-      const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, maxRequests, windowMs);
-      const remaining = Math.max(0, maxRequests - currentCount);
+      const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, effectiveLimit, windowMs);
+      const remaining = Math.max(0, effectiveLimit - currentCount);
 
-      res.setHeader('X-RateLimit-Limit', maxRequests.toString());
+      res.setHeader('X-RateLimit-Limit', effectiveLimit.toString());
       res.setHeader('X-RateLimit-Remaining', remaining.toString());
       res.setHeader('X-RateLimit-Reset', resetSeconds.toString());
 
@@ -121,7 +131,9 @@ export function createRateLimiter(options: RateLimiterOptions) {
         res.setHeader('Retry-After', resetSeconds.toString());
         return res.status(429).json({
           success: false,
-          error: message,
+          error: isPublicLeadEndpoint
+            ? 'Lead submission rate limit exceeded. Please wait a moment.'
+            : message,
           retryAfter: resetSeconds
         });
       }
@@ -136,64 +148,64 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
 // Preset rate limiters for production security
 export const authRateLimiter = createRateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  maxRequests: 15, // 15 attempts per 15 min
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 15,
   message: 'Too many authentication attempts. For security reasons, please try again in a few minutes.',
   keyPrefix: 'auth'
 });
 
 export const passwordResetRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  maxRequests: 5, // 5 requests per hour
+  windowMs: 60 * 60 * 1000,
+  maxRequests: 5,
   message: 'Too many password reset requests. Please check your inbox or try again in an hour.',
   keyPrefix: 'pw_reset'
 });
 
 export const otpRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000, // 10 minutes
+  windowMs: 10 * 60 * 1000,
   maxRequests: 5,
   message: 'Too many verification code requests. Please wait a few minutes before trying again.',
   keyPrefix: 'otp'
 });
 
 export const paymentRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   maxRequests: 20,
   message: 'Payment requests are currently rate-limited. Please retry shortly.',
   keyPrefix: 'pay'
 });
 
 export const generalApiRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 120, // 120 requests per minute
+  windowMs: 60 * 1000,
+  maxRequests: 120,
   message: 'API rate limit exceeded.',
   keyPrefix: 'api'
 });
 
 export const clientErrorRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
+  windowMs: 60 * 1000,
   maxRequests: 10,
   message: 'Client error telemetry rate limit exceeded.',
   keyPrefix: 'client_error'
 });
 
 export const embedApiRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 60, // 60 queries per minute per IP for public chat embed
+  windowMs: 60 * 1000,
+  maxRequests: 60,
   message: 'Embed assistant query rate limit exceeded. Please wait a moment before sending another message.',
   keyPrefix: 'embed'
 });
 
 export const aiGenerationRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  maxRequests: 40, // 40 AI responses per minute
+  windowMs: 60 * 1000,
+  maxRequests: 40,
   message: 'AI generation capacity reached. Please wait a moment.',
   keyPrefix: 'ai_gen'
 });
 
 export const exportRateLimiter = createRateLimiter({
-  windowMs: 10 * 60 * 1000, // 10 minutes
-  maxRequests: 10, // 10 exports per 10 minutes
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 10,
   message: 'Data export rate limit reached. Please wait before generating another export.',
   keyPrefix: 'export'
 });
