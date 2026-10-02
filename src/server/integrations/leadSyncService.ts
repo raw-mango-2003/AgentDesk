@@ -52,40 +52,64 @@ export async function deliverLeadToSpreadsheet(
   const url = validateWebhookUrl(webhookUrl);
   if (!url) return { configured: false, delivered: false };
 
+  const occurredAt = new Date().toISOString();
+  const leadName = String(lead.name || '');
+  const email = String(lead.email || '');
+  const phone = String(lead.phone || '');
+  const message = String(
+    lead.message ||
+    lead.notes ||
+    lead.requirement ||
+    lead.details?.latestMessage ||
+    ''
+  );
+  const date = String(lead.createdAt || occurredAt);
+
+  // Keep the structured envelope for future integrations, while also exposing
+  // flat fields for automation tools such as Activepieces/Google Sheets.
+  // The flat fields intentionally match the AgentDesk Leads Data sheet columns.
   const payload = {
     schemaVersion: '1.0',
     event: 'lead.created',
     source: 'agentdesk',
-    occurredAt: new Date().toISOString(),
+    occurredAt,
+
+    // Activepieces / Google Sheets mapping fields
+    date,
+    leadName,
+    email,
+    phone,
+    message,
+
     tenantId,
     businessId: String(lead.businessId || tenantId),
     businessName: String(business.name || ''),
     lead: {
       id: String(lead.id || ''),
-      name: String(lead.name || ''),
-      email: String(lead.email || ''),
-      phone: String(lead.phone || ''),
+      name: leadName,
+      email,
+      phone,
       company: String(lead.company || ''),
       source: String(lead.source || 'AI Chat Widget'),
       status: String(lead.status || 'new'),
       score: Number(lead.score || 0),
       scoreCategory: String(lead.scoreCategory || ''),
       requirement: String(lead.requirement || ''),
-      message: String(lead.message || ''),
+      message,
       notes: String(lead.notes || ''),
       serviceInterest: String(lead.serviceInterest || ''),
       timeline: String(lead.timeline || ''),
       budget: String(lead.budget || ''),
       location: String(lead.location || ''),
       conversationId: String(lead.conversationId || ''),
-      createdAt: String(lead.createdAt || new Date().toISOString())
+      createdAt: date
     },
     conversation: {
       conversationId: String(conversation?.conversationId || lead.conversationId || ''),
       status: String(conversation?.status || 'HUMAN_REQUIRED'),
       currentTopic: String(conversation?.state?.currentTopic || ''),
       language: String(conversation?.state?.language || ''),
-      latestMessage: String(lead.details?.latestMessage || lead.message || '')
+      latestMessage: message
     }
   };
 
