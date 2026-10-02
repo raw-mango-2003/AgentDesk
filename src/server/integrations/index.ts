@@ -10,10 +10,11 @@ import { AnalyticsService } from './analyticsService.js';
 import { ErrorMonitoringService } from './errorMonitoringService.js';
 import { StorageService } from './storageService.js';
 import { AuditLogService } from './auditLogService.js';
-import { QueueService } from './queueService.js';
+import { queueService } from './queueService.js';
 import { NotificationService } from './notificationService.js';
 import { AutomationEngine } from './automationEngine.js';
 import { deliveryLogService } from './deliveryLogService.js';
+import { deliverLeadToSpreadsheet, syncLeadToSpreadsheet } from './leadSyncService.js';
 
 // Central singletons
 export const gmailService = new GmailService();
@@ -28,7 +29,8 @@ export const analyticsService = new AnalyticsService();
 export const errorMonitoringService = new ErrorMonitoringService();
 export const storageService = new StorageService();
 export const auditLogService = new AuditLogService();
-export const queueService = new QueueService();
+
+export { queueService };
 
 export const notificationService = new NotificationService(
   emailService,
@@ -68,9 +70,19 @@ queueService.registerHandler('send_whatsapp', async (payload: any) => {
   await whatsAppService.sendWhatsAppMessage(payload.to, payload.message, payload.tenantId);
 });
 
+// Lead spreadsheet delivery retries use the same durable queue. The worker
+// calls the delivery function directly so a failed retry does not enqueue a
+// second retry job recursively.
+queueService.registerHandler('sync_lead_spreadsheet' as any, async (payload: any) => {
+  const result = await deliverLeadToSpreadsheet(payload.lead || {}, payload.business || {}, payload.conversation);
+  if (!result.delivered) {
+    throw new Error(result.error || 'Lead spreadsheet delivery failed.');
+  }
+});
+
 export * from './interfaces.js';
 export * from './rateLimiter.js';
 export * from './emailTemplates.js';
 export * from './integrationStore.js';
 
-export { syncLeadToSpreadsheet } from './leadSyncService.js';
+export { syncLeadToSpreadsheet };
