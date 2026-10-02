@@ -233,3 +233,7 @@ export class QueueService implements IQueueService {
     }
   }
 }
+
+// One process-wide worker is shared by all integration modules. Keeping the
+// singleton here prevents lead-sync retries from creating a second queue worker.
+export const queueService = new QueueService();
