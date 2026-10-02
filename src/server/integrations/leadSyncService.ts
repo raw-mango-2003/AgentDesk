@@ -130,7 +130,7 @@ export async function syncLeadToSpreadsheet(
 
   try {
     await queueService.enqueue(
-      'sync_lead_spreadsheet',
+      'sync_lead_spreadsheet' as any,
       { lead, business, conversation },
       { maxAttempts: 5, delayMs: 15000 }
     );
