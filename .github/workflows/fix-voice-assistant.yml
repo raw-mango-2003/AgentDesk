@@ -144,3 +144,5 @@ jobs:
           git rm .github/workflows/fix-voice-assistant.yml
           git commit -m "[voice-fix] fix voice assistant answers after greeting"
           git push
+
+# trigger
