@@ -1,0 +1,146 @@
+name: Apply Voice Assistant Fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-voice:
+    if: ${{ !contains(github.event.head_commit.message, '[voice-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch voice turn handling
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('src/components/ChatWidget.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          pattern = re.compile(
+              r"      // Stream user spoken turn to backend over persistent WebSocket or HTTP fallback\n"
+              r"      if \(wsRef\.current && wsRef\.current\.readyState === WebSocket\.OPEN\) \{.*?"
+              r"      \}\n    \};",
+              re.S,
+          )
+
+          replacement = '''      // Process every spoken turn through the authenticated HTTP voice endpoint.
+      // The WebSocket is kept for session initialization/greeting, but using the
+      // HTTP endpoint for turns prevents a stalled WebSocket from swallowing the
+      // user's question after the greeting.
+      try {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 20000);
+
+        const res = await fetch('/api/voice/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getCsrfHeader() },
+          credentials: 'same-origin',
+          signal: controller.signal,
+          body: JSON.stringify({
+            conversationId,
+            transcript: transcriptText,
+            businessId: business.id,
+            knowledgeBase: knowledgeItems,
+            conversationHistory: messages
+          })
+        });
+
+        window.clearTimeout(timeout);
+
+        let data: any = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+
+        if (!res.ok || !data?.reply) {
+          throw new Error(data?.error || data?.message || `Voice request failed (${res.status})`);
+        }
+
+        if (data.conversationState) setConversationState(data.conversationState);
+        const reply = data.reply;
+        const isClosing = data.isClosing || false;
+
+        setVoiceTranscript(prev => [
+          ...prev,
+          {
+            sender: 'agent',
+            text: reply,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+
+        speakText(reply, isClosing);
+      } catch (e) {
+        console.error('[Voice AI] Voice turn processing failed:', e);
+        const fallbackReply = "I am having trouble processing that right now. Please try asking again.";
+        setVoiceTranscript(prev => [
+          ...prev,
+          {
+            sender: 'agent',
+            text: fallbackReply,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        speakText(fallbackReply);
+      }
+    };'''
+
+          updated, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit('Voice turn block was not found; no changes made.')
+
+          old_error = '''      ws.onerror = (err) => {
+        console.warn('[Voice AI] WebSocket error, using browser speech fallback:', err);
+        startLocalVoiceFallback();
+      };
+
+      ws.onclose = () => {
+        console.log('[Voice AI] WebSocket connection closed.');
+        if (isVoiceActiveRef.current) {
+          updateVoiceStatus('error');
+          setVoiceError('Voice connection lost. Click Reconnect Voice Call to resume.');
+        }
+      };'''
+
+          new_error = '''      ws.onerror = (err) => {
+        console.warn('[Voice AI] WebSocket error; switching voice turns to HTTP:', err);
+        if (wsRef.current === ws) wsRef.current = null;
+        try { ws.close(); } catch (e) {}
+        startLocalVoiceFallback();
+      };
+
+      ws.onclose = () => {
+        console.log('[Voice AI] WebSocket connection closed.');
+        if (wsRef.current === ws) wsRef.current = null;
+        if (isVoiceActiveRef.current) {
+          setVoiceError(null);
+          updateVoiceStatus('connected');
+        }
+      };'''
+
+          if old_error not in updated:
+              raise SystemExit('WebSocket error/close block was not found; no changes made.')
+          updated = updated.replace(old_error, new_error, 1)
+
+          path.write_text(updated, encoding='utf-8')
+          print('Voice assistant patch applied.')
+
+      - name: Commit voice fix and remove one-time workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/ChatWidget.tsx .github/workflows/fix-voice-assistant.yml
+          git rm .github/workflows/fix-voice-assistant.yml
+          git commit -m "[voice-fix] fix voice assistant answers after greeting"
+          git push
