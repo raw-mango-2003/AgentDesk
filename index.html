@@ -24,6 +24,102 @@
         });
       }
     </script>
+
+    <script>
+      // Voice transport guard: keep the existing WebSocket for session setup/greeting,
+      // but process spoken turns through the existing server-side voice endpoint.
+      // This prevents a stalled WebSocket turn from swallowing the user's question.
+      (function installAgentDeskVoiceTransport() {
+        if (typeof window === 'undefined' || !window.WebSocket || window.__agentDeskVoiceTransportInstalled) return;
+        window.__agentDeskVoiceTransportInstalled = true;
+
+        var NativeWebSocket = window.WebSocket;
+        var nativeSend = NativeWebSocket.prototype.send;
+
+        NativeWebSocket.prototype.send = function(data) {
+          var socket = this;
+          var url = String(socket.url || '');
+
+          if (!url.includes('/ws/live-voice') || typeof data !== 'string') {
+            return nativeSend.call(socket, data);
+          }
+
+          var payload;
+          try {
+            payload = JSON.parse(data);
+          } catch (_) {
+            return nativeSend.call(socket, data);
+          }
+
+          if (payload && payload.type === 'init') {
+            socket.__agentDeskVoiceInit = payload;
+            return nativeSend.call(socket, data);
+          }
+
+          if (!payload || (payload.type !== 'spoken_text' && payload.type !== 'text')) {
+            return nativeSend.call(socket, data);
+          }
+
+          var init = socket.__agentDeskVoiceInit || {};
+          var transcript = payload.text || payload.transcript || '';
+          if (!transcript.trim()) return;
+
+          // Do not send the spoken turn through the unreliable WebSocket handler.
+          // The backend HTTP endpoint uses the same conversation engine and memory.
+          (async function() {
+            try {
+              var response = await fetch('/api/voice/process', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  conversationId: init.conversationId,
+                  transcript: transcript,
+                  businessId: init.businessId,
+                  knowledgeBase: init.knowledgeBase || [],
+                  conversationHistory: []
+                })
+              });
+
+              var result = null;
+              try { result = await response.json(); } catch (_) {}
+
+              var message = {
+                type: 'response',
+                text: result && result.reply
+                  ? result.reply
+                  : "I am having trouble processing that right now. Please try asking again.",
+                conversationId: (result && result.conversationId) || init.conversationId,
+                conversationState: result && result.conversationState,
+                isClosing: Boolean(result && result.isClosing),
+                needsHumanHandoff: Boolean(result && result.needsHumanHandoff),
+                voice: (result && result.voice) || 'Puck',
+                userText: transcript,
+                timestamp: new Date().toISOString()
+              };
+
+              socket.dispatchEvent(new MessageEvent('message', {
+                data: JSON.stringify(message)
+              }));
+            } catch (error) {
+              console.error('[AgentDesk Voice] HTTP voice processing failed:', error);
+              socket.dispatchEvent(new MessageEvent('message', {
+                data: JSON.stringify({
+                  type: 'response',
+                  text: 'I am having trouble processing that right now. Please try asking again.',
+                  conversationId: init.conversationId,
+                  isClosing: false,
+                  userText: transcript,
+                  timestamp: new Date().toISOString()
+                })
+              }));
+            }
+          })();
+
+          return;
+        };
+      })();
+    </script>
   </head>
   <body class="bg-slate-950 text-slate-100 antialiased min-h-screen overflow-x-hidden">
     <div id="root" class="min-h-screen bg-slate-950">
@@ -52,4 +148,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
