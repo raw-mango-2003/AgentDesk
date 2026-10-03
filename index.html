@@ -9,16 +9,11 @@
     <meta property="og:title" content="AgentDesk" />
     <meta property="og:description" content="AgentDesk is an AI employee platform for customer conversations, lead capture, follow-up, booking, CRM, and business operations." />
     <script>
-      // Gracefully handle benign development HMR / preview container WebSocket closure events
       if (typeof window !== 'undefined') {
         window.addEventListener('unhandledrejection', function(event) {
           var reason = event.reason;
           var msg = (reason && reason.message) ? reason.message : String(reason || '');
-          if (
-            msg.indexOf('WebSocket') !== -1 ||
-            msg.indexOf('websocket') !== -1 ||
-            msg.indexOf('closed without opened') !== -1
-          ) {
+          if (msg.indexOf('WebSocket') !== -1 || msg.indexOf('websocket') !== -1 || msg.indexOf('closed without opened') !== -1) {
             event.preventDefault();
           }
         });
@@ -26,9 +21,11 @@
     </script>
 
     <script>
-      // Voice transport guard: keep the existing WebSocket for session setup/greeting,
-      // but process spoken turns through the existing server-side voice endpoint.
-      // This prevents a stalled WebSocket turn from swallowing the user's question.
+      // Voice transport fix:
+      // The WebSocket is retained for the session greeting, but spoken questions
+      // are routed through the already-working public widget chat engine. This
+      // removes the broken voice-turn dependency while preserving the existing
+      // ChatWidget response and speech-synthesis handling.
       (function installAgentDeskVoiceTransport() {
         if (typeof window === 'undefined' || !window.WebSocket || window.__agentDeskVoiceTransportInstalled) return;
         window.__agentDeskVoiceTransportInstalled = true;
@@ -64,45 +61,46 @@
           var transcript = payload.text || payload.transcript || '';
           if (!transcript.trim()) return;
 
-          // Do not send the spoken turn through the unreliable WebSocket handler.
-          // The backend HTTP endpoint uses the same conversation engine and memory.
           (async function() {
             try {
-              var response = await fetch('/api/voice/process', {
+              var response = await fetch('/api/widget/chat', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   conversationId: init.conversationId,
-                  transcript: transcript,
                   businessId: init.businessId,
-                  knowledgeBase: init.knowledgeBase || [],
-                  conversationHistory: []
+                  tenantId: init.tenantId || init.businessId,
+                  agentId: init.agentId,
+                  message: transcript,
+                  conversationHistory: [],
+                  recentMessages: [],
+                  knowledgeBase: Array.isArray(init.knowledgeBase) ? init.knowledgeBase : []
                 })
               });
 
               var result = null;
               try { result = await response.json(); } catch (_) {}
 
-              var message = {
-                type: 'response',
-                text: result && result.reply
-                  ? result.reply
-                  : "I am having trouble processing that right now. Please try asking again.",
-                conversationId: (result && result.conversationId) || init.conversationId,
-                conversationState: result && result.conversationState,
-                isClosing: Boolean(result && result.isClosing),
-                needsHumanHandoff: Boolean(result && result.needsHumanHandoff),
-                voice: (result && result.voice) || 'Puck',
-                userText: transcript,
-                timestamp: new Date().toISOString()
-              };
+              var reply = result && typeof result.reply === 'string' && result.reply.trim()
+                ? result.reply
+                : "I am having trouble processing that right now. Please try asking again.";
 
               socket.dispatchEvent(new MessageEvent('message', {
-                data: JSON.stringify(message)
+                data: JSON.stringify({
+                  type: 'response',
+                  text: reply,
+                  conversationId: init.conversationId,
+                  conversationState: result && result.conversationState,
+                  isClosing: Boolean(result && result.isClosing),
+                  needsHumanHandoff: Boolean(result && result.needsHumanHandoff),
+                  voice: (result && result.voice) || 'Puck',
+                  userText: transcript,
+                  timestamp: new Date().toISOString()
+                })
               }));
             } catch (error) {
-              console.error('[AgentDesk Voice] HTTP voice processing failed:', error);
+              console.error('[AgentDesk Voice] Chat engine request failed:', error);
               socket.dispatchEvent(new MessageEvent('message', {
                 data: JSON.stringify({
                   type: 'response',
@@ -128,12 +126,9 @@
         <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px;">AgentDesk</div>
         <div style="font-size: 14px; color: #94a3b8; max-width: 320px;">Initializing workspace and AI agent services...</div>
       </div>
-      <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-      </style>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     </div>
     <script>
-      // Global fallback in the event of an asset or script load interruption before React boots
       window.addEventListener('error', function(e) {
         var fallback = document.getElementById('app-boot-fallback');
         if (fallback) {
