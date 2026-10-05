@@ -61,35 +61,6 @@ export const ContactSalesModal: React.FC<ContactSalesModalProps> = ({
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'We could not submit your deployment request. Please try again.');
       }
-
-      const n8nWebhookUrl = String(import.meta.env.VITE_N8N_WEBHOOK_URL || '').trim();
-      if (n8nWebhookUrl) {
-        try {
-          const n8nResponse = await fetch(n8nWebhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              name,
-              email,
-              phone,
-              company,
-              locationsCount,
-              callVolume,
-              requirements,
-              planName: plan.name,
-              source: 'agentdesk-sales-form',
-              requestId: data.requestId || '',
-              submittedAt: new Date().toISOString()
-            })
-          });
-          if (!n8nResponse.ok) {
-            console.warn('[AgentDesk] n8n webhook returned', n8nResponse.status);
-          }
-        } catch (n8nError) {
-          console.warn('[AgentDesk] n8n webhook delivery failed:', n8nError);
-        }
-      }
-
       setIsSuccess(true);
     } catch (err: any) {
       console.error('Error submitting deployment request:', err);
