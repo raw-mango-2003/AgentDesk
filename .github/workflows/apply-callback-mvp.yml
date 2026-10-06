@@ -1,0 +1,58 @@
+name: Apply callback MVP patch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'feat: add smart callback lead prompt') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch chatbot backend
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('server.ts')
+          text = path.read_text(encoding='utf-8')
+
+          old = '''    console.log(`[Widget Chat Engine] Processed request for tenant (${currentBusiness.id})`);\n\n    return res.json({\n      success: true,\n      reply: validatedReply,\n      conversationId: updatedRecord.conversationId,\n      conversationState: updatedRecord.state,\n      isClosing: rawResult.isClosing,\n      needsHumanHandoff: rawResult.needsHumanHandoff,\n      suggestedActions: rawResult.suggestedActions,\n      businessId: currentBusiness.id,\n      agentId: agent.id\n    });'''
+
+          new = '''    // Smart callback conversion: after several meaningful questions, offer a callback\n    // when the conversation shows commercial intent. This is intentionally separate\n    // from hard human handoff so normal questions remain conversational.\n    const userMessages = updatedRecord.messages\n      .filter(message => message.role === 'user')\n      .map(message => String(message.content || '').trim())\n      .filter(message => message.length >= 12 && !/^(hi|hello|hey|thanks|thank you|ok|okay|yes|no|sure|great|cool)[.! ]*$/i.test(message));\n    const recentUserText = userMessages.slice(-6).join(' ');\n    const hasCommercialIntent = /\\b(price|pricing|cost|quote|quotation|demo|buy|purchase|interested|service|services|product|package|plan|plans|availability|appointment|booking|start|started|get started|sign up|signup|enroll|register|implementation|proposal|estimate|budget)\\b/i.test(recentUserText);\n    const hasCallbackOffer = updatedRecord.messages.some(message =>\n      message.role === 'assistant' && /would you like (?:someone|a member).*call|arrange (?:a )?callback|someone from (?:our|the) team.*call/i.test(message.content || '')\n    );\n    const shouldOfferCallback =\n      !updatedRecord.leadCaptured &&\n      !hasCallbackOffer &&\n      userMessages.length >= 4 &&\n      hasCommercialIntent &&\n      !rawResult.isClosing;\n\n    const finalReply = shouldOfferCallback\n      ? 'I hope I have been able to answer your questions. If you would like, I can have someone from our team call you and walk you through everything based on what we have discussed. Would you like a callback?'\n      : validatedReply;\n    const finalNeedsHumanHandoff = shouldOfferCallback ? true : rawResult.needsHumanHandoff;\n\n    if (shouldOfferCallback) {\n      updatedRecord.messages.push({\n        id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,\n        conversationId: updatedRecord.conversationId,\n        businessId: updatedRecord.businessId,\n        role: 'assistant',\n        content: finalReply,\n        timestamp: new Date().toISOString()\n      });\n      try {\n        await conversationStore.persistConversationAsync(updatedRecord);\n      } catch (persistError: any) {\n        console.error('[CallbackOfferPersistError]', persistError?.message || persistError);\n      }\n    }\n\n    console.log(`[Widget Chat Engine] Processed request for tenant (${currentBusiness.id})`);\n\n    return res.json({\n      success: true,\n      reply: finalReply,\n      conversationId: updatedRecord.conversationId,\n      conversationState: updatedRecord.state,\n      isClosing: rawResult.isClosing,\n      needsHumanHandoff: finalNeedsHumanHandoff,\n      suggestedActions: shouldOfferCallback ? ['Yes, arrange a callback', 'No, I will continue here'] : rawResult.suggestedActions,\n      businessId: currentBusiness.id,\n      agentId: agent.id\n    });'''
+
+          if old not in text:
+              raise SystemExit('Expected widget chat response block was not found; aborting without changes.')
+
+          if 'Smart callback conversion:' in text:
+              raise SystemExit('Smart callback patch already exists; aborting without changes.')
+
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+      - name: Install dependencies
+        run: npm install --no-package-lock --ignore-scripts
+
+      - name: Typecheck
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit patch and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/apply-callback-mvp.yml
+          git add server.ts .github/workflows/apply-callback-mvp.yml
+          git diff --cached --check
+          git commit -m "feat: add smart callback lead prompt"
+          git push origin HEAD:main
