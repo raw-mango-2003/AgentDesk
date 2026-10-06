@@ -641,7 +641,41 @@ app.post('/api/public/deployment-request', async (req: Request, res: Response) =
     if (!name || !email || !isValidEmailAddress(email)) {
       return res.status(400).json({ success: false, error: 'A valid name and email address are required.' });
     }
+            const platformLead = {
+      id: 'DEP-' + new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + crypto.randomBytes(3).toString('hex').toUpperCase(),
+      tenantId: PLATFORM_ADMIN_TENANT_ID,
+      businessId: PLATFORM_ADMIN_TENANT_ID,
+      name,
+      email,
+      phone,
+      company,
+      source: 'AgentDesk Website',
+      status: 'new',
+      requirement: requirements,
+      message: requirements,
+      notes: [
+        company ? `Company: ${company}` : '',
+        locationsCount ? `Locations: ${locationsCount}` : '',
+        callVolume ? `Call volume: ${callVolume}` : '',
+        planName ? `Plan: ${planName}` : ''
+      ].filter(Boolean).join(' | '),
+      createdAt: new Date().toISOString()
+    };
 
+    try {
+      const persistedLead = await persistLeadToPostgres(platformLead as any);
+
+      try {
+        await syncLeadToSpreadsheet(
+          persistedLead || platformLead,
+          PLATFORM_ADMIN_BUSINESS as any
+        );
+      } catch (syncError: any) {
+        console.error('[Deployment Request] Lead integration sync failed:', syncError?.message || syncError);
+      }
+    } catch (leadError: any) {
+      console.error('[Deployment Request] Failed to persist platform lead:', leadError?.message || leadError);
+    }
     const adminEmail = (process.env.PLATFORM_ADMIN_EMAIL || process.env.EMAIL_REPLY_TO || '').trim().toLowerCase();
     if (!adminEmail || !isValidEmailAddress(adminEmail)) {
       console.error('[Deployment Request] PLATFORM_ADMIN_EMAIL/EMAIL_REPLY_TO is not configured.');
