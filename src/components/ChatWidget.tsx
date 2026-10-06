@@ -698,6 +698,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showHandoffForm, setShowHandoffForm] = useState(false);
+  const [showSmartCallbackOffer, setShowSmartCallbackOffer] = useState(false);
   
   // Handoff lead form fields
   const [leadName, setLeadName] = useState('');
@@ -725,6 +726,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     const queryText = textToSend || input;
     if (!queryText.trim()) return;
 
+    setShowSmartCallbackOffer(false);
     const userMsg: Message = {
       id: `u-${Date.now()}`,
       sender: 'user',
@@ -772,6 +774,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
         if (data.needsHumanHandoff) {
           setShowHandoffForm(true);
+        }
+        if (data.showSmartCallbackOffer) {
+          setShowSmartCallbackOffer(true);
         }
       } else {
         // Fallback error response
@@ -909,6 +914,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     setInput('');
     setIsTyping(false);
     setShowHandoffForm(false);
+    setShowSmartCallbackOffer(false);
     setLeadName('');
     setLeadEmail('');
     setLeadPhone('');
@@ -1091,6 +1097,35 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                   <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                   <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+
+            {showSmartCallbackOffer && !showHandoffForm && !leadSubmitted && (
+              <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-md space-y-3 my-2 animate-fadeIn">
+                <p className="text-sm text-slate-700">Would you like a callback from our team to discuss what we covered?</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSmartCallbackOffer(false);
+                      setShowHandoffForm(true);
+                    }}
+                    className="px-3 py-2 text-xs font-semibold text-white rounded-lg"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    Yes, arrange a callback
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSmartCallbackOffer(false);
+                      handleSendMessage("No, I'll continue here");
+                    }}
+                    className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 rounded-lg"
+                  >
+                    No, I'll continue here
+                  </button>
                 </div>
               </div>
             )}

@@ -286,6 +286,28 @@
     dispatchCustomEvent('message', msgObj);
   }
 
+  function renderSmartCallbackOffer(parentDiv) {
+    var actions = document.createElement('div');
+    actions.className = 'agentdesk-chips';
+    var yes = document.createElement('button');
+    yes.className = 'agentdesk-chip';
+    yes.textContent = 'Yes, arrange a callback';
+    yes.onclick = function () {
+      actions.remove();
+      renderLeadForm(parentDiv);
+    };
+    var no = document.createElement('button');
+    no.className = 'agentdesk-chip';
+    no.textContent = "No, I'll continue here";
+    no.onclick = function () {
+      actions.remove();
+      sendMessage("No, I'll continue here");
+    };
+    actions.appendChild(yes);
+    actions.appendChild(no);
+    parentDiv.appendChild(actions);
+  }
+
   function renderLeadForm(parentDiv) {
     var card = document.createElement('div');
     card.className = 'agentdesk-lead-card';
@@ -424,6 +446,11 @@
         setTyping(false);
         if (data && data.reply) {
           addMessage('agent', data.reply, data.suggestedActions);
+          if (data.showSmartCallbackOffer && !state.leadCaptured) {
+            var messages = document.getElementById('agentdesk-msg-list');
+            var lastMessage = messages && messages.lastElementChild;
+            if (lastMessage) renderSmartCallbackOffer(lastMessage);
+          }
         } else {
           addMessage('agent', "I'm having a slight connection issue. How else can I assist you?");
         }

@@ -663,11 +663,11 @@ app.post('/api/public/deployment-request', async (req: Request, res: Response) =
     };
 
     try {
-      const persistedLead = await persistLeadToPostgres(platformLead as any);
+      await persistLeadToPostgres(platformLead as any);
 
       try {
         await syncLeadToSpreadsheet(
-          persistedLead || platformLead,
+          platformLead,
           PLATFORM_ADMIN_BUSINESS as any
         );
       } catch (syncError: any) {
@@ -2008,6 +2008,28 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     const record = await conversationStore.getOrCreateConversationAsync(safeConvId, currentBusiness.id);
 
+    const pendingSmartCallback = (record.state as any).smartCallbackOffer;
+    if (
+      pendingSmartCallback?.status === 'offered' &&
+      /^(no|nope|not now|no thanks|i'?ll continue here|i will continue here)\b/i.test(safeMessage)
+    ) {
+      pendingSmartCallback.status = 'declined';
+      pendingSmartCallback.declinedAt = new Date().toISOString();
+      const reply = "No problem at all — I’m here whenever you’d like to continue.";
+      const now = new Date().toISOString();
+      record.messages.push(
+        { id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, conversationId: record.conversationId, businessId: record.businessId, role: 'user', content: safeMessage, timestamp: now },
+        { id: `msg-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`, conversationId: record.conversationId, businessId: record.businessId, role: 'assistant', content: reply, timestamp: now }
+      );
+      record.updatedAt = now;
+      await conversationStore.persistConversationAsync(record);
+      return res.json({
+        success: true, reply, conversationId: record.conversationId, conversationState: record.state,
+        isClosing: false, needsHumanHandoff: false, suggestedActions: ['Ask Another Question'],
+        businessId: currentBusiness.id, agentId: agent.id
+      });
+    }
+
     // Lead-capture guardrail: once the visitor provides a phone/email during
     // the lead-capture flow, persist the lead immediately and keep the AI
     // response focused on capture. Do not expose the client's own phone/email
@@ -2209,9 +2231,13 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     // Pipeline Stage 6: Answer Validation
     const validatedReply = validateAnswer(rawResult.reply, extracted, currentBusiness, record);
+    const smartCallbackOffer = shouldOfferSmartCallback(record, rawResult.needsHumanHandoff, safeMessage);
+    const responseReply = smartCallbackOffer
+      ? `${validatedReply}\n\nI hope I've been able to answer your questions. If you'd like, I can have someone from our team call you and walk through everything we discussed. Would you like a callback?`
+      : validatedReply;
 
     // Pipeline Stage 7: Conversation State & Memory Update
-    const updatedRecord = updateConversationMemory(record, safeMessage, validatedReply, extracted);
+    const updatedRecord = updateConversationMemory(record, safeMessage, responseReply, extracted);
     try {
       await conversationStore.persistConversationAsync(updatedRecord);
     } catch (persistError: any) {
@@ -2226,11 +2252,12 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 
     return res.json({
       success: true,
-      reply: validatedReply,
+      reply: responseReply,
       conversationId: updatedRecord.conversationId,
       conversationState: updatedRecord.state,
       isClosing: rawResult.isClosing,
       needsHumanHandoff: rawResult.needsHumanHandoff,
+      showSmartCallbackOffer: smartCallbackOffer,
       suggestedActions: rawResult.suggestedActions,
       businessId: currentBusiness.id,
       agentId: agent.id
@@ -2342,7 +2369,16 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
     leadRecord.scoreCategory = leadQualification.category;
     leadRecord.details = { ...(leadRecord.details || {}), qualification: { score: leadQualification.score, category: leadQualification.category, explanation: leadQualification.explanation, status: 'new' } };
     const persisted = await persistLeadToPostgres(leadRecord);
-    const spreadsheetSync = await syncLeadToSpreadsheet(leadRecord, business, { conversationId: safeConversationId, status: 'HUMAN_REQUIRED' });
+    const conversationRecord = await conversationStore.getOrCreateConversationAsync(safeConversationId, business.id);
+    conversationRecord.leadCaptured = true;
+    conversationRecord.status = 'HUMAN_REQUIRED';
+    const smartCallbackOffer = (conversationRecord.state as any).smartCallbackOffer;
+    if (smartCallbackOffer?.status === 'offered') {
+      smartCallbackOffer.status = 'accepted';
+      smartCallbackOffer.acceptedAt = now;
+    }
+    await conversationStore.persistConversationAsync(conversationRecord);
+    const spreadsheetSync = await syncLeadToSpreadsheet(leadRecord, business, conversationRecord);
     if (!persisted && process.env.NODE_ENV === 'production') {
       return res.status(503).json({
         success: false,
@@ -2539,6 +2575,50 @@ app.get('/api/business/:businessId/widget-config', requireAuth, requireTenantAcc
     }
   });
 });
+
+function shouldOfferSmartCallback(record: ConversationRecord, needsHumanHandoff: boolean, pendingUserMessage: string): boolean {
+  const state = record.state as any;
+  if (
+    needsHumanHandoff ||
+    record.leadCaptured ||
+    record.status === 'HUMAN_REQUIRED' ||
+    state.conversationStage === 'BOOKING' ||
+    state.smartCallbackOffer
+  ) return false;
+
+  const acknowledgements = /^(hi|hello|hey|ok|okay|thanks|thank you|got it|sure|yes|no|fine|cool)[!.\s]*$/i;
+  const commercialPatterns: Array<[string, RegExp]> = [
+    ['pricing', /\b(price|pricing|cost|quote|quotation|plan|plans|budget)\b/i],
+    ['purchase', /\b(purchase|buy|buying|sales|interested)\b/i],
+    ['offering', /\b(service|services|product|products|availability|available)\b/i],
+    ['implementation', /\b(implementation|implement|setup|onboarding|getting started|integration|integrate)\b/i],
+    ['consultation', /\b(demo|consultation|appointment|booking|requirements|custom solution|callback)\b/i]
+  ];
+
+  const meaningfulMessages = [
+    ...record.messages
+      .filter(message => message.role === 'user')
+      .map(message => String(message.content || '').trim()),
+    pendingUserMessage.trim()
+  ].filter(message => message.length >= 8 && !acknowledgements.test(message));
+
+  const commercialSignals = new Set<string>();
+  for (const message of meaningfulMessages) {
+    for (const [category, pattern] of commercialPatterns) {
+      if (pattern.test(message)) commercialSignals.add(category);
+    }
+  }
+
+  if (meaningfulMessages.length < 4 || commercialSignals.size < 2) return false;
+
+  state.smartCallbackOffer = {
+    status: 'offered',
+    offeredAt: new Date().toISOString(),
+    meaningfulUserMessages: meaningfulMessages.length,
+    commercialSignals: Array.from(commercialSignals)
+  };
+  return true;
+}
 
 // Server-side Conversation Intelligence Engine Chat Endpoint
 app.post('/api/chat', async (req: Request, res: Response) => {
