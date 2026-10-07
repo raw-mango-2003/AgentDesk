@@ -31,7 +31,12 @@ export function installGlobalHaptics(): () => void {
       'button, a, [role="button"], input[type="button"], input[type="submit"], input[type="checkbox"], input[type="radio"], select, summary'
     );
 
-    if (!interactive || interactive.getAttribute('aria-disabled') === 'true' || (interactive as HTMLButtonElement).disabled) return;
+    if (!interactive || interactive.getAttribute('aria-disabled') === 'true') return;
+
+    if ('disabled' in interactive && Boolean((interactive as HTMLButtonElement | HTMLInputElement | HTMLSelectElement).disabled)) {
+      return;
+    }
+
     if (interactive.closest('[data-haptics="off"]')) return;
 
     triggerHaptic('light');
