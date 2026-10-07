@@ -16,6 +16,7 @@ const ColdOutreachDashboard = lazy(() => import('./components/ColdOutreachDashbo
 const IntegrationsDashboard = lazy(() => import('./components/IntegrationsDashboard').then(module => ({ default: module.IntegrationsDashboard })));
 const KnowledgeBaseDashboard = lazy(() => import('./components/KnowledgeBaseDashboard').then(module => ({ default: module.KnowledgeBaseDashboard })));
 const ConversationsDashboard = lazy(() => import('./components/ConversationsDashboard').then(module => ({ default: module.ConversationsDashboard })));
+const DesignStudio = lazy(() => import('./components/DesignStudio').then(module => ({ default: module.DesignStudio })));
 const PlatformAdminDashboard = lazy(() => import('./components/PlatformAdminDashboard').then(module => ({ default: module.PlatformAdminDashboard })));
 const AICopilotDrawer = lazy(() => import('./components/AICopilotDrawer').then(module => ({ default: module.AICopilotDrawer })));
 const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer').then(module => ({ default: module.NotificationsDrawer })));
@@ -115,7 +116,8 @@ export type SaaSNavTab =
   | 'localization'
   | 'embed'
   | 'admin'
-  | 'account_credentials';
+  | 'account_credentials'
+  | 'design_studio';
 
 export type AppView = 'landing' | 'pricing' | 'login' | 'platform_login' | 'onboarding' | 'checkout' | 'dashboard' | 'setup_account' | 'reset_password' | 'verify_email' | 'terms' | 'privacy' | 'refunds' | 'acceptable_use' | 'cookies';
 
@@ -152,6 +154,7 @@ export default function App() {
       if (path === '/billing' || hash === '#billing') return 'billing';
       if (path === '/embed' || hash === '#embed') return 'embed';
       if (path === '/admin/account-credentials') return 'account_credentials';
+      if (path === '/admin/design-studio') return 'design_studio';
       if (path.startsWith('/admin') || hash.startsWith('#admin')) return 'admin';
       const match = path.match(/^\/dashboard\/([^/]+)$/);
       const slugToTab: Record<string, SaaSNavTab> = {
@@ -722,6 +725,10 @@ export default function App() {
               navigateTab('overview');
             }}
           />
+        ) : (currentUser?.role === 'PLATFORM_ADMIN' || currentUser?.role === 'UI_UX_DESIGNER') && activeTab === 'design_studio' ? (
+          <Suspense fallback={<RouteLoading />}>
+            <DesignStudio />
+          </Suspense>
         ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'admin' ? (
           <PlatformAdminDashboard
             initialTab={adminSubTab as any}
