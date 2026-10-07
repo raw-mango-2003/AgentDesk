@@ -22,7 +22,9 @@ import {
   PUBLIC_AGENTDESK_DEMO_AGENT, 
   PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS,
   PUBLIC_DEMO_TENANT_ID,
-  PUBLIC_DEMO_AGENT_ID 
+  PUBLIC_DEMO_AGENT_ID,
+  PLATFORM_ADMIN_TENANT_ID,
+  PLATFORM_ADMIN_AGENT_ID
 } from '../data/demoBusiness';
 const getCsrfHeader = (): Record<string, string> => {
   if (typeof document === 'undefined') return {};
@@ -74,6 +76,50 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
     async function initContext() {
       if (agentId) {
+        // The homepage uses the public widget surface, so the platform agent
+        // must be resolved through its public, sanitized configuration endpoint
+        // rather than the authenticated /api/agents endpoint.
+        if (agentId.toLowerCase() === PLATFORM_ADMIN_AGENT_ID.toLowerCase() || agentId.toLowerCase() === PLATFORM_ADMIN_TENANT_ID.toLowerCase()) {
+          try {
+            const response = await fetch(`/api/widget/config?agentId=${encodeURIComponent(agentId)}`, {
+              headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (!cancelled && response.ok && data?.success && data.agent && data.business) {
+              const publicAgent: AIAgent = {
+                ...data.agent,
+                tenantId: data.tenantId || data.business.id,
+                businessId: data.tenantId || data.business.id
+              };
+              const publicBusiness: Business = {
+                ...data.business,
+                id: data.business.id,
+                tenantId: data.tenantId || data.business.id,
+                tenant_id: data.tenantId || data.business.id,
+                primaryAgentId: data.agent.id,
+                agentSettings: {
+                  ...(initialBusiness?.agentSettings || {}),
+                  agentName: data.agent.name,
+                  welcomeMessage: data.agent.welcomeMessage,
+                  tone: data.agent.tone,
+                  suggestedQuestions: data.agent.suggestedQuestions,
+                  primaryColor: data.agent.primaryColor,
+                  secondaryColor: data.agent.secondaryColor
+                },
+                primaryColor: data.agent.primaryColor || data.business.primaryColor,
+                secondaryColor: data.agent.secondaryColor || data.business.secondaryColor,
+                voice: data.agent.voice,
+                voiceGreeting: data.agent.voiceGreeting
+              } as Business;
+              setResolvedBiz(publicBusiness);
+              setResolvedAgent(publicAgent);
+              return;
+            }
+          } catch (error) {
+            console.warn('[ChatWidget] Failed to load public platform agent config:', error);
+          }
+        }
+
         const { tenant, agent } = await resolveAgentAndTenant(agentId);
         if (cancelled) return;
         if (tenant) setResolvedBiz(tenant);
