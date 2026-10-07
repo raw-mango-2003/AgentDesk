@@ -369,6 +369,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           email: leadEmail.trim(),
           phone: leadPhone.trim(),
           notes: leadMessage.trim() || 'Requested human support via AI Chat widget.'
+          callConsent: true,
         })
       });
 
@@ -402,7 +403,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         {
           id: `sys-${Date.now()}`,
           sender: 'system',
-          text: `Thank you, ${leadName.trim()}! Your request has been recorded. Our team will reach out to you shortly.`,
+          text: `Thank you, ${leadName.trim()}! Your request is recorded. Our AI employee will call you shortly, and you can ask to speak with a human during the same call.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -624,10 +625,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               <div className="bg-white border border-blue-200 rounded-xl p-4 shadow-md space-y-3 my-2 animate-fadeIn">
                 <div className="flex items-center gap-2 text-blue-900 font-medium text-xs">
                   <UserCheck className="w-4 h-4 text-blue-600" />
-                  <span>Connect with Human Support Team</span>
+                  <span>AI Employee Call</span>
                 </div>
                 <p className="text-xs text-slate-600">
-                  Please share your details so our counselor or support agent can get back to you shortly.
+                  Our AI employee will call you first. If you ask for a human, the same call will be transferred to your team.
                 </p>
                 <form onSubmit={handleHandoffSubmit} className="space-y-2.5">
                   <div>
