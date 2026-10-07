@@ -746,7 +746,7 @@ export default function App() {
               const list = await getAllBusinesses();
               setAllBusinesses(list);
               if (activeBusinessId === deletedBizId) {
-                const nextId = list.length > 0 ? list[0].id : 'summit-home-services';
+                const nextId = list.length > 0 ? list[0].id : PLATFORM_ADMIN_TENANT_ID;
                 setActiveBusinessId(nextId);
               }
             }}
