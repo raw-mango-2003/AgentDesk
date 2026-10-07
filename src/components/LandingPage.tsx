@@ -76,7 +76,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     fetch('/api/site-design')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data?.success && data.design) setSiteDesign(data.design);
+        if (data?.success && data.design) {
+          setSiteDesign(data.design);
+          if (data.design.site?.name) document.title = data.design.site.name;
+        }
       })
       .catch(() => {
         // Keep compiled homepage defaults if the design service is unavailable.
@@ -89,7 +92,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     '--agentdesk-accent': siteDesign.brand.accentColor,
     '--agentdesk-background': siteDesign.brand.backgroundColor,
     '--agentdesk-text': siteDesign.brand.textColor,
+    '--agentdesk-heading-font': siteDesign.typography.headingFont,
     fontFamily: siteDesign.typography.bodyFont,
+    fontSize: `${siteDesign.typography.baseSize}px`,
     backgroundColor: siteDesign.brand.backgroundColor,
     color: siteDesign.brand.textColor
   } as React.CSSProperties) : undefined;
@@ -212,10 +217,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-4 sm:mb-6 shadow-md">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>AgentDesk • AI Employee for customer conversations</span>
+            <span>{siteDesign?.site?.name || 'AgentDesk'} • AI Employee for customer conversations</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-4 sm:mb-6">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] mb-4 sm:mb-6" style={{ fontFamily: siteDesign?.typography?.headingFont, fontWeight: siteDesign?.typography?.headingWeight, color: siteDesign?.brand?.textColor }}>
             {siteDesign?.homepage?.heroHeadline || 'Your AI employee for every customer conversation.'}
           </h1>
 
