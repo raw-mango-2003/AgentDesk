@@ -1,8 +1,6 @@
-export const version = '003_department_design';
-export const description = 'Add internal department roles and persistent homepage design configuration';
+export const version = '003_site_design';
+export const description = 'Add persistent AgentDesk site design and control-center configuration';
 export const sql = `
-ALTER TABLE agentdesk_users ADD COLUMN IF NOT EXISTS department VARCHAR(64);
-
 CREATE TABLE IF NOT EXISTS agentdesk_site_design (
   id VARCHAR(64) PRIMARY KEY,
   config JSONB NOT NULL,
