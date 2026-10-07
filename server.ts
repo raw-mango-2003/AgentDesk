@@ -188,6 +188,20 @@ const corsOptionsDelegate = (req: Request, callback: (err: Error | null, options
 };
 
 app.use(cors(corsOptionsDelegate));
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV !== 'production') return next();
+  const allowedHosts = [process.env.APP_URL, ...(process.env.ALLOWED_HOSTS || '').split(',')]
+    .filter(Boolean)
+    .flatMap(value => {
+      try { return [new URL(String(value).trim()).host.toLowerCase()]; } catch { return []; }
+    });
+  const requestHost = String(req.headers.host || '').trim().toLowerCase();
+  if (allowedHosts.length > 0 && !allowedHosts.includes(requestHost)) {
+    return res.status(421).json({ success: false, error: 'Misdirected request.' });
+  }
+  next();
+});
+
 app.use(express.json({
   limit: '2mb',
   verify: (req: any, _res, buf) => {
