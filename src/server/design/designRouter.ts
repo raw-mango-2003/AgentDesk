@@ -91,8 +91,8 @@ designRouter.post('/site-design/reset', async (req: Request, res: Response) => {
     const session = await getSession(token);
     const user = session ? getUserById(session.userId) : null;
     if (!user) return res.status(401).json({ success: false, error: { code: 'AUTH_REQUIRED', message: 'Authentication required.' } });
-    if (!canAccessDepartment(user.role, 'UI_UX')) {
-      return res.status(403).json({ success: false, error: { code: 'DESIGN_FORBIDDEN', message: 'Only Platform Admin and UI/UX Design can edit the site design.' } });
+    if (user.role !== 'PLATFORM_ADMIN') {
+      return res.status(403).json({ success: false, error: { code: 'DESIGN_FORBIDDEN', message: 'Only Platform Admin can reset the site design.' } });
     }
 
     await postgresClient.query('DELETE FROM agentdesk_site_design WHERE id = $1', ['global']);
