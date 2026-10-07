@@ -247,19 +247,10 @@ export const PlatformAdminAgentEditor: React.FC<PlatformAdminAgentEditorProps> =
         updatedAt: now
       };
 
-      // 1. Save in local dbService
-      await saveKnowledgeDoc(itemToSave);
+      // saveKnowledgeDoc already persists through the production API.
+      // Avoid a second identical request, which only consumes rate-limit capacity.
 
-      // 2. Save in backend server.ts endpoint
-      try {
-        await fetch('/api/knowledge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(itemToSave)
-        });
-      } catch (e) {
-        console.warn('Server knowledge sync warning:', e);
-      }
+      await saveKnowledgeDoc(itemToSave);
 
       // Refresh list
       const updatedList = await getKnowledgeDocs(PLATFORM_ADMIN_TENANT_ID);
@@ -276,17 +267,9 @@ export const PlatformAdminAgentEditor: React.FC<PlatformAdminAgentEditorProps> =
   const handleDeleteKnowledgeItem = async (id: string) => {
     if (!confirm('Are you sure you want to delete this knowledge base item?')) return;
     try {
-      // 1. Delete in dbService
+      // deleteKnowledgeDoc already persists through the production API.
+      // Avoid issuing the same delete a second time.
       await deleteKnowledgeDoc(PLATFORM_ADMIN_TENANT_ID, id);
-
-      // 2. Delete on server
-      try {
-        await fetch(`/api/knowledge/${PLATFORM_ADMIN_TENANT_ID}/${id}`, {
-          method: 'DELETE'
-        });
-      } catch (e) {
-        console.warn('Server delete knowledge warning:', e);
-      }
 
       const updatedList = await getKnowledgeDocs(PLATFORM_ADMIN_TENANT_ID);
       setKnowledgeItems(updatedList);
