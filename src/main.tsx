@@ -33,7 +33,7 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | 
   }
 }
 
-const removeGlobalHaptics = installGlobalHaptics();
+installGlobalHaptics();
 
 try {
   const rootEl = document.getElementById('root');
