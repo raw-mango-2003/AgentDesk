@@ -109,7 +109,19 @@ export class NotificationService implements INotificationService {
     if (email && shouldSendEmail) {
       const templateName = this.mapEventToEmailTemplate(event);
       if (templateName) {
-        await this.emailService.sendTemplate(templateName as any, email, payload, { userId, tenantId });
+        const delivery = await this.emailService.sendTemplate(
+          templateName as any,
+          email,
+          payload,
+          { userId, tenantId }
+        );
+
+        // Password reset is a security-critical flow. Never report the
+        // automation as successfully dispatched when the email transport
+        // actually failed or is not configured.
+        if (event === 'PASSWORD_RESET_REQUESTED' && !delivery.success) {
+          throw new Error(delivery.error || 'Password reset email could not be delivered.');
+        }
       }
     }
 
