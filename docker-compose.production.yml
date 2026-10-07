@@ -1,0 +1,62 @@
+services:
+  agentdesk:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      TRUST_PROXY: "true"
+      ALLOWED_HOSTS: ${APP_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8080"
+    networks:
+      - agentdesk_internal
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-agentdesk}
+      POSTGRES_USER: ${POSTGRES_USER:-agentdesk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agentdesk_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agentdesk} -d ${POSTGRES_DB:-agentdesk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      N8N_SECURE_COOKIE: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - agentdesk_internal
+    expose:
+      - "5678"
+
+volumes:
+  postgres_data:
+  n8n_data:
+
+networks:
+  agentdesk_internal:
+    internal: true

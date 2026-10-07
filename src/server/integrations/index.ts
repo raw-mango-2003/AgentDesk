@@ -15,6 +15,7 @@ import { NotificationService } from './notificationService.js';
 import { AutomationEngine } from './automationEngine.js';
 import { deliveryLogService } from './deliveryLogService.js';
 import { deliverLeadToSpreadsheet, syncLeadToSpreadsheet } from './leadSyncService.js';
+import { voiceCallService } from './voiceCallService.js';
 
 // Central singletons
 export const gmailService = new GmailService();
@@ -85,4 +86,4 @@ export * from './rateLimiter.js';
 export * from './emailTemplates.js';
 export * from './integrationStore.js';
 
-export { syncLeadToSpreadsheet };
+export { syncLeadToSpreadsheet, voiceCallService };
