@@ -3,7 +3,6 @@ import { postgresClient } from '../db/postgresClient.js';
 import { extractTokenFromRequest } from '../auth/authRouter.js';
 import { getSession } from '../auth/sessionStore.js';
 import { getUserById } from '../auth/userRegistry.js';
-import { canAccessDepartment } from '../auth/departmentAccess.js';
 import { DEFAULT_SITE_DESIGN, SiteDesignConfig } from './designTypes.js';
 
 export const designRouter = Router();
@@ -67,8 +66,8 @@ designRouter.put('/site-design', async (req: Request, res: Response) => {
     const session = await getSession(token);
     const user = session ? getUserById(session.userId) : null;
     if (!user) return res.status(401).json({ success: false, error: { code: 'AUTH_REQUIRED', message: 'Authentication required.' } });
-    if (!canAccessDepartment(user.role, 'UI_UX')) {
-      return res.status(403).json({ success: false, error: { code: 'DESIGN_FORBIDDEN', message: 'Only Platform Admin and UI/UX Design can edit the site design.' } });
+    if (user.role !== 'PLATFORM_ADMIN') {
+      return res.status(403).json({ success: false, error: { code: 'DESIGN_FORBIDDEN', message: 'Only Platform Admin can edit the site design.' } });
     }
 
     const design = sanitizeDesign(req.body);
