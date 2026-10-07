@@ -46,11 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (typeof window === 'undefined') return;
     const path = window.location.pathname.toLowerCase();
 
-    const isDesignStudio = path === '/admin/design-studio';
-    const isPlatformAdminOnly = path === '/dashboard/integrations';
-    const canUseDesignStudio = user?.role === 'PLATFORM_ADMIN' || user?.role === 'UI_UX_DESIGNER';
+    const isPlatformAdminOnly = path === '/dashboard/integrations' || path === '/admin/design-studio';
 
-    if (!isDesignStudio && !isPlatformAdminOnly) return;
+    if (!isPlatformAdminOnly) return;
 
     if (!user) {
       window.history.replaceState({ ...(window.history.state || {}), agentDeskRoute: true, agentDeskView: 'login', agentDeskTab: undefined, agentDeskScrollY: 0 }, '', '/login');
@@ -58,13 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    if (isDesignStudio && !canUseDesignStudio) {
-      window.history.replaceState({ ...(window.history.state || {}), agentDeskRoute: true, agentDeskView: 'dashboard', agentDeskTab: 'overview', agentDeskScrollY: 0 }, '', '/dashboard');
-      window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
-      return;
-    }
-
-    if (isPlatformAdminOnly && user.role !== 'PLATFORM_ADMIN') {
+    if (user.role !== 'PLATFORM_ADMIN') {
       window.history.replaceState({ ...(window.history.state || {}), agentDeskRoute: true, agentDeskView: 'dashboard', agentDeskTab: 'overview', agentDeskScrollY: 0 }, '', '/dashboard');
       window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
     }
