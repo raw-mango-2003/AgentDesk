@@ -47,6 +47,8 @@ import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { gmailService, integrationStore, notificationService, syncLeadToSpreadsheet, voiceCallService } from './src/server/integrations/index.js';
+import { storageService } from './src/server/integrations/index.js';
+import { designRouter } from './src/server/design/designRouter.js';
 
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
