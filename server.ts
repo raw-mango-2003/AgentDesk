@@ -46,7 +46,7 @@ import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTen
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
-import { storageService, gmailService, integrationStore, notificationService, syncLeadToSpreadsheet, voiceCallService } from './src/server/integrations/index.js';
+
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
@@ -328,6 +328,8 @@ app.use('/api', tenantRouter);
 
 // Mount Production Integrations, Notifications, Security & Health API Router
 app.use('/api', integrationsRouter);
+// Public homepage design is read-only to visitors; writes are restricted inside designRouter.
+app.use('/api', designRouter);
 // Integrations are exposed only through the canonical /api mount. Legacy root aliases are intentionally removed.
 
 // Secure Local Storage Files Endpoint with Strict Tenant Isolation
