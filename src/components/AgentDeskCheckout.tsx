@@ -45,6 +45,7 @@ export interface AgentDeskCheckoutProps {
   }) => void;
   onNavigateHome?: () => void;
   onNavigateLogin?: () => void;
+  onNavigateLegal?: (view: 'terms' | 'privacy' | 'refunds') => void;
 }
 
 interface OrderCalculationState {
@@ -106,7 +107,8 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   onClose,
   onSuccess,
   onNavigateHome,
-  onNavigateLogin
+  onNavigateLogin,
+  onNavigateLegal
 }) => {
   const [selectedPlanId, setSelectedPlanId] = useState<string>(() => {
     const valid = ['starter', 'growth', 'scale'];
@@ -1551,6 +1553,46 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     {selectedMethod === 'wallets' && 'Authenticate with your mobile wallet account to pay securely using your available wallet balance.'}
                   </span>
                 </div>
+              </div>
+
+              {/* Required legal acceptance */}
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedLegalTerms}
+                    onChange={(e) => setAcceptedLegalTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-blue-600"
+                    aria-label="Accept Terms of Use, Privacy Policy, and Refund and Cancellation Policy"
+                  />
+                  <span className="text-xs text-slate-300 leading-relaxed">
+                    I agree to the{' '}
+                    <button
+                      type="button"
+                      onClick={() => onNavigateLegal?.('terms')}
+                      className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold"
+                    >
+                      Terms of Use
+                    </button>
+                    ,{' '}
+                    <button
+                      type="button"
+                      onClick={() => onNavigateLegal?.('privacy')}
+                      className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold"
+                    >
+                      Privacy Policy
+                    </button>
+                    , and{' '}
+                    <button
+                      type="button"
+                      onClick={() => onNavigateLegal?.('refunds')}
+                      className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold"
+                    >
+                      Refund &amp; Cancellation Policy
+                    </button>
+                    .
+                  </span>
+                </label>
               </div>
 
               {/* Pay Button */}
