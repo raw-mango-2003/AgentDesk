@@ -544,8 +544,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
  {/* Text Chat View */}
 
-      <>
-
           {/* Messages Scroll Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/60">
             {(messages || []).map(msg => (
@@ -727,7 +725,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               <Send className="w-4 h-4" />
             </button>
           </div>
-      </>
 
       {/* Footer Branding */}
       <div className="py-1.5 px-3 bg-slate-100 text-[10px] text-slate-400 text-center flex items-center justify-center gap-1 border-t border-slate-200/60">
