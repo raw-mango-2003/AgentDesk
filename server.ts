@@ -46,7 +46,7 @@ import { authRouter, tenantRouter, requirePlatformAdmin, requireAuth, requireTen
 import { getSession } from './src/server/auth/sessionStore.js';
 import { getUserById } from './src/server/auth/userRegistry.js';
 import { integrationsRouter } from './src/server/integrationsRouter.js';
-import { storageService, gmailService, integrationStore, notificationService, syncLeadToSpreadsheet } from './src/server/integrations/index.js';
+import { storageService, gmailService, integrationStore, notificationService, syncLeadToSpreadsheet, voiceCallService } from './src/server/integrations/index.js';
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
 import { postgresClient, getSafeDatabaseDiagnostics } from './src/server/db/postgresClient.js';
@@ -2275,6 +2275,150 @@ app.post('/api/widget/chat', async (req: Request, res: Response) => {
 });
 
 // POST Public Widget Lead Capture
+
+function getVoiceWebhookBaseUrl(req: Request): string {
+  const configured = String(process.env.APP_URL || '').trim();
+  if (configured) {
+    try { return new URL(configured).origin; } catch {}
+  }
+  const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
+  const host = forwardedHost || req.get('host') || 'localhost:3000';
+  const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim().toLowerCase();
+  const protocol = forwardedProto === 'https' || req.protocol === 'https' ? 'https' : 'http';
+  return protocol + '://' + host;
+}
+
+function isExplicitHumanRequest(text: string): boolean {
+  return /\b(human|representative|real person|real human|support agent|customer support|team member|someone from the team|connect me to (a )?(human|person|agent|representative)|talk to (a )?(human|person|agent|representative))\b/i.test(text || '');
+}
+
+async function getLeadForVoiceCall(tenantId: string, leadId: string): Promise<any | null> {
+  const dbReady = await postgresClient.initialize();
+  if (!dbReady) return null;
+  const result = await postgresClient.query(
+    'SELECT * FROM agentdesk_leads WHERE id = $1 AND tenant_id = $2 LIMIT 1',
+    [leadId, tenantId]
+  );
+  if (!result.rows?.length) return null;
+  const row = result.rows[0];
+  return {
+    ...row,
+    id: row.id,
+    tenantId: row.tenant_id,
+    businessId: row.tenant_id,
+    name: row.name || '',
+    email: row.email || '',
+    phone: row.phone || '',
+    details: row.details && typeof row.details === 'object' ? row.details : {}
+  };
+}
+
+async function updateLeadVoiceCallMetadata(tenantId: string, leadId: string, metadata: Record<string, any>): Promise<void> {
+  const dbReady = await postgresClient.initialize();
+  if (!dbReady) return;
+  await postgresClient.query(
+    'UPDATE agentdesk_leads SET details = COALESCE(details, \'{}\'::jsonb) || $3::jsonb, updated_at = $4 WHERE id = $1 AND tenant_id = $2',
+    [leadId, tenantId, JSON.stringify({ aiCall: metadata }), new Date().toISOString()]
+  );
+}
+
+async function triggerLeadAiCall(params: {
+  req: Request;
+  business: any;
+  lead: any;
+  callConsent: boolean;
+}): Promise<{ success: boolean; sid?: string; error?: string; skipped?: boolean }> {
+  const { req, business, lead, callConsent } = params;
+  if (!callConsent || !lead.phone) return { success: true, skipped: true };
+  if (business?.agentSettings?.aiLeadCallingEnabled === false) return { success: true, skipped: true };
+
+  const existingCall = lead.details?.aiCall;
+  if (existingCall?.attemptedAt || existingCall?.sid) {
+    return { success: true, sid: existingCall.sid, skipped: true };
+  }
+
+  if (!voiceCallService.isConfigured()) {
+    await updateLeadVoiceCallMetadata(business.id, lead.id, {
+      status: 'not_configured',
+      attemptedAt: new Date().toISOString(),
+      error: 'Twilio Voice is not configured.'
+    });
+    return { success: false, error: 'Twilio Voice is not configured.' };
+  }
+
+  const conversationId = String(lead.conversationId || ('voice-lead-' + lead.id)).slice(0, 128);
+  const result = await voiceCallService.createOutboundLeadCall({
+    to: lead.phone,
+    tenantId: business.id,
+    leadId: lead.id,
+    conversationId,
+    businessName: business.name,
+    assistantName: business.agentSettings?.agentName || business.name + ' AI Employee',
+    baseUrl: getVoiceWebhookBaseUrl(req)
+  });
+
+  await updateLeadVoiceCallMetadata(business.id, lead.id, {
+    status: result.success ? 'initiated' : 'failed',
+    sid: result.sid,
+    attemptedAt: new Date().toISOString(),
+    error: result.error
+  });
+
+  return result;
+}
+
+async function processLeadVoiceTurn(params: {
+  business: any;
+  knowledge: KnowledgeItem[];
+  record: ConversationRecord;
+  transcript: string;
+}): Promise<{ reply: string; isClosing: boolean; needsHumanHandoff: boolean; record: ConversationRecord }> {
+  const { business, knowledge, record, transcript } = params;
+  const normInput = normalizeInput(transcript, knowledge.map(k => k.title));
+  const classifiedIntent = classifyConversationIntent(normInput, record, business.name);
+  let rawResult: any;
+  let extracted: any;
+
+  if (!classifiedIntent.requiresKnowledgeRetrieval && classifiedIntent.directReply) {
+    rawResult = {
+      reply: classifiedIntent.directReply,
+      isClosing: classifiedIntent.isClosing,
+      needsHumanHandoff: classifiedIntent.needsHumanHandoff,
+      suggestedActions: classifiedIntent.suggestedActions
+    };
+    extracted = extractIntentsAndEntities(normInput, record, business.name);
+  } else {
+    extracted = extractIntentsAndEntities(normInput, record, business.name);
+    const targetedKnowledge = retrieveTargetedKnowledge(business, knowledge, extracted, { publicOnly: true });
+    let geminiReply: string | null = null;
+    const agentId = String(business.primaryAgentId || 'voice-lead-agent');
+    if (targetedKnowledge.length > 0 && await checkAgentAiHourlyBudget(agentId, 250)) {
+      geminiReply = await generateGroundedGeminiResponse(
+        sanitizePublicBusinessForAI(business),
+        targetedKnowledge,
+        normInput.raw,
+        record.state.currentTopic,
+        normInput.language
+      );
+    }
+    if (geminiReply) {
+      rawResult = { reply: geminiReply, isClosing: false, needsHumanHandoff: false, suggestedActions: [] };
+    } else {
+      rawResult = generateEngineAnswer(business, extracted, targetedKnowledge, record);
+    }
+  }
+
+  const validatedReply = validateAnswer(rawResult.reply, extracted, business, record);
+  const updatedRecord = updateConversationMemory(record, transcript, validatedReply, extracted);
+  await conversationStore.persistConversationAsync(updatedRecord);
+  return {
+    reply: validatedReply,
+    isClosing: rawResult.isClosing || false,
+    needsHumanHandoff: rawResult.needsHumanHandoff || false,
+    record: updatedRecord
+  };
+}
+
 app.post('/api/widget/lead', async (req: Request, res: Response) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '127.0.0.1';
@@ -2283,7 +2427,7 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
   }
 
   try {
-    const { agentId, businessId, tenantId, conversationId, name, email, phone, notes } = req.body || {};
+    const { agentId, businessId, tenantId, conversationId, name, email, phone, notes, callConsent } = req.body || {};
     const targetIdentifier = agentId || tenantId || businessId;
     if (!targetIdentifier || typeof targetIdentifier !== 'string') {
       return res.status(400).json({ success: false, error: 'A valid widget identifier is required.' });
@@ -2358,6 +2502,7 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
         notes: safeNotes,
         requirement: safeNotes,
         capturedBy: 'AI Receptionist',
+        aiCallConsent: callConsent === true,
         qualification: (() => {
           const q = calculateLeadQualification({ name: safeName, email: safeEmail, phone: safePhone, requirement: safeNotes, message: safeNotes });
           return { score: q.score, category: q.category, status: 'new', explanation: q.explanation };
@@ -2418,12 +2563,26 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       console.error('[WidgetLeadNotificationError]', notifyError?.message || notifyError);
     }
 
-    console.log(`[Widget Lead Capture] New lead captured for tenant (${business.id})`);
+    let aiCall: { success: boolean; sid?: string; error?: string; skipped?: boolean } = { success: true, skipped: true };
+    try {
+      aiCall = await triggerLeadAiCall({
+        req,
+        business,
+        lead: leadRecord,
+        callConsent: callConsent === true
+      });
+    } catch (callError: any) {
+      console.error('[WidgetLeadAiCallError]', callError?.message || callError);
+      aiCall = { success: false, error: callError?.message || 'Unable to start AI lead call.' };
+    }
+
+    console.log('[Widget Lead Capture] New lead captured for tenant (' + business.id + ')');
 
     return res.json({
       success: true,
       message: 'Lead captured successfully',
-      lead: leadRecord
+      lead: { ...leadRecord, details: { ...(leadRecord.details || {}), aiCall: aiCall.skipped ? undefined : aiCall } },
+      aiCall
     });
   } catch (error: any) {
     console.error('[Widget Lead Capture] Persistence failed:', error?.message || 'Unknown error');
@@ -2431,6 +2590,188 @@ app.post('/api/widget/lead', async (req: Request, res: Response) => {
       success: false,
       error: 'Lead could not be saved right now. Please try again.'
     });
+  }
+});
+
+
+function validateTwilioWebhook(req: Request): boolean {
+  const signature = String(req.get('x-twilio-signature') || '').trim();
+  const baseUrl = getVoiceWebhookBaseUrl(req);
+  const url = baseUrl + req.originalUrl;
+  return voiceCallService.validateWebhookSignature(url, req.body || {}, signature);
+}
+
+// Twilio starts an AI employee call here.
+app.post('/api/voice/lead/start', async (req: Request, res: Response) => {
+  try {
+    if (!validateTwilioWebhook(req)) return res.status(403).type('text/plain').send('Forbidden');
+
+    const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
+    const leadId = String(req.query.leadId || '').trim();
+    const conversationId = String(req.query.conversationId || '').trim().slice(0, 128);
+    if (!tenantId || !leadId) return res.type('text/xml').send(voiceCallService.buildEndTwiml('I am sorry, this call could not be connected.'));
+
+    const resolved = resolveBusinessAndKnowledge(tenantId);
+    if (!resolved.business || !resolved.agent) return res.type('text/xml').send(voiceCallService.buildEndTwiml('I am sorry, this call is no longer available.'));
+
+    const lead = await getLeadForVoiceCall(tenantId, leadId);
+    if (!lead || !lead.phone) return res.type('text/xml').send(voiceCallService.buildEndTwiml('I am sorry, I could not find the enquiry details.'));
+
+    const record = await conversationStore.getOrCreateConversationAsync(
+      conversationId || ('voice-lead-' + leadId),
+      tenantId
+    );
+    record.customerName = lead.name || record.customerName;
+    record.customerEmail = lead.email || record.customerEmail;
+    record.customerPhone = lead.phone || record.customerPhone;
+    record.leadCaptured = true;
+    record.status = 'AI_ACTIVE';
+    await conversationStore.persistConversationAsync(record);
+
+    const baseUrl = getVoiceWebhookBaseUrl(req);
+    const actionUrl = new URL('/api/voice/lead/turn', baseUrl);
+    actionUrl.searchParams.set('tenantId', tenantId);
+    actionUrl.searchParams.set('leadId', leadId);
+    actionUrl.searchParams.set('conversationId', record.conversationId);
+
+    const assistantName = resolved.agent.name || resolved.business.agentSettings?.agentName || resolved.business.name + ' AI Employee';
+    const greeting =
+      'Hello ' + (lead.name || 'there') + ', this is ' + assistantName + ' from ' + resolved.business.name +
+      '. I am the AI employee following up on your enquiry. Is now a good time to talk?';
+
+    await updateLeadVoiceCallMetadata(tenantId, leadId, {
+      status: 'answered',
+      callSid: req.body?.CallSid,
+      answeredAt: new Date().toISOString()
+    });
+
+    return res.type('text/xml').send(voiceCallService.buildGreetingTwiml({
+      greeting,
+      actionUrl: actionUrl.toString()
+    }));
+  } catch (error: any) {
+    console.error('[LeadVoiceStartError]', error?.message || error);
+    return res.type('text/xml').send(voiceCallService.buildEndTwiml('I am sorry, I am having trouble connecting your call. Someone from the team will follow up.'));
+  }
+});
+
+// Each speech turn is transcribed by Twilio and processed through the same tenant knowledge engine.
+app.post('/api/voice/lead/turn', async (req: Request, res: Response) => {
+  try {
+    if (!validateTwilioWebhook(req)) return res.status(403).type('text/plain').send('Forbidden');
+
+    const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
+    const leadId = String(req.query.leadId || '').trim();
+    const conversationId = String(req.query.conversationId || '').trim().slice(0, 128);
+    const speech = String(req.body?.SpeechResult || req.body?.Digits || '').trim();
+
+    const resolved = resolveBusinessAndKnowledge(tenantId);
+    if (!resolved.business || !resolved.agent) return res.type('text/xml').send(voiceCallService.buildEndTwiml('This call is no longer available. Thank you.'));
+
+    const lead = await getLeadForVoiceCall(tenantId, leadId);
+    if (!lead) return res.type('text/xml').send(voiceCallService.buildEndTwiml('I could not find your enquiry. Someone from the team will follow up.'));
+
+    const humanPhone =
+      resolved.business.aiHumanHandoffPhone ||
+      resolved.business.leadNotificationPhone ||
+      resolved.business.phone ||
+      '';
+
+    const record = await conversationStore.getOrCreateConversationAsync(
+      conversationId || ('voice-lead-' + leadId),
+      tenantId
+    );
+
+    if (!speech) {
+      const baseUrl = getVoiceWebhookBaseUrl(req);
+      const actionUrl = new URL('/api/voice/lead/turn', baseUrl);
+      actionUrl.searchParams.set('tenantId', tenantId);
+      actionUrl.searchParams.set('leadId', leadId);
+      actionUrl.searchParams.set('conversationId', record.conversationId);
+      return res.type('text/xml').send(voiceCallService.buildAssistantTurnTwiml({
+        reply: 'I am still here. Could you tell me what you would like help with?',
+        actionUrl: actionUrl.toString()
+      }));
+    }
+
+    if (isExplicitHumanRequest(speech)) {
+      record.status = 'HUMAN_ACTIVE';
+      await conversationStore.persistConversationAsync(record);
+      await updateLeadVoiceCallMetadata(tenantId, leadId, {
+        status: 'human_requested',
+        humanRequestedAt: new Date().toISOString()
+      });
+      return res.type('text/xml').send(
+        voiceCallService.buildTransferTwiml(
+          humanPhone,
+          humanPhone
+            ? 'Absolutely. I will connect you with a member of the team now. Please hold.'
+            : 'Absolutely. I will have a member of the team follow up with you. Our live transfer number is not configured yet.'
+        )
+      );
+    }
+
+    if (!(await checkAndIncrementConversationTurns(tenantId + ':' + record.conversationId, 35))) {
+      return res.type('text/xml').send(voiceCallService.buildEndTwiml('We have reached the conversation limit for this call. A team member will follow up with you.'));
+    }
+
+    const processed = await processLeadVoiceTurn({
+      business: resolved.business,
+      knowledge: resolved.knowledge.filter((k: any) => k?.active !== false && k?.visibility !== 'internal' && k?.visibility !== 'restricted'),
+      record,
+      transcript: speech
+    });
+
+    const baseUrl = getVoiceWebhookBaseUrl(req);
+    const actionUrl = new URL('/api/voice/lead/turn', baseUrl);
+    actionUrl.searchParams.set('tenantId', tenantId);
+    actionUrl.searchParams.set('leadId', leadId);
+    actionUrl.searchParams.set('conversationId', processed.record.conversationId);
+
+    if (processed.needsHumanHandoff) {
+      record.status = 'HUMAN_ACTIVE';
+      await conversationStore.persistConversationAsync(record);
+      return res.type('text/xml').send(
+        voiceCallService.buildTransferTwiml(
+          humanPhone,
+          humanPhone
+            ? 'I understand. I will connect you with a member of the team now. Please hold.'
+            : 'I understand. I will have a member of the team follow up with you. Live transfer is not configured yet.'
+        )
+      );
+    }
+
+    return res.type('text/xml').send(voiceCallService.buildAssistantTurnTwiml({
+      reply: processed.reply,
+      actionUrl: actionUrl.toString(),
+      isClosing: processed.isClosing
+    }));
+  } catch (error: any) {
+    console.error('[LeadVoiceTurnError]', error?.message || error);
+    return res.type('text/xml').send(voiceCallService.buildEndTwiml('I am sorry, I had trouble processing that. Someone from the team will follow up with you.'));
+  }
+});
+
+// Twilio call lifecycle callback.
+app.post('/api/voice/lead/status', async (req: Request, res: Response) => {
+  try {
+    if (!validateTwilioWebhook(req)) return res.status(403).json({ success: false, error: 'Forbidden' });
+    const tenantId = String(req.query.tenantId || '').trim().toLowerCase();
+    const leadId = String(req.query.leadId || '').trim();
+    const status = String(req.body?.CallStatus || '').trim().toLowerCase();
+    const callSid = String(req.body?.CallSid || '').trim();
+
+    if (tenantId && leadId) {
+      await updateLeadVoiceCallMetadata(tenantId, leadId, {
+        status,
+        sid: callSid || undefined,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    return res.json({ success: true });
+  } catch (error: any) {
+    console.error('[LeadVoiceStatusError]', error?.message || error);
+    return res.json({ success: false });
   }
 });
 
