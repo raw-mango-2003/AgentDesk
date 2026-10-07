@@ -5,11 +5,6 @@ export interface SiteDesignConfig {
     publicDomain: string;
     logoUrl: string;
   };
-  site: {
-    name: 'AgentDesk',
-    publicDomain: '',
-    logoUrl: ''
-  },
   brand: {
     primaryColor: string;
     secondaryColor: string;
@@ -37,6 +32,11 @@ export interface SiteDesignConfig {
 
 export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
   version: 1,
+  site: {
+    name: 'AgentDesk',
+    publicDomain: '',
+    logoUrl: ''
+  },
   brand: {
     primaryColor: '#2563EB',
     secondaryColor: '#0F172A',
