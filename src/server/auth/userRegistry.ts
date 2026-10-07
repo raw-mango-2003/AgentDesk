@@ -3,7 +3,7 @@ import { hashPassword, verifyPassword } from './passwordUtils.js';
 import { logCredentialAction } from './auditRegistry.js';
 import { postgresClient } from '../db/postgresClient.js';
 
-export type UserRole = 'PLATFORM_ADMIN' | 'BUSINESS_ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_USER';
+export type UserRole = 'PLATFORM_ADMIN' | 'BUSINESS_ADMIN' | 'BUSINESS_OWNER' | 'BUSINESS_USER' | 'UI_UX_DESIGNER' | 'SECURITY_ADMIN' | 'HOSTING_ADMIN' | 'INTEGRATIONS_ADMIN';
 export type UserStatus = 'PENDING' | 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
 
 export interface UserRecord {
