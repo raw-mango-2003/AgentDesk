@@ -243,8 +243,12 @@ export async function bootstrapPlatformAdminAsync(): Promise<{ created: boolean;
       // Repair only an untouched bootstrap account. Once an administrator has
       // changed their profile/password, do not silently overwrite their
       // credentials on later deployments.
+      const createdMs = new Date(dbAdmin.createdAt).getTime();
+      const updatedMs = new Date(dbAdmin.updatedAt).getTime();
       const untouchedBootstrapAccount =
-        dbAdmin.createdAt === dbAdmin.updatedAt;
+        Number.isFinite(createdMs) &&
+        Number.isFinite(updatedMs) &&
+        Math.abs(createdMs - updatedMs) <= 1000;
 
       if (
         untouchedBootstrapAccount &&
