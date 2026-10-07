@@ -542,7 +542,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           </div>
         )}
 
- {/* Text Chat View */}
+      </div>
+
+      {/* Text Chat View */}
 
           {/* Messages Scroll Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/60">
