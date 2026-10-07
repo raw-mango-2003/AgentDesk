@@ -1,5 +1,4 @@
 import { Router, Request, Response } from 'express';
-import crypto from 'crypto';
 import { postgresClient } from '../db/postgresClient.js';
 import { extractTokenFromRequest } from '../auth/authRouter.js';
 import { getSession } from '../auth/sessionStore.js';
@@ -16,6 +15,10 @@ function validHex(value: unknown): value is string {
 function sanitizeDesign(input: any): SiteDesignConfig {
   const next = structuredClone(DEFAULT_SITE_DESIGN);
   if (!input || typeof input !== 'object') return next;
+
+  if (typeof input.site?.name === 'string') next.site.name = input.site.name.trim().slice(0, 80);
+  if (typeof input.site?.publicDomain === 'string') next.site.publicDomain = input.site.publicDomain.trim().toLowerCase().replace(/[^a-z0-9.:-]/g, '').slice(0, 253);
+  if (typeof input.site?.logoUrl === 'string') next.site.logoUrl = input.site.logoUrl.trim().slice(0, 500);
 
   if (validHex(input.brand?.primaryColor)) next.brand.primaryColor = input.brand.primaryColor;
   if (validHex(input.brand?.secondaryColor)) next.brand.secondaryColor = input.brand.secondaryColor;
