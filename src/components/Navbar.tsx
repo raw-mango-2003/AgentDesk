@@ -12,7 +12,6 @@ import {
   Tag, 
   CreditCard,
   ShieldAlert,
-  Palette,
   Bell,
   Check,
   ArrowRight,
