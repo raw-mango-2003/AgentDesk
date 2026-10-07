@@ -4,6 +4,11 @@ import { safeFetchJson } from '../lib/apiClient';
 
 type Design = {
   version: 1;
+  site: {
+    name: string;
+    publicDomain: string;
+    logoUrl: string;
+  };
   brand: {
     primaryColor: string;
     secondaryColor: string;
@@ -31,6 +36,7 @@ type Design = {
 
 const DEFAULT_DESIGN: Design = {
   version: 1,
+  site: { name: 'AgentDesk', publicDomain: '', logoUrl: '' },
   brand: {
     primaryColor: '#2563EB',
     secondaryColor: '#0F172A',
@@ -107,10 +113,18 @@ export const DesignStudio: React.FC = () => {
       <div className="max-w-7xl mx-auto grid xl:grid-cols-[360px_1fr] gap-6">
         <aside className="rounded-3xl border border-slate-800 bg-slate-900/90 p-5 space-y-5 h-fit sticky top-4">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.22em] text-blue-400 font-black">UI / UX CONTROL</div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-blue-400 font-black">AGENTDESK CONTROL CENTER</div>
             <h1 className="text-2xl font-black mt-2">Homepage Studio</h1>
-            <p className="text-xs text-slate-400 mt-2">Edit the public homepage without touching React components. Changes are stored as design data and applied at runtime.</p>
+            <p className="text-xs text-slate-400 mt-2">Change branding and homepage settings without editing code. Saved settings are applied at runtime.</p>
           </div>
+
+          <section className="space-y-3">
+            <h2 className="text-xs font-black uppercase tracking-wider text-slate-300">Site</h2>
+            <input value={design.site.name} onChange={e => update(['site','name'],e.target.value)} placeholder="Site name" className="w-full rounded-xl bg-slate-800 border-slate-700 text-white text-sm" />
+            <input value={design.site.publicDomain} onChange={e => update(['site','publicDomain'],e.target.value)} placeholder="agentdesk.in" className="w-full rounded-xl bg-slate-800 border-slate-700 text-white text-sm" />
+            <input value={design.site.logoUrl} onChange={e => update(['site','logoUrl'],e.target.value)} placeholder="Logo URL (optional)" className="w-full rounded-xl bg-slate-800 border-slate-700 text-white text-sm" />
+            <p className="text-[11px] text-slate-500">The domain still needs DNS/Cloudflare setup once. After that, you can keep the domain value here without editing code.</p>
+          </section>
 
           <section className="space-y-3">
             <h2 className="text-xs font-black uppercase tracking-wider text-slate-300">Brand</h2>
