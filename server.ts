@@ -92,6 +92,7 @@ const appDirectory = getAppDirectory();
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
+app.disable('x-powered-by');
 
 // Enable trust proxy for Google Cloud Run / reverse proxies so req.ip, req.secure, and protocol are accurate
 app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : 1);
@@ -183,12 +184,13 @@ const corsOptionsDelegate = (req: Request, callback: (err: Error | null, options
 
 app.use(cors(corsOptionsDelegate));
 app.use(express.json({
+  limit: '2mb',
   verify: (req: any, _res, buf) => {
     req.rawBody = buf;
     req.rawBodyString = buf.toString('utf8');
   }
 }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '256kb' }));
 
 const csrfProtectedMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
