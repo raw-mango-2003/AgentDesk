@@ -298,7 +298,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 3. How It Works */}
-      {(siteDesign?.homepage?.showPosterProcess ?? true) && <section className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
+      {(siteDesign?.homepage?.showPosterProcess ?? true) ? (
+        <section className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-[11px] font-black uppercase tracking-wider text-blue-400">How it works</span>
@@ -333,7 +334,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
         </div>
-      </section>}
+        </section>
+      ) : null}
       
       {/* 4. Dashboard Preview */}
       <section className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
@@ -400,7 +402,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 3. Pricing Matrix Section */}
-      {(siteDesign?.homepage?.showPricing ?? true) && <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      {(siteDesign?.homepage?.showPricing ?? true) ? (
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -535,6 +538,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </section>
+      ) : null}
 
       {/* 6. Final CTA */}
       <section className="py-16 px-4 sm:px-8">
