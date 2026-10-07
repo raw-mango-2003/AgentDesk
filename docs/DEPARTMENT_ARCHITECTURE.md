@@ -1,54 +1,74 @@
-# AgentDesk Department Architecture
+# AgentDesk Control Center Architecture
 
-AgentDesk uses a department boundary model for internal administration.
+AgentDesk is designed to be operated by one owner without requiring daily code changes.
 
-## Access model
+## Operating model
 
-| Department | Role | Scope |
-|---|---|---|
-| Platform | PLATFORM_ADMIN | Full control across all departments |
-| UI/UX | UI_UX_DESIGNER | Homepage and design system only |
-| Security | SECURITY_ADMIN | Security controls, audit and security tooling |
-| Hosting | HOSTING_ADMIN | Deployment, hosting and infrastructure controls |
-| Integrations | INTEGRATIONS_ADMIN | Provider configuration and integration controls |
-| Business | BUSINESS_ADMIN | Business operations and customer workspace controls |
+There is one internal administrator role:
 
-## Rules
+- PLATFORM_ADMIN: full control of AgentDesk.
 
-1. Platform Admin is the only global owner role.
-2. Department roles must not inherit access to another department.
-3. Backend authorization is authoritative. Hiding a tab in React is not security.
-4. New department APIs should use the centralized department access helper instead of scattered role checks.
-5. Tenant/customer authorization remains separate from internal department authorization.
-6. Design changes should be stored as versioned configuration, not by rewriting React source files at runtime.
-7. UI/UX changes must not change security, billing, integrations or hosting code.
-8. Every future department should have its own router, service layer and UI module.
+Customers have their normal tenant roles and cannot access the Platform Control Center.
 
-## Homepage Design Studio
+The code is still organized into logical modules, but those modules are not exposed as separate departments. This keeps the product easier to operate and maintain.
 
-The Design Studio stores a controlled JSON design configuration in PostgreSQL.
+## Control Center
 
-It controls:
-- brand colors
-- heading and body fonts
-- typography scale
-- hero copy
-- homepage section visibility
-- homepage section order foundation
+The Platform Admin should be able to manage normal product configuration from one place:
 
-The public homepage reads this configuration at runtime.
+- Dashboard
+- Customers
+- AI Employees
+- Leads & CRM
+- Integrations
+- Billing
+- Design Studio
+- Security
+- System
 
-This intentionally does not mutate source code. Runtime source-code rewriting would make deployments unpredictable and could introduce security and rollback problems. The result is still Canva-like from the designer perspective: change the design, publish, and the homepage changes without editing React components.
+## No-code configuration principle
 
-## Recommended next separation
+Normal changes should be configuration-driven rather than source-code-driven.
 
-- src/server/security/
-- src/server/hosting/
-- src/server/integrations/
-- src/server/business/
-- src/components/admin/security/
-- src/components/admin/hosting/
-- src/components/admin/integrations/
-- src/components/admin/business/
+Examples:
 
-Each module should expose a small, explicit API and should not import UI/business logic from another department.
+- homepage colors
+- fonts
+- homepage copy
+- section visibility
+- branding
+- site name
+- logo
+- public domain value
+- pricing configuration
+- AI Employee configuration
+- integration settings
+- feature flags
+
+The application stores safe configuration in PostgreSQL and the frontend reads it at runtime.
+
+## Domain connection
+
+Buying a domain does not require changing React source code. The domain still needs a one-time DNS/Cloudflare setup at the infrastructure layer. After the domain is connected, the canonical domain can be stored in the Control Center.
+
+## Code boundaries
+
+Code should still be separated by technical responsibility:
+
+- authentication and authorization
+- design
+- business
+- AI
+- integrations
+- billing
+- security
+- infrastructure
+- shared services
+
+These are engineering boundaries, not departments the owner has to switch between.
+
+## Safety rule
+
+The Control Center must never rewrite production source code automatically. It changes validated configuration. Source-code changes remain a development/deployment task.
+
+This makes the system easier to understand, safer to roll back, and much easier for a non-technical owner to operate.
