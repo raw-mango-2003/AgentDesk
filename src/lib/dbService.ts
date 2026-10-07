@@ -350,19 +350,17 @@ export async function getAllBusinesses(): Promise<Business[]> {
           'Accept': 'application/json'
         }
       });
-      if (data?.success && Array.isArray(data.tenants) && data.tenants.length > 0) {
-        const merged = [...localList];
-        for (const st of data.tenants) {
-          const sId = normalizeTenantId(st.id);
-          const idx = merged.findIndex(b => normalizeTenantId(b.id) === sId || normalizeTenantId(b.tenantId) === sId);
-          if (idx >= 0) {
-            merged[idx] = { ...merged[idx], ...st };
-          } else {
-            merged.push(st);
-          }
-        }
-        setItem('businesses', merged);
-        return merged;
+      if (data?.success && Array.isArray(data.tenants)) {
+        // Production API is the authoritative tenant registry. Replace the
+        // browser cache instead of merging so deleted tenants cannot reappear
+        // from stale localStorage data.
+        const authoritativeList = data.tenants.map((tenant: Business) => ({
+          ...tenant,
+          id: normalizeTenantId(tenant.id),
+          tenantId: normalizeTenantId(tenant.tenantId || tenant.id)
+        }));
+        setItem('businesses', authoritativeList);
+        return authoritativeList;
       }
     } catch (err) {
       if (isProductionRuntime()) throw err;
