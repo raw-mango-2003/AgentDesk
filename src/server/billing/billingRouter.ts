@@ -9,7 +9,15 @@ export const billingRouter = Router();
 
 // Keep payment failures actionable for customers without exposing internal provider details, database errors, or secrets.
 function safePaymentError(error: any, fallback: string): string {
-  const message = typeof error?.message === 'string' ? error.message.trim() : '';
+  const rawMessage =
+    typeof error?.message === 'string'
+      ? error.message
+      : typeof error?.error?.description === 'string'
+        ? error.error.description
+        : typeof error?.description === 'string'
+          ? error.description
+          : '';
+  const message = rawMessage.trim();
   const lower = message.toLowerCase();
   if (!message) return fallback;
 
