@@ -1010,6 +1010,11 @@ export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge
 
 function resolvePublicWidgetTarget(identifier?: string) {
   const normId = String(identifier || '').trim().toLowerCase();
+  const isPlatformAdminPublicAgent =
+    normId === PLATFORM_ADMIN_AGENT_ID.toLowerCase() ||
+    normId === PLATFORM_ADMIN_TENANT_ID.toLowerCase() ||
+    normId === 'platform-admin' ||
+    normId === 'platform_admin';
 
   const resolved = resolveBusinessAndKnowledge(identifier);
   if (!resolved.business || !resolved.agent) {
@@ -1024,7 +1029,7 @@ function resolvePublicWidgetTarget(identifier?: string) {
     resolved.business.id.toLowerCase() === PUBLIC_DEMO_TENANT_ID.toLowerCase() ||
     resolved.agent.id.toLowerCase() === PUBLIC_DEMO_AGENT_ID.toLowerCase();
 
-  if (!isPublicDemo) {
+  if (!isPublicDemo && !isPlatformAdminPublicAgent) {
     const businessAllowed =
       businessStatus === 'active' &&
       (!subscriptionState || ['ACTIVE', 'TRIAL'].includes(subscriptionState));
