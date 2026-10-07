@@ -19,6 +19,31 @@ const FONTS=['Inter','system-ui','Arial','Helvetica','Georgia','Trebuchet MS','V
 const TABS=[['theme',Palette,'Theme'],['background',ImageIcon,'Background'],['type',Type,'Typography'],['nav',Navigation,'Navigation'],['buttons',MousePointer2,'Buttons'],['icons',Sparkles,'Icons'],['pages',LayoutTemplate,'Pages'],['homepage',Layers,'Homepage']];
 const clone=(x:any)=>structuredClone(x);
 
+const normalizeAssetUrl=(raw:string)=>{
+  const value=String(raw||'').trim();
+  if(!value)return '';
+  try{
+    const u=new URL(value,window.location.origin);
+    const host=u.hostname.toLowerCase();
+    const drive=u.pathname.match(/^\/file\/d\/([^/]+)/);
+    if((host==='drive.google.com'||host==='docs.google.com')&&drive?.[1]){
+      return `https://drive.google.com/uc?export=view&id=${encodeURIComponent(drive[1])}`;
+    }
+    if(host==='dropbox.com'||host.endsWith('.dropbox.com')){
+      u.searchParams.set('raw','1');
+      return u.toString();
+    }
+    if(host==='github.com'){
+      const parts=u.pathname.split('/').filter(Boolean);
+      const blobIndex=parts.indexOf('blob');
+      if(parts.length>=5&&blobIndex===2){
+        return `https://raw.githubusercontent.com/${parts[0]}/${parts[1]}/${parts[3]}/${parts.slice(4).join('/')}`;
+      }
+    }
+    return u.toString();
+  }catch{return value;}
+};
+
 export const DesignStudio: React.FC = () => {
   const [design,setDesign]=useState<Design>(DEFAULT), [saved,setSaved]=useState(false), [loading,setLoading]=useState(true), [tab,setTab]=useState('theme'), [device,setDevice]=useState('desktop'), [preview,setPreview]=useState(true);
   useEffect(()=>{safeFetchJson('/api/site-design').then((r:any)=>r.success&&r.design&&setDesign(r.design)).finally(()=>setLoading(false));},[]);
@@ -26,7 +51,7 @@ export const DesignStudio: React.FC = () => {
   const save=async()=>{const r:any=await safeFetchJson('/api/site-design',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(design)});if(r.success){setSaved(true);setTimeout(()=>setSaved(false),2000)}};
   const reset=async()=>{const r:any=await safeFetchJson('/api/site-design/reset',{method:'POST'});if(r.success)setDesign(r.design||DEFAULT)};
   const move=(i:number,dir:number)=>{const a=[...design.homepage.sectionOrder],j=i+dir;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];update(['homepage','sectionOrder'],a)};
-  const bg=useMemo(()=>{const b=design.background;if(b.mode==='gradient')return `linear-gradient(${b.gradientAngle}deg,${b.gradientStart},${b.gradientEnd})`;if(b.mode==='image'&&b.imageUrl)return `linear-gradient(rgba(2,6,23,${b.overlayOpacity}),rgba(2,6,23,${b.overlayOpacity})),url(${b.imageUrl}) center/cover`;return b.mode==='glass'?'radial-gradient(circle at 20% 10%,rgba(37,99,235,.35),transparent 40%),radial-gradient(circle at 80% 20%,rgba(124,58,237,.3),transparent 40%)':b.mode==='aurora'?'radial-gradient(circle at 20% 20%,rgba(37,99,235,.42),transparent 35%),radial-gradient(circle at 80% 10%,rgba(124,58,237,.35),transparent 38%),'+design.brand.backgroundColor:design.brand.backgroundColor},[design]);
+  const bg=useMemo(()=>{const b=design.background;if(b.mode==='gradient')return `linear-gradient(${b.gradientAngle}deg,${b.gradientStart},${b.gradientEnd})`;return b.mode==='glass'?'radial-gradient(circle at 20% 10%,rgba(37,99,235,.35),transparent 40%),radial-gradient(circle at 80% 20%,rgba(124,58,237,.3),transparent 40%)':b.mode==='aurora'?'radial-gradient(circle at 20% 20%,rgba(37,99,235,.42),transparent 35%),radial-gradient(circle at 80% 10%,rgba(124,58,237,.35),transparent 38%),'+design.brand.backgroundColor:design.brand.backgroundColor},[design]);
   const css={...{'--p':design.brand.primaryColor,'--a':design.brand.accentColor,'--surface':design.brand.surfaceColor} as any,backgroundColor:design.brand.backgroundColor,color:design.brand.textColor,fontFamily:design.typography.bodyFont};
   if(loading)return <div className="p-8 text-slate-400">Loading Visual Studio...</div>;
   return <div className="min-h-full bg-[#05070c] text-white flex flex-col">
@@ -55,7 +80,7 @@ export const DesignStudio: React.FC = () => {
       <main className="flex-1 p-5 overflow-auto bg-[#11141b]">
         <div className="flex justify-center">
           <div className={`transition-all duration-300 ${device==='desktop'?'w-full max-w-[1200px]':device==='tablet'?'w-[768px] max-w-full':'w-[390px] max-w-full'}`}>
-            <div style={{...css,background:bg,borderRadius:design.appearance.radius,overflow:'hidden',minHeight:design.homepage.heroMinHeight,boxShadow:'0 30px 80px rgba(0,0,0,.45)'}} className="relative">
+            <div style={{...css,background:bg,borderRadius:design.appearance.radius,overflow:'hidden',minHeight:design.homepage.heroMinHeight,boxShadow:'0 30px 80px rgba(0,0,0,.45)'}} className="relative">\n              {design.background.mode==='image'&&design.background.imageUrl&&<img src={normalizeAssetUrl(design.background.imageUrl)} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" onError={(e)=>{e.currentTarget.style.display='none'}}/>}\n              {design.background.mode==='image'&&design.background.imageUrl&&<div className="absolute inset-0" style={{background:`rgba(2,6,23,${design.background.overlayOpacity})`}}/>}
               {design.background.mode==='video'&&design.background.videoUrl&&<video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70"><source src={design.background.videoUrl}/></video>}
               <div className="relative z-10 p-5">
                 <div style={{backdropFilter:`blur(${design.navigation.blur}px)`,background:'rgba(255,255,255,.07)',borderRadius:design.appearance.radius}} className="h-14 px-4 flex items-center justify-between border border-white/10">
