@@ -225,10 +225,59 @@ export async function bootstrapPlatformAdminAsync(): Promise<{ created: boolean;
   try {
     const res = await postgresClient.query("SELECT * FROM agentdesk_users WHERE role = 'PLATFORM_ADMIN' LIMIT 1");
     if (res?.rows?.length > 0) {
-      const dbAdmin = mapDbRowToUserRecord(res.rows[0]);
+      let dbAdmin = mapDbRowToUserRecord(res.rows[0]);
+
+      const configuredEmail = (
+        process.env.PLATFORM_ADMIN_EMAIL ||
+        process.env.INITIAL_ADMIN_EMAIL ||
+        ''
+      ).toLowerCase().trim();
+
+      const configuredPassword = (
+        process.env.PLATFORM_ADMIN_INITIAL_PASSWORD ||
+        process.env.PLATFORM_ADMIN_PASSWORD ||
+        process.env.INITIAL_ADMIN_PASSWORD ||
+        ''
+      ).trim();
+
+      // Repair only an untouched bootstrap account. Once an administrator has
+      // changed their profile/password, do not silently overwrite their
+      // credentials on later deployments.
+      const untouchedBootstrapAccount =
+        dbAdmin.createdAt === dbAdmin.updatedAt;
+
+      if (
+        untouchedBootstrapAccount &&
+        configuredEmail &&
+        configuredPassword.length >= 8
+      ) {
+        const emailChanged = dbAdmin.email !== configuredEmail;
+        const passwordChanged = !verifyPassword(configuredPassword, dbAdmin.passwordHash);
+
+        if (emailChanged || passwordChanged) {
+          dbAdmin = {
+            ...dbAdmin,
+            email: configuredEmail,
+            passwordHash: hashPassword(configuredPassword),
+            failedLoginAttempts: 0,
+            lockoutUntil: undefined,
+            mustChangePassword: false,
+            status: 'ACTIVE',
+            emailVerified: true,
+            updatedAt: new Date().toISOString()
+          };
+
+          await persistUserToPostgres(dbAdmin);
+          console.log(
+            `[Auth Bootstrap] Reconciled untouched platform admin credentials from configured environment (${configuredEmail}).`
+          );
+        }
+      }
+
       usersByEmailStore.set(dbAdmin.email, dbAdmin);
       usersByIdStore.set(dbAdmin.id, dbAdmin);
-      const message = `[Auth Bootstrap] Existing platform admin account is already configured in PostgreSQL (${dbAdmin.email}).`;
+
+      const message = `[Auth Bootstrap] Existing platform admin account is configured in PostgreSQL (${dbAdmin.email}).`;
       console.log(message);
       return { created: false, email: dbAdmin.email, message };
     }
