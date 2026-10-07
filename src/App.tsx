@@ -659,6 +659,7 @@ export default function App() {
             isModal={false}
             onNavigateHome={() => handleNavigate('landing')}
             onNavigateLogin={() => handleNavigate('login')}
+            onNavigateLegal={(view) => handleNavigate(view)}
             onSuccess={async (provisioned) => {
               const list = await getAllBusinesses();
               setAllBusinesses(list);
