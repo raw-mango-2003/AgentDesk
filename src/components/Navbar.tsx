@@ -12,6 +12,7 @@ import {
   Tag, 
   CreditCard,
   ShieldAlert,
+  Palette,
   Bell,
   Check,
   ArrowRight,
@@ -144,6 +145,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               Pricing
             </button>
+
+            {currentUser?.role === 'UI_UX_DESIGNER' && (
+              <button
+                onClick={() => { window.location.href = '/admin/design-studio'; }}
+                className="px-3 py-1.5 text-xs font-semibold text-pink-300 hover:text-white hover:bg-slate-800/60 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Palette className="w-3.5 h-3.5" />
+                <span>Design Studio</span>
+              </button>
+            )}
 
             {/* If logged in, show Dashboard link */}
             {currentUser && (
