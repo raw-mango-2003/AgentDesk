@@ -232,7 +232,14 @@ function isCsrfExempt(req: Request): boolean {
     '/api/voice/process',
     '/voice/process',
     '/api/public/deployment-request',
-    '/public/deployment-request'
+    '/public/deployment-request',
+    // Public checkout endpoints create and verify their own server-authorized
+    // payment intents and must remain usable even when a visitor has an
+    // existing AgentDesk session cookie.
+    '/api/billing/calculate-order',
+    '/api/billing/validate-coupon',
+    '/api/billing/create-checkout-session',
+    '/api/billing/verify-payment'
   ]);
 
   if (exemptExact.has(fullPath) || exemptExact.has(subPath)) return true;
