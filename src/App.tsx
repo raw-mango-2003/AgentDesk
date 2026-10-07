@@ -729,7 +729,7 @@ export default function App() {
               navigateTab('overview');
             }}
           />
-        ) : (currentUser?.role === 'PLATFORM_ADMIN' || currentUser?.role === 'UI_UX_DESIGNER') && activeTab === 'design_studio' ? (
+        ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'design_studio' ? (
           <Suspense fallback={<RouteLoading />}>
             <DesignStudio />
           </Suspense>
