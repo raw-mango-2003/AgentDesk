@@ -1772,6 +1772,17 @@ export async function deleteBusiness(businessId: string, actorEmail?: string): P
       headers: { 'Accept': 'application/json' }
     });
     if (!data?.success) throw new Error(data?.error || 'Unable to delete tenant.');
+
+    // Remove the tenant from the browser cache immediately after the
+    // authoritative server deletion succeeds. The next registry fetch will
+    // also replace the cache from the server, preventing deleted tenants from
+    // reappearing in the admin UI.
+    const cachedBusinesses = getItem<Business[]>('businesses', []);
+    setItem(
+      'businesses',
+      cachedBusinesses.filter(b => normalizeTenantId(b.id) !== validTenant)
+    );
+
     return { success: true, message: data.message || 'Tenant deleted successfully.' };
   }
 
