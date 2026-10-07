@@ -331,7 +331,7 @@ export default function App() {
     };
   }, []);
 
-  const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings'>(getInitialAdminSubTab);
+  const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' | 'design_studio'>(getInitialAdminSubTab);
   
   // Active business workspace state
   const [business, setBusiness] = useState<Business | null>(null);
