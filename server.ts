@@ -101,7 +101,12 @@ app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : 1);
 app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
+  // X-XSS-Protection is obsolete; modern browsers should rely on CSP and output encoding.
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('X-Download-Options', 'noopen');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=()');
+  res.setHeader('Origin-Agent-Cluster', '?1');
   // Allow embedding within AI Studio and Google preview environments
   res.setHeader(
     'Content-Security-Policy',
