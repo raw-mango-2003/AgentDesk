@@ -108,7 +108,7 @@ export class EmailService implements IEmailService {
         replyTo: options.replyTo || process.env.EMAIL_REPLY_TO || this.gmailService.defaultReplyTo
       });
       record.provider = 'gmail';
-      record.status = gmailResult.success ? 'SENT' : (gmailResult.status === 'REAUTHORIZATION_REQUIRED' ? 'FAILED' : gmailResult.status);
+      record.status = gmailResult.success ? 'SENT' : 'FAILED';
       record.providerMessageId = gmailResult.messageId;
       record.error = gmailResult.error;
       if (gmailResult.success) {
@@ -125,7 +125,7 @@ export class EmailService implements IEmailService {
       });
       return {
         success: gmailResult.success,
-        status: gmailResult.status,
+        status: record.status,
         messageId: gmailResult.messageId,
         error: gmailResult.error
       };
