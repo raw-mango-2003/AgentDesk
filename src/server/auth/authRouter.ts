@@ -1316,7 +1316,7 @@ authRouter.post('/forgot-password', passwordResetRateLimiter, async (req: Reques
 
       // Dispatch reset email using Gmail API via Automation Engine
       // Never store raw token in DB. Never email user passwords.
-      automationEngine.emit('PASSWORD_RESET_REQUESTED', {
+      const delivery = await automationEngine.emit('PASSWORD_RESET_REQUESTED', {
         userId: user.id,
         tenantId: user.tenantId,
         email: cleanEmail,
@@ -1325,7 +1325,14 @@ authRouter.post('/forgot-password', passwordResetRateLimiter, async (req: Reques
         resetToken: generatedResetToken,
         resetUrl,
         expiryTime: '1 hour'
-      }).catch(e => console.error('[PasswordResetEmailError]', e.message));
+      });
+
+      if (delivery.status === 'FAILED' || delivery.deliveryStatus === 'RETRYING') {
+        return res.status(503).json({
+          success: false,
+          error: 'We could not deliver the password reset email. Please contact the platform administrator or connect a transactional email provider.'
+        });
+      }
 
       logCredentialAction({
         actorId: 'anonymous',
