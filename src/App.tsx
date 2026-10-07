@@ -52,6 +52,8 @@ const markNotificationsAsRead = (...args: Parameters<Awaited<ReturnType<typeof l
 import {
   PUBLIC_AGENTDESK_DEMO_BUSINESS,
   PLATFORM_ADMIN_BUSINESS,
+  PLATFORM_ADMIN_AGENT_ID,
+  PLATFORM_ADMIN_TENANT_ID,
   PUBLIC_DEMO_AGENT_ID,
   PUBLIC_DEMO_TENANT_ID,
   PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS
@@ -1535,11 +1537,10 @@ export default function App() {
       {/* Floating Demo Chat Widget Overlay */}
       {currentView === 'landing' || currentView === 'pricing' ? (
         <ChatWidget
-          key="public-agentdesk-demo-chat"
-          business={PUBLIC_AGENTDESK_DEMO_BUSINESS}
-          agentId={PUBLIC_DEMO_AGENT_ID}
-          tenantId={PUBLIC_DEMO_TENANT_ID}
-          knowledgeItems={PUBLIC_AGENTDESK_DEMO_KNOWLEDGE_ITEMS}
+          key="public-agentdesk-platform-chat"
+          business={PLATFORM_ADMIN_BUSINESS}
+          agentId={PLATFORM_ADMIN_AGENT_ID}
+          tenantId={PLATFORM_ADMIN_TENANT_ID}
           isOpen={showDemoWidget}
           onOpen={() => setShowDemoWidget(true)}
           onClose={() => setShowDemoWidget(false)}
