@@ -1,5 +1,15 @@
 export interface SiteDesignConfig {
   version: 1;
+  site: {
+    name: string;
+    publicDomain: string;
+    logoUrl: string;
+  };
+  site: {
+    name: 'AgentDesk',
+    publicDomain: '',
+    logoUrl: ''
+  },
   brand: {
     primaryColor: string;
     secondaryColor: string;
