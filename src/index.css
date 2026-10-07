@@ -195,3 +195,48 @@ select:disabled {
 .bg-white textarea::placeholder {
   color: #0f172a;
 }
+
+
+/* Visual Studio global design tokens. Components can opt into these tokens without
+   changing their data or navigation behavior. */
+:root {
+  --ad-primary: #2563EB;
+  --ad-secondary: #0F172A;
+  --ad-accent: #7C3AED;
+  --ad-background: #020617;
+  --ad-surface: #0F172A;
+  --ad-text: #F8FAFC;
+  --ad-muted: #94A3B8;
+  --ad-border: #1E293B;
+  --ad-radius: 18px;
+  --ad-button-radius: 16px;
+  --ad-glass-blur: 18px;
+  --ad-glass-opacity: .62;
+  --ad-font-body: Inter;
+  --ad-font-heading: Inter;
+}
+
+html, body, #root {
+  background: var(--ad-background);
+  color: var(--ad-text);
+  font-family: var(--ad-font-body), system-ui, sans-serif;
+}
+
+.ad-design-surface {
+  background: var(--ad-surface);
+  border-color: var(--ad-border);
+  border-radius: var(--ad-radius);
+}
+
+.ad-design-glass {
+  background: color-mix(in srgb, var(--ad-surface) calc(var(--ad-glass-opacity) * 100%), transparent);
+  border: 1px solid color-mix(in srgb, var(--ad-border) 70%, transparent);
+  backdrop-filter: blur(var(--ad-glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--ad-glass-blur)) saturate(150%);
+}
+
+.ad-design-button {
+  border-radius: var(--ad-button-radius);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+.ad-design-button:hover { transform: translateY(-2px); }
