@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
 import './index.css';
+import { installGlobalHaptics } from './lib/haptics';
 
 class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
   state = { error: null as Error | null };
@@ -31,6 +32,8 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | 
     return this.props.children;
   }
 }
+
+const removeGlobalHaptics = installGlobalHaptics();
 
 try {
   const rootEl = document.getElementById('root');
