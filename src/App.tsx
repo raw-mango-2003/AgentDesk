@@ -39,6 +39,7 @@ import { EmailVerificationPage } from './components/auth/EmailVerificationPage';
 import { LegalPage } from './components/LegalPage';
 import { Business, AppNotification } from './types';
 import { getCountryMetadata } from './lib/localization';
+import { safeFetchJson } from './lib/apiClient';
 const loadDbService = () => import('./lib/dbService');
 
 const getBusinessById = (...args: Parameters<Awaited<ReturnType<typeof loadDbService>>['getBusinessById']>) =>
@@ -199,6 +200,40 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
+  const [globalDesign, setGlobalDesign] = useState<any | null>(null);
+
+  useEffect(() => {
+    safeFetchJson('/api/site-design').then((result: any) => {
+      if (!result?.success || !result.design) return;
+      const d = result.design;
+      setGlobalDesign(d);
+      const root = document.documentElement;
+      const vars: Record<string,string> = {
+        '--ad-primary': d.brand.primaryColor,
+        '--ad-secondary': d.brand.secondaryColor,
+        '--ad-accent': d.brand.accentColor,
+        '--ad-background': d.brand.backgroundColor,
+        '--ad-surface': d.brand.surfaceColor,
+        '--ad-text': d.brand.textColor,
+        '--ad-muted': d.brand.mutedTextColor,
+        '--ad-border': d.brand.borderColor,
+        '--ad-radius': d.appearance.radius + 'px',
+        '--ad-button-radius': d.buttons.radius + 'px',
+        '--ad-icon-color': d.icons.color,
+        '--ad-glass-blur': d.appearance.glassBlur + 'px',
+        '--ad-glass-opacity': String(d.appearance.glassOpacity),
+        '--ad-font-body': d.typography.bodyFont,
+        '--ad-font-heading': d.typography.headingFont
+      };
+      Object.entries(vars).forEach(([key,value]) => root.style.setProperty(key,value));
+      document.title = d.site.pageTitle || d.site.name || 'AgentDesk';
+      if (d.site.faviconUrl) {
+        let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+        if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+        link.href = d.site.faviconUrl;
+      }
+    }).catch(() => {});
+  }, []);
 
   // AgentDesk uses the browser's real session history as its navigation model.
   // Every meaningful console destination gets a URL, so Back/Forward and mobile

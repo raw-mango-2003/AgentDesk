@@ -86,6 +86,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       });
   }, []);
 
+  useEffect(() => {
+    if (!siteDesign?.homepage?.sectionOrder) return;
+    const root = document.querySelector('[data-agentdesk-landing]');
+    if (!root) return;
+    const nodes = Array.from(root.querySelectorAll<HTMLElement>('[data-design-section]'));
+    const byKey = new Map(nodes.map(node => [node.dataset.designSection || '', node]));
+    siteDesign.homepage.sectionOrder.forEach((key: string) => { const node = byKey.get(key); if (node) root.appendChild(node); });
+  }, [siteDesign]);
+
   const designStyle = siteDesign ? ({
     '--agentdesk-primary': siteDesign.brand.primaryColor,
     '--agentdesk-secondary': siteDesign.brand.secondaryColor,
@@ -206,11 +215,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div
-      className="min-h-screen text-slate-100 font-sans selection:bg-blue-600 selection:text-white"
-      style={designStyle}
+      data-agentdesk-landing
+      className="min-h-screen text-slate-100 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden"
+      style={{...designStyle, background: siteDesign?.background?.mode === "gradient" ? `linear-gradient(${siteDesign.background.gradientAngle}deg, ${siteDesign.background.gradientStart}, ${siteDesign.background.gradientEnd})` : siteDesign?.background?.mode === "image" && siteDesign.background.imageUrl ? `linear-gradient(rgba(2,6,23,${siteDesign.background.overlayOpacity}),rgba(2,6,23,${siteDesign.background.overlayOpacity})), url(${siteDesign.background.imageUrl}) center/cover fixed` : undefined}}
     >
+      {siteDesign?.background?.mode === "video" && siteDesign.background.videoUrl ? <video autoPlay muted loop playsInline className="fixed inset-0 w-full h-full object-cover -z-20"><source src={siteDesign.background.videoUrl} /></video> : null}
+      {siteDesign?.background?.mode === "aurora" ? <div className="fixed inset-0 -z-10 pointer-events-none" style={{background:"radial-gradient(circle at 15% 15%, rgba(37,99,235,.35), transparent 32%), radial-gradient(circle at 85% 10%, rgba(124,58,237,.30), transparent 30%), radial-gradient(circle at 50% 85%, rgba(6,182,212,.18), transparent 32%)"}} /> : null}
       {/* 1. Hero Section */}
-      <section className="relative pt-12 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-8 overflow-hidden">
+      <section data-design-section="hero" className="relative pt-12 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-8 overflow-hidden">
         {/* Background glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/15 blur-[140px] rounded-full pointer-events-none" />
         
@@ -274,7 +286,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 2. Problem Section */}
-      <section className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
+      <section data-design-section="problem" className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
           <div>
             <span className="text-[11px] font-black uppercase tracking-wider text-rose-400">The problem</span>
@@ -299,7 +311,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* 3. How It Works */}
       {(siteDesign?.homepage?.showPosterProcess ?? true) ? (
-        <section className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
+        <section data-design-section="poster" className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-[11px] font-black uppercase tracking-wider text-blue-400">How it works</span>
@@ -338,7 +350,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ) : null}
       
       {/* 4. Dashboard Preview */}
-      <section className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
+      <section data-design-section="dashboard" className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-[11px] font-black uppercase tracking-wider text-purple-400">Workspace preview</span>
