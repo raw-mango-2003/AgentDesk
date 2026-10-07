@@ -1011,15 +1011,6 @@ export function resolveBusinessAndKnowledge(identifier?: string, customKnowledge
 function resolvePublicWidgetTarget(identifier?: string) {
   const normId = String(identifier || '').trim().toLowerCase();
 
-  if (
-    normId === PLATFORM_ADMIN_AGENT_ID.toLowerCase() ||
-    normId === PLATFORM_ADMIN_TENANT_ID.toLowerCase() ||
-    normId === 'platform-admin' ||
-    normId === 'platform_admin'
-  ) {
-    return { business: null, agent: null, knowledge: [] as KnowledgeItem[] };
-  }
-
   const resolved = resolveBusinessAndKnowledge(identifier);
   if (!resolved.business || !resolved.agent) {
     return { business: null, agent: null, knowledge: [] as KnowledgeItem[] };
