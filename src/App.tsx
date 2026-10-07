@@ -178,7 +178,7 @@ export default function App() {
     return 'overview';
   };
 
-  const getInitialAdminSubTab = (): 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' => {
+  const getInitialAdminSubTab = (): 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' | 'design_studio' => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
@@ -188,6 +188,8 @@ export default function App() {
       if (section === 'system_health') return 'system_health';
       if (section === 'monitoring') return 'monitoring';
       if (section === 'settings') return 'settings';
+      if (section === 'design_studio') return 'design_studio';
+      if (path === '/admin/design-studio') return 'design_studio';
       if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
         return 'my_agent';
       }
@@ -220,7 +222,8 @@ export default function App() {
     localization: '/dashboard/localization',
     embed: '/embed',
     admin: '/admin',
-    account_credentials: '/admin/account-credentials'
+    account_credentials: '/admin/account-credentials',
+    design_studio: '/admin/design-studio'
   };
 
   const getTabFromLocation = (): SaaSNavTab => {
@@ -228,6 +231,7 @@ export default function App() {
     if (path === '/billing') return 'billing';
     if (path === '/embed') return 'embed';
     if (path === '/admin/account-credentials') return 'account_credentials';
+    if (path === '/admin/design-studio') return 'design_studio';
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
     const match = path.match(/^\/dashboard\/([^/]+)$/);
     const slugToTab: Record<string, SaaSNavTab> = {
