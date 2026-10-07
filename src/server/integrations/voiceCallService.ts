@@ -67,7 +67,7 @@ export class VoiceCallService {
     statusUrl.searchParams.set('leadId', params.leadId);
 
     try {
-      const authHeader = 'Basic ' + Buffer.from(params && config.accountSid + ':' + config.authToken).toString('base64');
+      const authHeader = 'Basic ' + Buffer.from(config.accountSid + ':' + config.authToken).toString('base64');
       const form = new URLSearchParams();
       form.set('To', to);
       form.set('From', from);
