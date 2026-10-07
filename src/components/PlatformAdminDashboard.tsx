@@ -70,6 +70,7 @@ import { PlatformMonitoringLogs } from './admin/PlatformMonitoringLogs';
 import { PlatformAutomationsDashboard } from './admin/PlatformAutomationsDashboard';
 import { PlatformMultiCurrencyManager } from './admin/PlatformMultiCurrencyManager';
 import { PlatformAdminSidebar, PlatformAdminSection } from './admin/PlatformAdminSidebar';
+import { DesignStudio } from './DesignStudio';
 import { PlatformAdminDashboardOverview } from './admin/PlatformAdminDashboardOverview';
 import { PlatformPaymentsSection } from './admin/PlatformPaymentsSection';
 import { PlatformCouponsSection } from './admin/PlatformCouponsSection';
@@ -869,7 +870,13 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
 
           <AdminErrorBoundary sectionName={activeTab}>
             {/* 1. Dashboard Overview */}
-            {activeTab === 'dashboard' && (
+            {activeTab === 'design_studio' && (
+        <AdminErrorBoundary>
+          <DesignStudio />
+        </AdminErrorBoundary>
+      )}
+
+      {activeTab === 'dashboard' && (
               <PlatformAdminDashboardOverview
                 businesses={businesses}
                 subscriptionsList={subscriptionsList}
