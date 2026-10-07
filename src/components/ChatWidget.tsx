@@ -368,7 +368,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           name: leadName.trim(),
           email: leadEmail.trim(),
           phone: leadPhone.trim(),
-          notes: leadMessage.trim() || 'Requested human support via AI Chat widget.'
+          notes: leadMessage.trim() || 'Requested human support via AI Chat widget.',
           callConsent: true,
         })
       });
