@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Bot, 
   Sparkles, 
@@ -70,6 +70,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const [currency, setCurrency] = useState<CurrencyCode>(getRecommendedCurrency());
+  const [siteDesign, setSiteDesign] = useState<any | null>(null);
+
+  useEffect(() => {
+    fetch('/api/site-design')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.success && data.design) {
+          setSiteDesign(data.design);
+          if (data.design.site?.name) document.title = data.design.site.name;
+        }
+      })
+      .catch(() => {
+        // Keep compiled homepage defaults if the design service is unavailable.
+      });
+  }, []);
+
+  const designStyle = siteDesign ? ({
+    '--agentdesk-primary': siteDesign.brand.primaryColor,
+    '--agentdesk-secondary': siteDesign.brand.secondaryColor,
+    '--agentdesk-accent': siteDesign.brand.accentColor,
+    '--agentdesk-background': siteDesign.brand.backgroundColor,
+    '--agentdesk-text': siteDesign.brand.textColor,
+    '--agentdesk-heading-font': siteDesign.typography.headingFont,
+    fontFamily: siteDesign.typography.bodyFont,
+    fontSize: `${siteDesign.typography.baseSize}px`,
+    backgroundColor: siteDesign.brand.backgroundColor,
+    color: siteDesign.brand.textColor
+  } as React.CSSProperties) : undefined;
   
   // Checkout Modal State for Starter, Growth, Scale
   const [checkoutModal, setCheckoutModal] = useState<{
@@ -177,7 +205,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white">
+    <div
+      className="min-h-screen text-slate-100 font-sans selection:bg-blue-600 selection:text-white"
+      style={designStyle}
+    >
       {/* 1. Hero Section */}
       <section className="relative pt-12 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-8 overflow-hidden">
         {/* Background glow */}
@@ -186,18 +217,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-4 sm:mb-6 shadow-md">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span>AgentDesk • AI Employee for customer conversations</span>
+            <span>{siteDesign?.site?.name || 'AgentDesk'} • AI Employee for customer conversations</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-4 sm:mb-6">
-            Your AI employee for{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
-              every customer conversation.
-            </span>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.15] mb-4 sm:mb-6" style={{ fontFamily: siteDesign?.typography?.headingFont, fontWeight: siteDesign?.typography?.headingWeight, color: siteDesign?.brand?.textColor }}>
+            {siteDesign?.homepage?.heroHeadline || 'Your AI employee for every customer conversation.'}
           </h1>
 
           <p className="text-sm sm:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-8 sm:mb-10 font-normal">
-            Let AgentDesk handle the first response, capture the enquiry, qualify the lead, and keep follow-up moving. Your team steps in when human attention is needed.
+            {siteDesign?.homepage?.heroSubheadline || 'Let AgentDesk handle the first response, capture the enquiry, qualify the lead, and keep follow-up moving. Your team steps in when human attention is needed.'}
           </p>
 
           {/* Action CTAs */}
@@ -270,7 +298,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 3. How It Works */}
-      <section className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
+      {(siteDesign?.homepage?.showPosterProcess ?? true) && <section className="py-16 px-4 sm:px-8 bg-slate-900/30 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
             <span className="text-[11px] font-black uppercase tracking-wider text-blue-400">How it works</span>
@@ -305,8 +333,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
         </div>
-      </section>
-
+      </section>}
+      
       {/* 4. Dashboard Preview */}
       <section className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto">
@@ -372,7 +400,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 3. Pricing Matrix Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      {(siteDesign?.homepage?.showPricing ?? true) && <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />

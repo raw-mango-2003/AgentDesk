@@ -45,7 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const enforceRoleScopedRoutes = (user: UserProfile | null) => {
     if (typeof window === 'undefined') return;
     const path = window.location.pathname.toLowerCase();
-    if (path !== '/dashboard/integrations') return;
+
+    const isPlatformAdminOnly = path === '/dashboard/integrations' || path === '/admin/design-studio';
+
+    if (!isPlatformAdminOnly) return;
 
     if (!user) {
       window.history.replaceState({ ...(window.history.state || {}), agentDeskRoute: true, agentDeskView: 'login', agentDeskTab: undefined, agentDeskScrollY: 0 }, '', '/login');
