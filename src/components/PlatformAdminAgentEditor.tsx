@@ -247,19 +247,10 @@ export const PlatformAdminAgentEditor: React.FC<PlatformAdminAgentEditorProps> =
         updatedAt: now
       };
 
-      // 1. Save in local dbService
-      await saveKnowledgeDoc(itemToSave);
+      // saveKnowledgeDoc already persists through the production API.
+      // Avoid a second identical request, which only consumes rate-limit capacity.
 
-      // 2. Save in backend server.ts endpoint
-      try {
-        await fetch('/api/knowledge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(itemToSave)
-        });
-      } catch (e) {
-        console.warn('Server knowledge sync warning:', e);
-      }
+      await saveKnowledgeDoc(itemToSave);
 
       // Refresh list
       const updatedList = await getKnowledgeDocs(PLATFORM_ADMIN_TENANT_ID);
@@ -276,17 +267,9 @@ export const PlatformAdminAgentEditor: React.FC<PlatformAdminAgentEditorProps> =
   const handleDeleteKnowledgeItem = async (id: string) => {
     if (!confirm('Are you sure you want to delete this knowledge base item?')) return;
     try {
-      // 1. Delete in dbService
+      // deleteKnowledgeDoc already persists through the production API.
+      // Avoid issuing the same delete a second time.
       await deleteKnowledgeDoc(PLATFORM_ADMIN_TENANT_ID, id);
-
-      // 2. Delete on server
-      try {
-        await fetch(`/api/knowledge/${PLATFORM_ADMIN_TENANT_ID}/${id}`, {
-          method: 'DELETE'
-        });
-      } catch (e) {
-        console.warn('Server delete knowledge warning:', e);
-      }
 
       const updatedList = await getKnowledgeDocs(PLATFORM_ADMIN_TENANT_ID);
       setKnowledgeItems(updatedList);
@@ -374,26 +357,9 @@ export const PlatformAdminAgentEditor: React.FC<PlatformAdminAgentEditorProps> =
       await saveAgent(updatedAgent);
       await saveBusiness(updatedBusiness);
 
-      // 4. Persist to Backend Server Memory & Registry
-      try {
-        await fetch('/api/agents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedAgent)
-        });
-      } catch (err) {
-        console.warn('Backend API /api/agents sync note:', err);
-      }
-
-      try {
-        await fetch('/api/admin/businesses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatedBusiness)
-        });
-      } catch (err) {
-        console.warn('Backend API /api/admin/businesses sync note:', err);
-      }
+      // 4. saveAgent/saveBusiness already persist through the production
+      // API. Do not issue duplicate backend writes here, which unnecessarily
+      // consume API rate-limit capacity and can make a valid save appear to fail.
 
       // 5. Audit Log
       await addAuditLog({

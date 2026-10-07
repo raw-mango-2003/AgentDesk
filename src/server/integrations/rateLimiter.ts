@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { postgresClient } from '../db/postgresClient.js';
 import { getSession } from '../auth/sessionStore.js';
 import { getUserById } from '../auth/userRegistry.js';
@@ -132,7 +133,20 @@ export function createRateLimiter(options: RateLimiterOptions) {
       );
       const effectiveLimit = isPublicLeadEndpoint ? 10 : maxRequests;
       const effectiveKeyPrefix = isPublicLeadEndpoint ? 'lead_shared' : keyPrefix;
-      const key = `${effectiveKeyPrefix}:${ip}`;
+
+      // Authenticated API traffic should not share one rate-limit bucket with
+      // every user behind the same NAT/proxy IP. Use a one-way hash of the
+      // session token for authenticated sessions, while keeping IP limiting
+      // for anonymous traffic.
+      let identityKey = ip;
+      if (keyPrefix === 'api' && !isPublicLeadEndpoint) {
+        const sessionToken = extractSessionToken(req);
+        if (sessionToken) {
+          identityKey = `session:${crypto.createHash('sha256').update(sessionToken).digest('hex').slice(0, 24)}`;
+        }
+      }
+
+      const key = `${effectiveKeyPrefix}:${identityKey}`;
 
       const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, effectiveLimit, windowMs);
       const remaining = Math.max(0, effectiveLimit - currentCount);
