@@ -3629,7 +3629,7 @@ async function startServer() {
       success: false,
       error: {
         code: err.code || 'INTERNAL_SERVER_ERROR',
-        message: err.message || 'An unexpected internal server error occurred.'
+        message: status >= 500 ? 'An unexpected internal server error occurred.' : (err.message || 'Request failed.')
       }
     });
   });
