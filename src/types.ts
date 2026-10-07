@@ -10,7 +10,11 @@ export type UserRole =
   | 'MANAGER' 
   | 'AGENT' 
   | 'OPERATOR'
-  | 'VIEWER';
+  | 'VIEWER'
+  | 'UI_UX_DESIGNER'
+  | 'SECURITY_ADMIN'
+  | 'HOSTING_ADMIN'
+  | 'INTEGRATIONS_ADMIN';
 
 export type TenantType = 'demo' | 'customer' | 'platform';
 
@@ -26,6 +30,7 @@ export interface UserProfile {
   isPlatformAdmin?: boolean;
   mustChangePassword?: boolean;
   status?: string;
+  department?: 'PLATFORM' | 'UI_UX' | 'SECURITY' | 'HOSTING' | 'INTEGRATIONS' | 'BUSINESS';
   createdAt?: string;
 }
 
