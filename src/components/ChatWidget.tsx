@@ -560,11 +560,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     setVoiceTranscript([]);
 
     try {
-      // 1. Request microphone permission
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-
-      // 2. Establish WebSocket connection to backend Voice agent
+      // 1. Establish WebSocket connection to backend Voice agent
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${protocol}//${window.location.host}/ws/live-voice`;
       const ws = new WebSocket(wsUrl);
