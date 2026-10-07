@@ -83,7 +83,7 @@ function sanitizeDesign(input: any): SiteDesignConfig {
   if (Array.isArray(input.homepage?.sectionOrder)) {
     const allowed = new Set(['hero','problem','poster','dashboard','benefits','integrations','pricing','faq']);
     const order = input.homepage.sectionOrder.filter((x: unknown): x is string => typeof x === 'string' && allowed.has(x));
-    if (order.length) d.homepage.sectionOrder = [...new Set(order)];
+    if (order.length) d.homepage.sectionOrder = Array.from(new Set<string>(order));
   }
 
   d.pages.dashboard.backgroundColor = color(input.pages?.dashboard?.backgroundColor, d.pages.dashboard.backgroundColor);
