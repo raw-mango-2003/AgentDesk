@@ -97,7 +97,41 @@ export class EmailService implements IEmailService {
       return this.sendViaResendFallback(record, options, resendApiKey);
     }
 
-    const errorMsg = 'No transactional email provider is configured. Set BREVO_API_KEY in the environment.';
+    // 3. Fall back to the persisted Gmail OAuth integration when configured.
+    // This keeps security emails deliverable even when Brevo/Resend is absent.
+    if (this.gmailService.isConfigured()) {
+      const gmailResult = await this.gmailService.sendEmail({
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+        replyTo: options.replyTo || process.env.EMAIL_REPLY_TO || this.gmailService.defaultReplyTo
+      });
+      record.provider = 'gmail';
+      record.status = gmailResult.success ? 'SENT' : gmailResult.status;
+      record.providerMessageId = gmailResult.messageId;
+      record.error = gmailResult.error;
+      if (gmailResult.success) {
+        record.sentAt = new Date().toISOString();
+      } else {
+        record.failedAt = new Date().toISOString();
+      }
+      await deliveryLogService.update(record.id, {
+        status: record.status,
+        provider: 'gmail',
+        providerId: gmailResult.messageId,
+        retryCount: record.attemptCount,
+        error: gmailResult.error
+      });
+      return {
+        success: gmailResult.success,
+        status: gmailResult.status,
+        messageId: gmailResult.messageId,
+        error: gmailResult.error
+      };
+    }
+
+    const errorMsg = 'No transactional email provider is configured. Configure Brevo, Resend, or connect Gmail in Platform Admin.';
     record.status = 'NOT_CONFIGURED';
     await deliveryLogService.record({
       id: recordId,
