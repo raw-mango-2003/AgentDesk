@@ -86,6 +86,22 @@ const DEFAULT_PLAN_PRICES: Record<CurrencyCode, Record<string, { setup: number; 
   }
 };
 
+const getCheckoutErrorMessage = (value: unknown, fallback: string): string => {
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const candidates = [record.message, record.description, record.error, record.error_description, record.reason];
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+    }
+    try {
+      const serialized = JSON.stringify(value);
+      if (serialized && serialized !== '{}') return serialized;
+    } catch {}
+  }
+  return fallback;
+};
+
 const getSavedSession = (key: string, def = '') => {
   try {
     return typeof window !== 'undefined' ? sessionStorage.getItem(key) || def : def;
@@ -596,7 +612,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
       const sessionData = await sessionRes.json().catch(() => ({}));
       if (!sessionRes.ok || !sessionData.orderId) {
-        throw new Error(sessionData.error || 'Payment service temporarily unavailable. Please try again.');
+        throw new Error(getCheckoutErrorMessage(sessionData.error, 'Payment service temporarily unavailable. Please try again.'));
       }
 
       // 4. Ensure Razorpay SDK script is ready
@@ -678,7 +694,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
             const verifyData = await verifyRes.json().catch(() => ({}));
             if (!verifyRes.ok || !verifyData.success || verifyData.status !== 'ACTIVATED') {
-              throw new Error(verifyData.error || 'Payment verification is still pending. Please try again or contact support.');
+              throw new Error(getCheckoutErrorMessage(verifyData.error, 'Payment verification is still pending. Please try again or contact support.'));
             }
 
             // Sync newly created business & agent to local store
@@ -734,7 +750,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
             }
           } catch (verifyErr: any) {
             setPaymentFailed(true);
-            setError(verifyErr.message || 'Payment verification is still pending. Please try again or contact support.');
+            setError(getCheckoutErrorMessage(verifyErr, 'Payment verification is still pending. Please try again or contact support.'));
             setLoading(false);
           }
         }
@@ -749,7 +765,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       rzpInstance.open();
     } catch (err: any) {
       setPaymentFailed(true);
-      setError(err.message || 'Payment service temporarily unavailable. Please try again.');
+      setError(getCheckoutErrorMessage(err, 'Payment service temporarily unavailable. Please try again.'));
       setLoading(false);
     }
   };
