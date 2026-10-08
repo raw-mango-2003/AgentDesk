@@ -232,7 +232,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </button>
         </form>
 
-}
 
         {/* Toggle Mode */}
         <div className="mt-4 text-center text-xs text-slate-400">
