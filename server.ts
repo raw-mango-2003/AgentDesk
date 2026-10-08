@@ -49,6 +49,8 @@ import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { gmailService, integrationStore, notificationService, syncLeadToSpreadsheet, voiceCallService } from './src/server/integrations/index.js';
 import { storageService } from './src/server/integrations/index.js';
 import { designRouter } from './src/server/design/designRouter.js';
+import { clerkMiddleware } from '@clerk/express';
+import { captureServerException } from './src/server/observability.js';
 
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
