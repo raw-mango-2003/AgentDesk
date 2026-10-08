@@ -202,7 +202,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
   const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab;
-  const livePageDesign = globalDesign?.editor?.pages?.[liveEditorPageId] || globalDesign?.editor?.pages?.dashboard;
   const livePageStyle: React.CSSProperties = {
     backgroundColor: globalDesign?.pages?.dashboard?.backgroundColor || globalDesign?.brand?.backgroundColor || undefined,
     color: globalDesign?.brand?.textColor || undefined,
