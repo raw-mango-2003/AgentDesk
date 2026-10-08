@@ -145,7 +145,6 @@ export function resolveAppRoute(pathname: string, hash: string): AppView {
 }
 
 export default function App() {
-  const visualEditorRuntime = <VisualEditorRuntime />;
   const { currentUser, activeBusinessId, setActiveBusinessId, refreshAuth } = useAuth();
   
   const getInitialView = (): AppView => typeof window !== 'undefined' ? resolveAppRoute(window.location.pathname, window.location.hash) : 'landing';
