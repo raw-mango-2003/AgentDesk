@@ -90,14 +90,30 @@ const getCheckoutErrorMessage = (value: unknown, fallback: string): string => {
   if (typeof value === 'string' && value.trim()) return value.trim();
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    const candidates = [record.message, record.description, record.error, record.error_description, record.reason];
+    const nestedError = record.error;
+
+    const candidates: unknown[] = [
+      record.message,
+      record.description,
+      record.error_description,
+      record.reason,
+      typeof nestedError === 'string' ? nestedError : undefined,
+      nestedError && typeof nestedError === 'object'
+        ? (nestedError as Record<string, unknown>).message
+        : undefined,
+      nestedError && typeof nestedError === 'object'
+        ? (nestedError as Record<string, unknown>).description
+        : undefined,
+      nestedError && typeof nestedError === 'object'
+        ? (nestedError as Record<string, unknown>).reason
+        : undefined
+    ];
+
     for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return candidate.trim();
+      }
     }
-    try {
-      const serialized = JSON.stringify(value);
-      if (serialized && serialized !== '{}') return serialized;
-    } catch {}
   }
   return fallback;
 };
@@ -612,7 +628,25 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
       const sessionData = await sessionRes.json().catch(() => ({}));
       if (!sessionRes.ok || !sessionData.orderId) {
-        throw new Error(getCheckoutErrorMessage(sessionData.error, 'Payment service temporarily unavailable. Please try again.'));
+        const serverMessage = getCheckoutErrorMessage(
+          sessionData,
+          ''
+        );
+        const errorCode = typeof sessionData?.code === 'string'
+          ? sessionData.code
+          : typeof sessionData?.error?.code === 'string'
+            ? sessionData.error.code
+            : '';
+
+        const statusHint = !serverMessage && sessionRes.status
+          ? ` (HTTP ${sessionRes.status})`
+          : '';
+
+        const codeHint = errorCode ? ` [${errorCode}]` : '';
+
+        throw new Error(
+          `${serverMessage || 'Payment service temporarily unavailable. Please try again.'}${codeHint}${statusHint}`
+        );
       }
 
       // 4. Ensure Razorpay SDK script is ready
