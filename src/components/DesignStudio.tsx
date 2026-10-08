@@ -27,7 +27,7 @@ const DEFAULT: Design = {
     heroSubheadline: 'Let AgentDesk handle the first response, capture the enquiry, qualify the lead, and keep follow-up moving.',
     showPosterProcess: true, showBenefits: true, showIntegrations: true, showPricing: true, showFaq: true,
     showDashboardPreview: true, showProblem: true, showTrustBar: true,
-    sectionOrder: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'integrations', 'pricing', 'faq'],
+    sectionOrder: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'],
     heroAlignment: 'center', heroMinHeight: 720, heroBackgroundMode: 'aurora'
   },
   pages: {
@@ -85,7 +85,7 @@ export const DesignStudio: React.FC = () => {
   const [device, setDevice] = useState('desktop');
 
   useEffect(() => {
-    safeFetchJson('/api/site-design')
+    safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
       .then((result: any) => {
         if (result.success && result.design) setDesign(result.design);
       })

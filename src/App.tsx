@@ -203,7 +203,7 @@ export default function App() {
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
 
   useEffect(() => {
-    safeFetchJson('/api/site-design').then((result: any) => {
+    safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }).then((result: any) => {
       if (!result?.success || !result.design) return;
       const d = result.design;
       setGlobalDesign(d);
