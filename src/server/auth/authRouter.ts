@@ -483,7 +483,6 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
       verifyUrl
     }).catch(e => console.error('[SignupEmailError]', e.message));
 
-    // PostHog analytics tracking
     analyticsService.track('user_signed_up', {
       email: cleanEmail,
       role: 'BUSINESS_ADMIN'
