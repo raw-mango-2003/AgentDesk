@@ -48,6 +48,12 @@ function safePaymentError(error: any, fallback: string): string {
   if (/timeout|network|gateway/.test(lower)) {
     return 'Payment gateway connection timed out. Please check your connection and retry.';
   }
+  if (/not_configured|credentials|authentication failed|invalid api key|api key/.test(lower)) {
+    return 'Payment gateway configuration is incomplete. Please contact AgentDesk support.';
+  }
+  if (/payment intent persistence|billing persistence|persistence is unavailable/.test(lower)) {
+    return 'Billing service is temporarily unavailable. Please retry in a moment.';
+  }
 
   return fallback;
 }
@@ -442,7 +448,8 @@ billingRouter.post('/create-checkout-session', paymentRateLimiter, async (req: R
     if (!targetProvider || !targetProvider.isConfigured()) {
       return res.status(503).json({
         success: false,
-        error: 'Online payments are temporarily unavailable. Please contact sales.'
+        code: 'PAYMENT_GATEWAY_NOT_CONFIGURED',
+        error: 'Payment gateway configuration is incomplete. Please contact AgentDesk support.'
       });
     }
 
@@ -465,7 +472,22 @@ billingRouter.post('/create-checkout-session', paymentRateLimiter, async (req: R
     return res.json(session);
   } catch (err: any) {
     logBillingError('Checkout session failed', err);
-    return res.status(503).json({ success: false, error: safePaymentError(err, 'Payment service temporarily unavailable. Please try again.') });
+
+    const rawMessage = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
+    let code = 'PAYMENT_CHECKOUT_UNAVAILABLE';
+    if (/razorpay order creation failed/.test(rawMessage)) {
+      code = 'RAZORPAY_ORDER_CREATION_FAILED';
+    } else if (/payment intent persistence|billing persistence/.test(rawMessage)) {
+      code = 'BILLING_PERSISTENCE_UNAVAILABLE';
+    } else if (/not_configured|credentials|authentication failed|invalid api key|api key/.test(rawMessage)) {
+      code = 'PAYMENT_GATEWAY_CONFIGURATION_ERROR';
+    }
+
+    return res.status(503).json({
+      success: false,
+      code,
+      error: safePaymentError(err, 'Payment service temporarily unavailable. Please try again.')
+    });
   }
 });
 
