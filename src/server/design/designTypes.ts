@@ -188,7 +188,7 @@ export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
     showDashboardPreview: true,
     showProblem: true,
     showTrustBar: true,
-    sectionOrder: ['hero','problem','poster','dashboard','benefits','integrations','pricing','faq'],
+    sectionOrder: ['hero','problem','poster','dashboard','benefits','pricing','cta','faq','footer'],
     heroAlignment: 'center',
     heroMinHeight: 720,
     heroBackgroundMode: 'aurora'
