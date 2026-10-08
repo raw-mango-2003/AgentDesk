@@ -85,7 +85,7 @@ export const DesignStudio: React.FC = () => {
   const [device, setDevice] = useState('desktop');
 
   useEffect(() => {
-    safeFetchJson('/api/site-design')
+    safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
       .then((result: any) => {
         if (result.success && result.design) setDesign(result.design);
       })
