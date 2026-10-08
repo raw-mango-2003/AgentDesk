@@ -3638,6 +3638,7 @@ async function startServer() {
   // Global API error handler ensuring any unhandled backend exception in /api returns JSON
   app.use('/api', (err: any, req: Request, res: Response, _next: NextFunction) => {
     console.error(`[API Global Error] ${req.method} ${req.originalUrl}:`, err);
+    captureServerException(err, { method: req.method, path: req.path });
     const status = typeof err.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500;
     res.status(status).json({
       success: false,
