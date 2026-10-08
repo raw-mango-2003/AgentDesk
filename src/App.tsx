@@ -733,6 +733,7 @@ export default function App() {
             }}
           />
         ) : currentView === 'pricing' ? (
+          <div className="agentdesk-public-pricing-shell">
           <PricingPage
             onOpenDashboard={(tenantId) => {
               if (tenantId) {
@@ -749,6 +750,7 @@ export default function App() {
               navigateTab('overview');
             }}
           />
+          </div>
         ) : !currentUser ? (
           <BusinessLoginPage
             onLoginSuccess={() => handleNavigate('dashboard')}
