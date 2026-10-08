@@ -659,6 +659,13 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       const rzpKey = sessionData.keyId || sessionData.payment?.raw?.key || '';
       const orderId = sessionData.orderId;
 
+      if (!rzpKey) {
+        throw new Error('Payment gateway public key is missing from the checkout session [PAYMENT_GATEWAY_CONFIGURATION_ERROR].');
+      }
+      if (!orderId) {
+        throw new Error('Razorpay order ID is missing from the checkout session [RAZORPAY_ORDER_MISSING].');
+      }
+
       const orderDesc = currency !== 'INR'
         ? `AgentDesk ${calculation.planName} Plan (${formatCurrencyAmount(calculation.total_due_today, currency)} ${currency}) - Charged in INR`
         : `${calculation.planName} - Setup & 1st Month Subscription`;
@@ -793,7 +800,26 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       const rzpInstance = new (window as any).Razorpay(rzpOptions);
       rzpInstance.on('payment.failed', (resp: any) => {
         setPaymentFailed(true);
-        setError('Payment was declined or could not be completed. Please try another payment method or try again.');
+
+        const paymentError = resp?.error;
+        const description = typeof paymentError?.description === 'string'
+          ? paymentError.description.trim()
+          : '';
+        const reason = typeof paymentError?.reason === 'string'
+          ? paymentError.reason.trim()
+          : '';
+        const code = typeof paymentError?.code === 'string'
+          ? paymentError.code.trim()
+          : '';
+
+        const detail = description || reason;
+        const suffix = code ? ` [RZP_${code}]` : '';
+
+        setError(
+          detail
+            ? `${detail}${suffix}`
+            : `Payment was declined or could not be completed. Please try another payment method or try again.${suffix}`
+        );
         setLoading(false);
       });
       rzpInstance.open();
