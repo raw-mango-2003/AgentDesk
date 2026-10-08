@@ -45,6 +45,7 @@ const PAGE_DEFS = [
   ['crm', 'CRM'], ['follow-up', 'Follow Up'], ['re-engagement', 'Re-engagement'], ['reviews', 'Reviews'],
   ['appointments', 'Appointments'], ['estimates', 'Estimates'], ['cold-outreach', 'Cold Outreach'],
   ['integrations', 'Integrations'], ['knowledge-base', 'Knowledge Base'], ['conversations', 'Conversations'],
+  ['billing', 'Billing & Usage'], ['localization', 'Localization'], ['embed', 'Deploy & Embed'], ['account-credentials', 'Account & Credentials'],
   ['platform-admin', 'Platform Admin']
 ] as const;
 
@@ -52,7 +53,11 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string; sections: str
   home: { title: 'Your AI employee for every customer conversation.', subtitle: 'Turn enquiries into conversations, leads and booked work.', sections: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'] },
   pricing: { title: 'Simple pricing that scales with your business.', subtitle: 'Choose the plan that fits your customer operations.', sections: ['header', 'plans', 'faq', 'cta', 'footer'] },
   login: { title: 'Welcome back.', subtitle: 'Sign in to your AgentDesk workspace.', sections: ['auth'] },
-  dashboard: { title: 'Your workspace.', subtitle: 'Everything your team needs in one place.', sections: ['sidebar', 'header', 'content'] }
+  dashboard: { title: 'Your workspace.', subtitle: 'Everything your team needs in one place.', sections: ['sidebar', 'header', 'content'] },
+  billing: { title: 'Billing & usage.', subtitle: 'Manage plan, usage and upgrades.', sections: ['header', 'usage', 'plan'] },
+  localization: { title: 'Localization.', subtitle: 'Configure market, currency and regional settings.', sections: ['header', 'settings'] },
+  embed: { title: 'Deploy & embed.', subtitle: 'Deploy AgentDesk into the customer experience.', sections: ['header', 'snippet'] },
+  'account-credentials': { title: 'Account & credentials.', subtitle: 'Manage account access and credentials.', sections: ['header', 'security'] }
 };
 
 const buildPage = (design: Design, id: string) => {
@@ -118,6 +123,8 @@ export const DesignStudio: React.FC = () => {
   const [future, setFuture] = useState<Design[]>([]);
   const [previewNonce, setPreviewNonce] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const dragSnapshotRef = useRef<Design | null>(null);
 
   useEffect(() => {
     safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
@@ -148,6 +155,71 @@ export const DesignStudio: React.FC = () => {
   });
 
   const currentPage = useMemo(() => getPage(design, pageId), [design, pageId]);
+
+  const sendDraftToPreview = () => {
+    const frame = previewFrameRef.current;
+    if (!frame?.contentWindow) return;
+    frame.contentWindow.postMessage({
+      type: 'agentdesk-visual-editor-sync',
+      selectedId: target?.kind === 'element' ? target.id : '',
+      payload: {
+        pageId,
+        sections: currentPage.sections,
+        brand: design.brand,
+        typography: design.typography
+      }
+    }, window.location.origin);
+  };
+
+  useEffect(() => {
+    const handlePreviewMessage = (event: MessageEvent) => {
+      const frame = previewFrameRef.current;
+      if (event.origin !== window.location.origin || !frame?.contentWindow || event.source !== frame.contentWindow) return;
+      if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.type === 'agentdesk-visual-editor-ready') {
+        window.requestAnimationFrame(sendDraftToPreview);
+        return;
+      }
+      if (event.data.type === 'agentdesk-visual-editor-select') {
+        const id = String(event.data.selectedId || '');
+        if (id) setTarget({ kind: 'element', id });
+        return;
+      }
+      if (event.data.type === 'agentdesk-visual-editor-drag') {
+        const id = String(event.data.selectedId || '');
+        const x = Number(event.data.x);
+        const y = Number(event.data.y);
+        if (!id || !Number.isFinite(x) || !Number.isFinite(y)) return;
+        if (!dragSnapshotRef.current) dragSnapshotRef.current = clone(design);
+        setDesign((current: Design) => {
+          const next = clone(current);
+          const page = getPage(next, pageId);
+          const element = page.sections.flatMap((section: any) => section.elements).find((item: any) => item.id === id);
+          if (element) {
+            element.x = Math.max(0, Math.min(100, x));
+            element.y = Math.max(0, Math.min(100, y));
+          }
+          return next;
+        });
+        setSaved(false);
+        return;
+      }
+      if (event.data.type === 'agentdesk-visual-editor-drag-end') {
+        if (dragSnapshotRef.current) {
+          setHistory(history => [...history.slice(-39), dragSnapshotRef.current as Design]);
+          dragSnapshotRef.current = null;
+          setFuture([]);
+        }
+      }
+    };
+    window.addEventListener('message', handlePreviewMessage);
+    return () => window.removeEventListener('message', handlePreviewMessage);
+  }, [design, pageId]);
+
+  useEffect(() => {
+    sendDraftToPreview();
+  }, [design, pageId, target]);
+
 
   const publish = async () => {
     setBusy(true); setError('');
@@ -339,7 +411,7 @@ export const DesignStudio: React.FC = () => {
         <div className="flex items-center gap-2">
           <button type="button" onClick={openLivePreview} className="px-3 py-2 rounded-lg border border-white/10 text-xs font-semibold flex gap-2 items-center"><Eye className="w-4 h-4" />Live preview</button>
           <button type="button" onClick={reset} className="p-2 rounded-lg border border-white/10"><RotateCcw className="w-4 h-4" /></button>
-          <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-lg bg-blue-600 text-xs font-bold flex gap-2 items-center"><Save className="w-4 h-4" />{busy ? 'Saving...' : saved ? 'Published' : 'Publish'}</button>
+          <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-lg bg-[#b8a47e] text-xs font-bold flex gap-2 items-center"><Save className="w-4 h-4" />{busy ? 'Saving...' : saved ? 'Published' : 'Publish'}</button>
         </div>
       </header>
       {error && <div className="px-4 py-2 bg-red-950/80 text-xs text-red-200 border-b border-red-500/20">{error}</div>}
@@ -363,12 +435,12 @@ export const DesignStudio: React.FC = () => {
             <AddButton onClick={addSection}><Plus /> Section</AddButton>
           </Panel>}
           {tool === 'pages' && <Panel title="Pages">
-            {PAGE_DEFS.map(([id, label]) => <button key={id} type="button" onClick={() => { setPageId(id); setTarget(null); }} className={'w-full text-left px-3 py-2.5 rounded-lg text-sm mb-1 ' + (pageId === id ? 'bg-blue-600/20 text-blue-200' : 'text-slate-400 hover:bg-white/5')}>{label}</button>)}
+            {PAGE_DEFS.map(([id, label]) => <button key={id} type="button" onClick={() => { setPageId(id); setTarget(null); }} className={'w-full text-left px-3 py-2.5 rounded-lg text-sm mb-1 ' + (pageId === id ? 'bg-[#b8a47e]/20 text-[#d8c49a]' : 'text-slate-400 hover:bg-white/5')}>{label}</button>)}
           </Panel>}
           {tool === 'layers' && <Panel title="Layers">
             {currentPage.sections.map((section: any, index: number) => <div key={section.id} className="mb-2">
-              <button type="button" onClick={() => setTarget({kind:'section',id:section.id})} className={'w-full text-left px-2 py-2 rounded bg-white/5 text-xs ' + (target?.id === section.id ? 'ring-1 ring-blue-500' : '')}>{section.label || section.name}</button>
-              <div className="pl-3 pt-1">{section.elements.map((e: any) => <button key={e.id} type="button" onClick={() => setTarget({kind:'element',id:e.id})} className={'block w-full text-left px-2 py-1.5 text-[11px] text-slate-400 rounded ' + (target?.id === e.id ? 'bg-blue-600/20 text-blue-200' : '')}>{e.type}: {e.text || 'media'}</button>)}</div>
+              <button type="button" onClick={() => setTarget({kind:'section',id:section.id})} className={'w-full text-left px-2 py-2 rounded bg-white/5 text-xs ' + (target?.id === section.id ? 'ring-1 ring-[#b8a47e]' : '')}>{section.label || section.name}</button>
+              <div className="pl-3 pt-1">{section.elements.map((e: any) => <button key={e.id} type="button" onClick={() => setTarget({kind:'element',id:e.id})} className={'block w-full text-left px-2 py-1.5 text-[11px] text-slate-400 rounded ' + (target?.id === e.id ? 'bg-[#b8a47e]/20 text-[#d8c49a]' : '')}>{e.type}: {e.text || 'media'}</button>)}</div>
               <div className="flex gap-1 mt-1">
                 <SmallButton onClick={() => moveSection(index, -1)}><ArrowUp /></SmallButton>
                 <SmallButton onClick={() => moveSection(index, 1)}><ArrowDown /></SmallButton>
@@ -378,7 +450,7 @@ export const DesignStudio: React.FC = () => {
           {tool === 'templates' && <Panel title="Templates">
             <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
               <div className="text-xs font-semibold text-white mb-1">Start from a real direction</div>
-              <div className="text-[11px] leading-4 text-slate-500">These are visual presets for AgentDesk. We will use the connected Figma workflow to bring in a real Community template after you connect Figma.</div>
+              <div className="text-[11px] leading-4 text-slate-500">These are AgentDesk visual directions. The connected Figma workspace is now available for template research and design handoff.</div>
             </div>
             {TEMPLATE_PRESETS.map((preset: any) => <button key={preset.id} type="button" onClick={() => applyTemplate(preset)} className="w-full text-left p-3 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] mb-2">
               <div className="h-16 rounded-lg mb-3" style={{background:preset.background,border:'1px solid rgba(255,255,255,.08)'}}>
@@ -388,7 +460,7 @@ export const DesignStudio: React.FC = () => {
               <div className="text-xs font-semibold text-white">{preset.name}</div>
               <div className="text-[10px] leading-4 text-slate-500 mt-1">{preset.description}</div>
             </button>)}
-            <a href="https://www.figma.com/templates/web-design-inspiration/" target="_blank" rel="noreferrer" className="block text-center text-xs text-blue-300 hover:text-blue-200 mt-3">Browse free Figma website templates ↗</a>
+            <a href="https://www.figma.com/templates/web-design-inspiration/" target="_blank" rel="noreferrer" className="block text-center text-xs text-[#d8c49a] hover:text-[#d8c49a] mt-3">Browse free Figma website templates ↗</a>
           </Panel>}
           {tool === 'style' && <Panel title="Global style">
             <Color label="Primary" value={design.brand.primaryColor} onChange={v => updatePath(['brand','primaryColor'],v)} />
@@ -420,6 +492,8 @@ export const DesignStudio: React.FC = () => {
                 <span className="text-slate-600">Publish to apply draft changes</span>
               </div>
               <iframe
+                ref={previewFrameRef}
+                onLoad={sendDraftToPreview}
                 key={pageId + ':' + previewNonce}
                 title={'AgentDesk ' + (PAGE_DEFS.find(([id]) => id === pageId)?.[1] || pageId) + ' preview'}
                 src={(() => {
@@ -441,6 +515,10 @@ export const DesignStudio: React.FC = () => {
                     integrations: '/dashboard/integrations',
                     'knowledge-base': '/dashboard/knowledge',
                     conversations: '/dashboard/conversations',
+                    billing: '/billing',
+                    localization: '/dashboard/localization',
+                    embed: '/embed',
+                    'account-credentials': '/admin/account-credentials',
                     'platform-admin': '/admin'
                   };
                   return paths[pageId] || '/dashboard';
@@ -459,7 +537,7 @@ export const DesignStudio: React.FC = () => {
           <div className="flex items-center justify-between mb-4"><div className="font-bold text-sm">Properties</div>{target && <button type="button" onClick={removeSelected} className="p-1.5 rounded border border-red-500/20 text-red-300"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
           {!target && <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-400">
               <div className="text-white font-semibold mb-1">Nothing selected</div>
-              Click a real section or element in the page preview. Drag it on the canvas, then use these controls to change the content and visual treatment.
+              Click any real element in the live page to select it. Drag it directly in the page preview, then use these controls to change its content and visual treatment. Changes are draft-only until Publish.
             </div>}
           {target?.kind === 'section' && selectedSection && <SectionInspector section={selectedSection} onChange={updateSelected} />}
           {target?.kind === 'element' && selectedElement && <ElementInspector element={selectedElement} onChange={updateSelected} onUpload={uploadImage} />}
@@ -472,8 +550,8 @@ export const DesignStudio: React.FC = () => {
 const CanvasNav = ({design}:{design:Design}) => <div style={{background:'rgba(10,10,10,.82)',backdropFilter:'blur(18px)',borderBottom:'1px solid rgba(255,255,255,.08)'}} className="h-14 px-5 flex items-center justify-between sticky top-0 z-10"><div className="font-black text-sm">{design.site.name}</div><div className="flex gap-2"><span className="text-[10px] text-white/50 px-2 py-1">Products</span><span className="text-[10px] text-white/50 px-2 py-1">Pricing</span><span className="text-[10px] text-white/50 px-2 py-1">Contact</span><button style={{background:design.brand.primaryColor,borderRadius:design.buttons.radius}} className="px-3 py-1.5 text-[10px] font-bold">Get Started</button></div></div>;
 
 const CanvasSection = ({section,design,selected,selectedElementId,onSelect,onSelectElement,onDrag,onDoubleText}:{section:any,design:Design,selected:boolean,selectedElementId:string,onSelect:(id:string)=>void,onSelectElement:(id:string)=>void,onDrag:(e:React.PointerEvent,el:any)=>void,onDoubleText:(id:string,text:string)=>void}) => (
-  <section onPointerDown={() => onSelect(section.id)} style={{minHeight:section.height||280,padding:section.padding||40,background:section.background||'transparent',textAlign:section.align||'center'}} className={'relative overflow-hidden border-2 ' + (selected ? 'border-blue-500/70' : 'border-transparent hover:border-blue-500/30')}>
-    {selected && <div className="absolute left-2 top-2 z-20 px-2 py-1 bg-blue-600 text-[9px] uppercase font-bold rounded">{section.label || section.name}</div>}
+  <section onPointerDown={() => onSelect(section.id)} style={{minHeight:section.height||280,padding:section.padding||40,background:section.background||'transparent',textAlign:section.align||'center'}} className={'relative overflow-hidden border-2 ' + (selected ? 'border-[#b8a47e]/70' : 'border-transparent hover:border-[#b8a47e]/30')}>
+    {selected && <div className="absolute left-2 top-2 z-20 px-2 py-1 bg-[#b8a47e] text-[9px] uppercase font-bold rounded">{section.label || section.name}</div>}
     {section.elements.map((e:any)=><CanvasElement key={e.id} element={e} design={design} selected={selectedElementId===e.id} onSelect={(ev)=>{ev.stopPropagation();onSelectElement(e.id)}} onDrag={onDrag} onDoubleText={onDoubleText}/>)}
   </section>
 );
@@ -494,7 +572,7 @@ const ElementInspector=({element,onChange,onUpload}:{element:any,onChange:(p:any
 
 const Panel=({title,children}:{title:string,children:React.ReactNode})=><><div className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-3">{title}</div>{children}</>;
 const AddButton=({children,onClick}:{children:React.ReactNode,onClick:()=>void})=><button type="button" onClick={onClick} className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-sm mb-2"><span className="w-5 h-5 flex items-center justify-center">{children && React.Children.toArray(children)[0]}</span>{React.Children.toArray(children)[1]}</button>;
-const Tool=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-3 rounded-xl '+(active?'bg-blue-600/20 text-blue-300':'text-slate-500 hover:text-white')} title="Tool">{children}</button>;
+const Tool=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-3 rounded-xl '+(active?'bg-[#b8a47e]/20 text-[#d8c49a]':'text-slate-500 hover:text-white')} title="Tool">{children}</button>;
 const IconButton=({onClick,disabled,children,label}:{onClick:()=>void,disabled?:boolean,children:React.ReactNode,label:string})=><button type="button" title={label} disabled={disabled} onClick={onClick} className="p-1.5 rounded text-slate-400 hover:text-white disabled:opacity-30">{children}</button>;
 const Device=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-1.5 rounded '+(active?'bg-white/10 text-white':'text-slate-500')}>{children}</button>;
 const SmallButton=({onClick,children}:{onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className="p-1 rounded bg-white/5 text-slate-500"><span className="w-3 h-3 block">{children}</span></button>;
@@ -502,4 +580,4 @@ const Input=({label,value,onChange}:{label:string,value:string,onChange:(v:strin
 const Color=({label,value,onChange}:{label:string,value:string,onChange:(v:string)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<input type="color" value={value||'#000000'} onChange={e=>onChange(e.target.value)} className="w-9 h-7 bg-transparent"/></label>;
 const Select=({label,value,options,onChange}:{label:string,value:string,options:string[],onChange:(v:string)=>void})=><label className="block text-xs text-slate-400">{label}<select value={value} onChange={e=>onChange(e.target.value)} className="mt-1 w-full bg-[#181a1f] border border-white/10 rounded-lg px-3 py-2 text-sm text-white">{options.map(o=><option key={o} value={o}>{o}</option>)}</select></label>;
 const Range=({label,value,min,max,step=1,onChange}:{label:string,value:number,min:number,max:number,step?:number,onChange:(v:number)=>void})=><label className="block text-xs text-slate-400">{label}<div className="flex gap-2 items-center mt-1"><input className="w-full" type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><span className="w-10 text-right text-white text-[11px]">{Number(value).toFixed(step<1?1:0)}</span></div></label>;
-const Toggle=({label,value,onChange}:{label:string,value:boolean,onChange:(v:boolean)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<button type="button" onClick={()=>onChange(!value)} className={'w-9 h-5 rounded-full p-0.5 '+(value?'bg-blue-600':'bg-white/10')}><span className={'block w-4 h-4 rounded-full bg-white '+(value?'translate-x-4':'')}/></button></label>;
+const Toggle=({label,value,onChange}:{label:string,value:boolean,onChange:(v:boolean)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<button type="button" onClick={()=>onChange(!value)} className={'w-9 h-5 rounded-full p-0.5 '+(value?'bg-[#b8a47e]':'bg-white/10')}><span className={'block w-4 h-4 rounded-full bg-white '+(value?'translate-x-4':'')}/></button></label>;

@@ -194,6 +194,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
 
   return (
     <main
+      data-visual-page="home"
       className={`min-h-screen overflow-x-hidden bg-[#080808] text-white transition-opacity duration-200 ${designReady ? 'opacity-100' : 'opacity-0'} ${motion ? '' : '[&_*]:!transition-none'}`}
       style={{ ...cssVars, backgroundColor: background, color: text, fontSize: `${Number(design.typography?.baseSize || 16)}px` }}
     >
@@ -253,7 +254,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </nav>
 
-        <section className="relative flex items-end pt-28 pb-12 sm:pb-16" style={{ minHeight: `${Number(editorHero?.height || design.homepage?.heroMinHeight || 760)}px` }}>
+        <section data-visual-section="hero" className="relative flex items-end pt-28 pb-12 sm:pb-16" style={{ minHeight: `${Number(editorHero?.height || design.homepage?.heroMinHeight || 760)}px` }}>
           <img src={heroImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-75" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/55 to-black/10" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
@@ -261,14 +262,14 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-8">
             <div className="max-w-4xl lux-reveal">
               <p className="mb-5 text-[10px] font-semibold uppercase tracking-[.32em]" style={{ color: primary }}>AI customer operations platform</p>
-              <h1 className="lux-display max-w-4xl text-5xl leading-[.94] sm:text-7xl lg:text-[7.5rem] font-semibold">
+              <h1 data-visual-id="home_hero_heading" className="lux-display max-w-4xl text-5xl leading-[.94] sm:text-7xl lg:text-[7.5rem] font-semibold">
                 {liveHeroHeadline}
               </h1>
-              <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
+              <p data-visual-id="home_hero_body" className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
                 {liveHeroSubheadline}
               </p>
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
-                <button onClick={handleGetStarted} className="group inline-flex items-center justify-center gap-3 rounded-full px-7 py-4 text-xs font-semibold uppercase tracking-[.18em] text-black cursor-pointer transition-transform hover:-translate-y-1" style={{ backgroundColor: primary }}>
+                <button data-visual-id="home_hero_button" onClick={handleGetStarted} className="group inline-flex items-center justify-center gap-3 rounded-full px-7 py-4 text-xs font-semibold uppercase tracking-[.18em] text-black cursor-pointer transition-transform hover:-translate-y-1" style={{ backgroundColor: primary }}>
                   Build your AI receptionist
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>

@@ -131,9 +131,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({
   const POPULAR_CURRENCIES: CurrencyCode[] = ['INR', 'USD', 'GBP'];
 
   return (
-    <div className="min-h-screen font-sans selection:bg-blue-600 selection:text-white pb-24 w-full overflow-x-clip" style={{ backgroundColor: pageBackground, color: pageText, fontFamily: siteDesign?.typography?.bodyFont || undefined, borderRadius: `${radius}px` }}>
+    <div data-visual-page="pricing" className="min-h-screen font-sans selection:bg-blue-600 selection:text-white pb-24 w-full overflow-x-clip" style={{ backgroundColor: pageBackground, color: pageText, fontFamily: siteDesign?.typography?.bodyFont || undefined, borderRadius: `${radius}px` }}>
       {/* 1. Hero Section */}
-      <section className="relative pt-12 sm:pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-center w-full max-w-7xl mx-auto overflow-hidden">
+      <section data-visual-section="header" className="relative pt-12 sm:pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-center w-full max-w-7xl mx-auto overflow-hidden">
         {/* Background Ambient Glow */}
         <div className="absolute inset-x-0 top-0 h-px bg-slate-800" />
 
@@ -143,14 +143,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             <span className="truncate">AgentDesk • Plans & Pricing</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-5 break-words">
+          <h1 data-visual-id="pricing_header_heading" className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-5 break-words">
             {pricingHeading || 'Turn every customer interaction into measurable'}{' '}
             <span className="text-blue-400">
               revenue.
             </span>
           </h1>
 
-          <p className="text-sm sm:text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-6 font-normal">
+          <p data-visual-id="pricing_header_body" className="text-sm sm:text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-6 font-normal">
             {pricingBody || 'One AI customer operations platform for reception, lead capture, qualification, follow-up, appointments and CRM.'}
           </p>
 

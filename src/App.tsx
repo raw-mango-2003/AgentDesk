@@ -21,6 +21,7 @@ const PlatformAdminDashboard = lazy(() => import('./components/PlatformAdminDash
 const AICopilotDrawer = lazy(() => import('./components/AICopilotDrawer').then(module => ({ default: module.AICopilotDrawer })));
 const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer').then(module => ({ default: module.NotificationsDrawer })));
 import { ChatWidget } from './components/ChatWidget';
+import { VisualEditorRuntime } from './components/VisualEditorRuntime';
 import { AuthModal } from './components/AuthModal';
 const PricingPage = lazy(() => import('./components/PricingPage').then(module => ({ default: module.PricingPage })));
 const BillingDashboard = lazy(() => import('./components/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
@@ -201,7 +202,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
-  const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab;
+  const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab === 'account_credentials' ? 'account-credentials' : activeTab === 'admin' ? 'platform-admin' : activeTab;
   const livePageStyle: React.CSSProperties = {
     backgroundColor: globalDesign?.pages?.dashboard?.backgroundColor || globalDesign?.brand?.backgroundColor || undefined,
     color: globalDesign?.brand?.textColor || undefined,
@@ -640,6 +641,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      <VisualEditorRuntime />
       {/* Top Navbar */}
       <Navbar
         currentView={currentView}
@@ -1450,7 +1452,7 @@ export default function App() {
                 onOpenLiveDemo={() => setShowDemoWidget(true)}
               />
             ) : business ? (
-              <div className="transition-all">
+              <div className="transition-all" data-visual-page={liveEditorPageId}>
                 {activeTab === 'overview' && (
                   <DashboardOverview
                     business={business}
