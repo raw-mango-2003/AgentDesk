@@ -68,22 +68,13 @@ const AVAILABLE_PLANS = [
   { id: 'scale', name: 'Scale Plan', isPopular: false }
 ];
 
-const DEFAULT_PLAN_PRICES: Record<CurrencyCode, Record<string, { setup: number; monthly: number }>> = {
-  INR: {
-    starter: { setup: 19999, monthly: 14999 },
-    growth: { setup: 34999, monthly: 29999 },
-    scale: { setup: 59999, monthly: 59999 }
-  },
-  USD: {
-    starter: { setup: 299, monthly: 199 },
-    growth: { setup: 499, monthly: 399 },
-    scale: { setup: 999, monthly: 799 }
-  },
-  GBP: {
-    starter: { setup: 249, monthly: 169 },
-    growth: { setup: 419, monthly: 339 },
-    scale: { setup: 829, monthly: 669 }
-  }
+const getCanonicalPlanPrice = (currency: CurrencyCode, planId: string) => {
+  const plan = getPlanConfig(planId);
+  const pricing = plan?.pricing?.[currency] || plan?.pricing?.INR;
+  return {
+    setup: pricing?.setupPrice ?? 0,
+    monthly: pricing?.monthlyPrice ?? 0
+  };
 };
 
 const getCheckoutErrorMessage = (value: unknown, fallback: string): string => {
@@ -182,8 +173,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
   // Authoritative Pricing & Calculation State (source of truth from backend)
   const [calculation, setCalculation] = useState<OrderCalculationState>(() => {
-    const prices = DEFAULT_PLAN_PRICES[initialCurrency || 'INR'] || DEFAULT_PLAN_PRICES.INR;
-    const p = prices[selectedPlanId] || prices.starter;
+    const p = getCanonicalPlanPrice(initialCurrency || 'INR', selectedPlanId);
     const planObj = AVAILABLE_PLANS.find(x => x.id === selectedPlanId) || AVAILABLE_PLANS[0];
     return {
       planId: planObj.id,
@@ -1098,8 +1088,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 <div className="grid grid-cols-3 gap-2">
                   {AVAILABLE_PLANS.map((plan) => {
                     const isSelected = selectedPlanId === plan.id;
-                    const curPrices = DEFAULT_PLAN_PRICES[currency] || DEFAULT_PLAN_PRICES.INR;
-                    const planPrice = curPrices[plan.id] || curPrices.starter;
+                    const planPrice = getCanonicalPlanPrice(currency, plan.id);
                     return (
                       <button
                         key={plan.id}
