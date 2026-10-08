@@ -174,11 +174,11 @@ export function VisualEditorRuntime() {
       const id = node.dataset.visualEditorId;
       if (!id) return;
       const parent = node.parentElement;
-      const rect = node.getBoundingClientRect();
       const parentRect = parent?.getBoundingClientRect();
       if (!parentRect) return;
-      const originLeft = ((rect.left - parentRect.left) / Math.max(1, parentRect.width)) * 100;
-      const originTop = ((rect.top - parentRect.top) / Math.max(1, parentRect.height)) * 100;
+      const modelElement = current.sections.flatMap((section) => section.elements || []).find((element) => element.id === id);
+      const originLeft = Number(modelElement?.x ?? 50);
+      const originTop = Number(modelElement?.y ?? 50);
       drag = { node, id, startX: event.clientX, startY: event.clientY, originLeft, originTop, parentWidth: parentRect.width, parentHeight: parentRect.height };
       node.setPointerCapture?.(event.pointerId);
       event.preventDefault();
