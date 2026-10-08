@@ -21,6 +21,7 @@ const PlatformAdminDashboard = lazy(() => import('./components/PlatformAdminDash
 const AICopilotDrawer = lazy(() => import('./components/AICopilotDrawer').then(module => ({ default: module.AICopilotDrawer })));
 const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer').then(module => ({ default: module.NotificationsDrawer })));
 import { ChatWidget } from './components/ChatWidget';
+import { VisualEditorRuntime } from './components/VisualEditorRuntime';
 import { AuthModal } from './components/AuthModal';
 const PricingPage = lazy(() => import('./components/PricingPage').then(module => ({ default: module.PricingPage })));
 const BillingDashboard = lazy(() => import('./components/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
@@ -144,6 +145,7 @@ export function resolveAppRoute(pathname: string, hash: string): AppView {
 }
 
 export default function App() {
+  const visualEditorRuntime = <VisualEditorRuntime />;
   const { currentUser, activeBusinessId, setActiveBusinessId, refreshAuth } = useAuth();
   
   const getInitialView = (): AppView => typeof window !== 'undefined' ? resolveAppRoute(window.location.pathname, window.location.hash) : 'landing';
@@ -368,7 +370,8 @@ export default function App() {
       window.location.href
     );
 
-    return () => {
+    return (
+    visualEditorRuntime) => {
       window.history.scrollRestoration = previousScrollRestoration;
     };
   }, []);
