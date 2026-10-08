@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { SignInButton, SignUpButton } from '@clerk/react';
 import { 
   X, 
   LogIn, 
@@ -29,6 +30,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onNavigatePlatformLogin 
 }) => {
   const { loginBusiness, signupBusiness } = useAuth();
+  const clerkEnabled = Boolean(String(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '').trim());
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -37,6 +39,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
+
+  useEffect(() => {
+    const handleClerkSynced = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      if (detail.onboardingPending) onSuccess('onboarding');
+      else onSuccess('dashboard');
+      onClose();
+    };
+    window.addEventListener('agentdesk:clerk-synced', handleClerkSynced);
+    return () => window.removeEventListener('agentdesk:clerk-synced', handleClerkSynced);
+  }, [onClose, onSuccess]);
 
   if (!isOpen) return null;
 
@@ -230,6 +243,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </button>
         </form>
+
+        {clerkEnabled && (
+          <div className="mt-4 pt-4 border-t border-slate-800">
+            <div className="text-center text-[10px] uppercase tracking-[.18em] text-slate-500 mb-3">Or continue with Clerk</div>
+            <div className="grid grid-cols-2 gap-2">
+              <SignInButton mode="modal">
+                <button type="button" className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-800 font-semibold text-xs cursor-pointer">
+                  Continue to Sign In
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button type="button" className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-950 text-slate-200 hover:bg-slate-800 font-semibold text-xs cursor-pointer">
+                  Create with Clerk
+                </button>
+              </SignUpButton>
+            </div>
+          </div>
+        )}
 
         {/* Toggle Mode */}
         <div className="mt-4 text-center text-xs text-slate-400">
