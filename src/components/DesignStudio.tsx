@@ -45,6 +45,7 @@ const PAGE_DEFS = [
   ['crm', 'CRM'], ['follow-up', 'Follow Up'], ['re-engagement', 'Re-engagement'], ['reviews', 'Reviews'],
   ['appointments', 'Appointments'], ['estimates', 'Estimates'], ['cold-outreach', 'Cold Outreach'],
   ['integrations', 'Integrations'], ['knowledge-base', 'Knowledge Base'], ['conversations', 'Conversations'],
+  ['billing', 'Billing & Usage'], ['localization', 'Localization'], ['embed', 'Deploy & Embed'], ['account-credentials', 'Account & Credentials'],
   ['platform-admin', 'Platform Admin']
 ] as const;
 
@@ -52,7 +53,11 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string; sections: str
   home: { title: 'Your AI employee for every customer conversation.', subtitle: 'Turn enquiries into conversations, leads and booked work.', sections: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'] },
   pricing: { title: 'Simple pricing that scales with your business.', subtitle: 'Choose the plan that fits your customer operations.', sections: ['header', 'plans', 'faq', 'cta', 'footer'] },
   login: { title: 'Welcome back.', subtitle: 'Sign in to your AgentDesk workspace.', sections: ['auth'] },
-  dashboard: { title: 'Your workspace.', subtitle: 'Everything your team needs in one place.', sections: ['sidebar', 'header', 'content'] }
+  dashboard: { title: 'Your workspace.', subtitle: 'Everything your team needs in one place.', sections: ['sidebar', 'header', 'content'] },
+  billing: { title: 'Billing & usage.', subtitle: 'Manage plan, usage and upgrades.', sections: ['header', 'usage', 'plan'] },
+  localization: { title: 'Localization.', subtitle: 'Configure market, currency and regional settings.', sections: ['header', 'settings'] },
+  embed: { title: 'Deploy & embed.', subtitle: 'Deploy AgentDesk into the customer experience.', sections: ['header', 'snippet'] },
+  'account-credentials': { title: 'Account & credentials.', subtitle: 'Manage account access and credentials.', sections: ['header', 'security'] }
 };
 
 const buildPage = (design: Design, id: string) => {
@@ -510,6 +515,10 @@ export const DesignStudio: React.FC = () => {
                     integrations: '/dashboard/integrations',
                     'knowledge-base': '/dashboard/knowledge',
                     conversations: '/dashboard/conversations',
+                    billing: '/billing',
+                    localization: '/dashboard/localization',
+                    embed: '/embed',
+                    'account-credentials': '/admin/account-credentials',
                     'platform-admin': '/admin'
                   };
                   return paths[pageId] || '/dashboard';
