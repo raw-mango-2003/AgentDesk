@@ -102,6 +102,43 @@ export interface SiteDesignConfig {
   };
 }
 
+
+
+export interface VisualEditorElement {
+  id: string;
+  type: 'heading' | 'text' | 'button' | 'image' | 'shape';
+  text?: string;
+  imageUrl?: string;
+  x: number;
+  y: number;
+  width: number;
+  fontSize?: number;
+  weight?: number;
+  color?: string;
+}
+
+export interface VisualEditorSection {
+  id: string;
+  name: string;
+  label: string;
+  visible: boolean;
+  height: number;
+  background: string;
+  padding: number;
+  align: 'left' | 'center' | 'right';
+  elements: VisualEditorElement[];
+}
+
+export interface VisualEditorPage {
+  title: string;
+  subtitle: string;
+  sections: VisualEditorSection[];
+}
+
+export interface VisualEditorConfig {
+  activePage?: string;
+  pages: Record<string, VisualEditorPage>;
+}
 export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
   version: 2,
   site: {
