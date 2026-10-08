@@ -151,7 +151,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
 
   return (
     <main
-      className={`min-h-screen overflow-x-hidden bg-[#080808] text-white ${motion ? '' : '[&_*]:!transition-none'}`}
+      className={`min-h-screen overflow-x-hidden bg-[#080808] text-white transition-opacity duration-200 ${designReady ? 'opacity-100' : 'opacity-0'} ${motion ? '' : '[&_*]:!transition-none'}`}
       style={{ ...cssVars, backgroundColor: background, color: text }}
     >
       <style>{`
