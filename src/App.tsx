@@ -1453,7 +1453,7 @@ export default function App() {
                 onOpenLiveDemo={() => setShowDemoWidget(true)}
               />
             ) : business ? (
-              <div className="transition-all">
+              <div className="transition-all" data-visual-page={liveEditorPageId}>
                 {activeTab === 'overview' && (
                   <DashboardOverview
                     business={business}
