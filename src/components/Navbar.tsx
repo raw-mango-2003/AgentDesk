@@ -113,11 +113,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="min-w-0">
                 <span className="font-extrabold text-sm sm:text-base tracking-tight text-white flex items-center gap-1.5 truncate">
                   AgentDesk
-                  <span className="hidden xs:inline text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 uppercase tracking-wide">
-                    RevenueOS
+                  <span className="hidden xs:inline text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide">
+                    AI Platform
                   </span>
                 </span>
-                <span className="text-[10px] text-slate-400 hidden sm:block -mt-0.5 truncate">Autonomous Receptionist & CRM</span>
+                <span className="text-[10px] text-slate-400 hidden sm:block -mt-0.5 truncate">AI Customer Operations Platform</span>
               </div>
             </button>
           </div>

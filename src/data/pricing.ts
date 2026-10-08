@@ -461,7 +461,7 @@ export const COMMUNICATION_USAGE_DISCLOSURE = {
   sectionTitle: 'Platform-Managed Telephony & Messaging Infrastructure',
   headline: 'All AI Voice telephony trunks, SMS routing, and WhatsApp Business API gateways are natively provisioned and managed by AgentDesk Technologies.',
   subtext: 'Standard monthly allowances are included in your platform fee. Transparent metered rates apply for high-volume overages with zero carrier setup headaches.',
-  summary: 'AI RevenueOS operates as an autonomous, fully hosted Managed AI Service. Voice AI telephony trunks, SMS routing, and WhatsApp Business API gateways are pre-provisioned, monitored, and scaled natively by AgentDesk Technologies.',
+  summary: 'AgentDesk operates as an autonomous, fully hosted Managed AI Service. Voice AI telephony trunks, SMS routing, and WhatsApp Business API gateways are pre-provisioned, monitored, and scaled natively by AgentDesk Technologies.',
   categories: [
     { name: 'AI Voice Receptionist Telephony', description: 'Inbound & outbound conversational voice minutes with real-time speech synthesis and sentiment detection.', includedEnterprise: '2,500 Mins / Month' },
     { name: 'Missed-Call SMS & Drips', description: 'Two-way SMS text messaging, missed call instant recovery, estimate follow-ups, and review requests.', includedEnterprise: '5,000 Texts / Month' },
@@ -498,7 +498,7 @@ export const PLATFORM_MANAGED_OPERATIONS = {
     'Weekly Conversion Rate Optimization Audits'
   ],
   company: 'AgentDesk Technologies',
-  product: 'AI RevenueOS',
+  product: 'AgentDesk',
   tagline: 'ONE AI SYSTEM FOR EVERY CUSTOMER INTERACTION',
   slaUptime: '99.95% Enterprise SLA',
   soc2Compliance: 'Dedicated Tenant Isolation & Encrypted Data Privacy',
@@ -510,7 +510,7 @@ export const PRICING_PLANS: PlanConfig[] = Object.values(PLAN_CONFIGS);
 
 export const IMPLEMENTATION_EXPLANATION = {
   title: '12-Step Enterprise Implementation Methodology',
-  summary: 'Every AI RevenueOS deployment is built, tuned, and monitored through our white-glove engineering roadmap to guarantee flawless performance and immediate revenue lift.',
+  summary: 'Every AgentDesk deployment is built, tuned, and monitored through our white-glove engineering roadmap to guarantee flawless performance and immediate revenue lift.',
   steps: [
     { step: 1, title: 'Discovery & Business Audit', desc: 'Deep dive into call volumes, FAQs, lead qualification criteria, and CRM workflows.' },
     { step: 2, title: 'Knowledge Base Ingestion', desc: 'Semantic indexing of service catalogs, pricing guides, PDFs, warranty terms, and FAQs.' },

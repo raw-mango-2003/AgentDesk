@@ -52,8 +52,15 @@ export class RazorpayProvider implements PaymentProvider {
     }
     const configuredCurrencies = (
       process.env.RAZORPAY_SUPPORTED_CURRENCIES || 'INR,USD,GBP'
-    ).split(',').map(c => c.trim().toUpperCase());
-    return configuredCurrencies.includes((currency || '').toUpperCase());
+    ).split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+
+    // INR is AgentDesk's domestic checkout currency and remains enabled when
+    // Razorpay credentials are configured. A stale supported-currency override
+    // must not break the primary domestic checkout.
+    const normalizedCurrency = (currency || '').trim().toUpperCase();
+    if (normalizedCurrency === 'INR') return true;
+
+    return configuredCurrencies.includes(normalizedCurrency);
   }
 
   public supportsRecurring(currency: CurrencyCode): boolean {

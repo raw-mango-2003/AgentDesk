@@ -118,23 +118,23 @@ export const PricingPage: React.FC<PricingPageProps> = ({
       {/* 1. Hero Section */}
       <section className="relative pt-12 sm:pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-center w-full max-w-7xl mx-auto overflow-hidden">
         {/* Background Ambient Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[700px] h-[350px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/10 blur-[130px] rounded-full pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-px bg-slate-800" />
 
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-6 shadow-md max-w-full">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">AgentDesk Technologies • Enterprise Pricing & System Plans</span>
+            <span className="truncate">AgentDesk • Plans & Pricing</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-5 break-words">
-            Turn every customer interaction into{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+            Turn every customer interaction into measurable{' '}
+            <span className="text-blue-400">
               revenue.
             </span>
           </h1>
 
           <p className="text-sm sm:text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-6 font-normal">
-            The complete AI Revenue & Customer Operations Platform. Consolidate your answering service, CRM, follow-up, appointments, and reviews into one intelligent system.
+            One AI customer operations platform for reception, lead capture, qualification, follow-up, appointments and CRM.
           </p>
 
           {/* Currency Indicator */}
@@ -170,19 +170,19 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             return (
               <div
                 key={plan.id}
-                className={`w-full min-w-0 rounded-3xl border transition-all flex flex-col justify-between p-5 sm:p-6 xl:p-6 2xl:p-7 relative ${
+                className={`w-full min-w-0 rounded-2xl border transition-colors flex flex-col justify-between p-5 sm:p-6 xl:p-6 2xl:p-7 relative ${
                   isGrowth
-                    ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950/50 border-blue-500 shadow-2xl shadow-blue-500/20 ring-2 ring-blue-500/40'
+                    ? 'bg-slate-900/70 border-blue-500/70'
                     : isScale
-                    ? 'bg-gradient-to-b from-slate-900 to-slate-950 border-indigo-500/50 shadow-xl'
+                    ? 'bg-slate-900/70 border-slate-700'
                     : isEnterprise
-                    ? 'bg-slate-900/80 border-purple-500/40 shadow-xl'
-                    : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
+                    ? 'bg-slate-900/70 border-slate-700'
+                    : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
                 }`}
               >
                 {/* Most Popular Badge */}
                 {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-600/30 border border-blue-400/30 whitespace-nowrap z-10">
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-blue-600 text-white font-bold text-[10px] uppercase tracking-wider border border-blue-500 whitespace-nowrap z-10">
                     {plan.badge}
                   </div>
                 )}
@@ -196,7 +196,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                   {/* Pricing Box - Delineated Two-Part Model */}
                   <div className="mb-6 pb-6 border-b border-slate-800 space-y-3">
                     {/* 1. Monthly Recurring Subscription */}
-                    <div className="p-3.5 rounded-2xl bg-blue-950/30 border border-blue-900/50">
+                    <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
                         MONTHLY SUBSCRIPTION
                       </div>
@@ -204,7 +204,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                         <span className="text-xl sm:text-2xl font-black text-white tracking-tight break-words">{monthlyFormatted}</span>
                         {!plan.isCustomPrice && <span className="text-xs text-slate-400">/month</span>}
                       </div>
-                      <div className="text-[11px] text-blue-300/80 mt-0.5 font-medium">
+                      <div className="text-[11px] text-slate-500 mt-0.5 font-medium">
                         Recurring monthly platform license
                       </div>
                     </div>
@@ -222,7 +222,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                       </div>
                     </div>
 
-                    <div className="text-[10px] text-slate-400 bg-slate-900/50 p-2 rounded-xl border border-slate-800/60 leading-snug">
+                    <div className="text-[10px] text-slate-400 bg-slate-950 p-2 rounded-lg border border-slate-800 leading-snug">
                       <span className="text-slate-300 font-semibold">Billing Policy:</span> Deployment is a single one-time setup fee. Monthly pricing is recurring. Deployment is never charged monthly.
                     </div>
                   </div>
@@ -233,7 +233,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                       Included Monthly Quotas:
                     </div>
                     <div className="flex justify-between items-center text-slate-300 bg-slate-900/70 p-2 rounded-lg border border-slate-800/50 gap-2">
-                      <span className="font-semibold text-blue-300 shrink-0">AI Conversations:</span>
+                      <span className="font-semibold text-slate-300 shrink-0">AI Conversations:</span>
                       <span className="font-black text-white text-right truncate">
                         {typeof plan.usageLimits.aiUsage === 'number'
                           ? `${plan.usageLimits.aiUsage.toLocaleString()}/month`
@@ -310,9 +310,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         <div className="p-8 sm:p-10 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl relative overflow-hidden">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-xs font-bold mb-2">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>White-Glove Deployment Guarantee</span>
+                <span>Managed implementation</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {IMPLEMENTATION_EXPLANATION.title}
@@ -355,9 +355,9 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         </div>
       </section>
 
-      {/* 4. Platform & Managed AI Operations */}
+      {/* 4. What AgentDesk manages for you */}
       <section className="px-4 sm:px-8 max-w-7xl mx-auto mb-20">
-        <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-950/30 via-slate-900 to-indigo-950/30 border border-slate-800 shadow-2xl">
+        <div className="p-8 sm:p-10 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl">
           <div className="max-w-3xl mb-8">
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">
               {PLATFORM_MANAGED_OPERATIONS.title}
@@ -395,12 +395,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         />
       </section>
 
-      {/* 6. Why AI RevenueOS Enterprise? (Consolidation & Autonomous Flow) */}
+      {/* 6. Why AgentDesk Enterprise? (Consolidation & Autonomous Flow) */}
       <section className="px-4 sm:px-8 max-w-7xl mx-auto mb-20">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
             <Layers className="w-3.5 h-3.5" />
-            <span>Software Consolidation & Cost Reduction</span>
+            <span>One platform instead of several tools</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
             {ENTERPRISE_CONSOLIDATION_VALUE.title}
@@ -606,7 +606,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
       <section className="px-4 sm:px-8 max-w-5xl mx-auto text-center">
         <div className="p-10 rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 border border-blue-700/50 shadow-2xl">
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-4">
-            Ready to deploy AI RevenueOS for your business?
+            Ready to deploy AgentDesk for your business?
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
             Speak with an AgentDesk solutions architect to audit your call volume, design your conversational voice agent, and schedule full onboarding.
