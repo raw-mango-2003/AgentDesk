@@ -123,18 +123,18 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-blue-400 text-xs font-bold mb-6 shadow-md max-w-full">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">AgentDesk Technologies • Enterprise Pricing & System Plans</span>
+            <span className="truncate">AgentDesk • Plans & Pricing</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-5 break-words">
-            Turn every customer interaction into{' '}
+            Turn every customer interaction into measurable{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
               revenue.
             </span>
           </h1>
 
           <p className="text-sm sm:text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-6 font-normal">
-            The complete AI Revenue & Customer Operations Platform. Consolidate your answering service, CRM, follow-up, appointments, and reviews into one intelligent system.
+            One AI customer operations platform for reception, lead capture, qualification, follow-up, appointments and CRM.
           </p>
 
           {/* Currency Indicator */}
@@ -312,7 +312,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
             <div>
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-2">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>White-Glove Deployment Guarantee</span>
+                <span>Managed implementation</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                 {IMPLEMENTATION_EXPLANATION.title}
@@ -355,7 +355,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         </div>
       </section>
 
-      {/* 4. Platform & Managed AI Operations */}
+      {/* 4. What AgentDesk manages for you */}
       <section className="px-4 sm:px-8 max-w-7xl mx-auto mb-20">
         <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-blue-950/30 via-slate-900 to-indigo-950/30 border border-slate-800 shadow-2xl">
           <div className="max-w-3xl mb-8">
@@ -395,12 +395,12 @@ export const PricingPage: React.FC<PricingPageProps> = ({
         />
       </section>
 
-      {/* 6. Why AI RevenueOS Enterprise? (Consolidation & Autonomous Flow) */}
+      {/* 6. Why AgentDesk Enterprise? (Consolidation & Autonomous Flow) */}
       <section className="px-4 sm:px-8 max-w-7xl mx-auto mb-20">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
             <Layers className="w-3.5 h-3.5" />
-            <span>Software Consolidation & Cost Reduction</span>
+            <span>One platform instead of several tools</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
             {ENTERPRISE_CONSOLIDATION_VALUE.title}
@@ -606,7 +606,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
       <section className="px-4 sm:px-8 max-w-5xl mx-auto text-center">
         <div className="p-10 rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 border border-blue-700/50 shadow-2xl">
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-4">
-            Ready to deploy AI RevenueOS for your business?
+            Ready to deploy AgentDesk for your business?
           </h2>
           <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
             Speak with an AgentDesk solutions architect to audit your call volume, design your conversational voice agent, and schedule full onboarding.
