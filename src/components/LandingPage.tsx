@@ -90,7 +90,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [siteDesign, setSiteDesign] = useState<any | null>(null);
 
   useEffect(() => {
-    fetch('/api/site-design')
+    fetch('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.success && data.design) {
@@ -234,12 +234,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <div
       data-agentdesk-landing
       className="min-h-screen text-slate-100 font-sans selection:bg-blue-600 selection:text-white relative overflow-hidden"
-      style={{...designStyle, background: siteDesign?.background?.mode === "gradient" ? `linear-gradient(${siteDesign.background.gradientAngle}deg, ${siteDesign.background.gradientStart}, ${siteDesign.background.gradientEnd})` : undefined}}
+      style={{...designStyle, background: siteDesign?.background?.mode === "gradient" ? `linear-gradient(${siteDesign.background.gradientAngle}deg, ${siteDesign.background.gradientStart}, ${siteDesign.background.gradientEnd})` : siteDesign?.brand?.backgroundColor}}
     >
-      {siteDesign?.background?.mode === "image" && siteDesign.background.imageUrl ? <><img src={normalizeAssetUrl(siteDesign.background.imageUrl)} alt="" aria-hidden="true" className="fixed inset-0 w-full h-full object-cover -z-20" /><div className="fixed inset-0 -z-10 pointer-events-none" style={{background:`rgba(2,6,23,${siteDesign.background.overlayOpacity})`}} /></> : null}\n      {siteDesign?.background?.mode === "video" && siteDesign.background.videoUrl ? <video autoPlay muted loop playsInline className="fixed inset-0 w-full h-full object-cover -z-20"><source src={normalizeAssetUrl(siteDesign.background.videoUrl)} /></video> : null}
-      {siteDesign?.background?.mode === "aurora" ? <div className="fixed inset-0 -z-10 pointer-events-none" style={{background:"radial-gradient(circle at 15% 15%, rgba(37,99,235,.35), transparent 32%), radial-gradient(circle at 85% 10%, rgba(124,58,237,.30), transparent 30%), radial-gradient(circle at 50% 85%, rgba(6,182,212,.18), transparent 32%)"}} /> : null}
+      {siteDesign?.background?.mode === "image" && siteDesign.background.imageUrl ? <><img src={normalizeAssetUrl(siteDesign.background.imageUrl)} alt="" aria-hidden="true" className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none" /><div className="fixed inset-0 z-[1] pointer-events-none" style={{background:`${siteDesign.background.overlayColor || '#020617'}`, opacity: siteDesign.background.overlayOpacity}} /></> : null}
+      {siteDesign?.background?.mode === "video" && siteDesign.background.videoUrl ? <video autoPlay muted loop playsInline className="fixed inset-0 w-full h-full object-cover z-0 pointer-events-none"><source src={normalizeAssetUrl(siteDesign.background.videoUrl)} /></video> : null}
+      {siteDesign?.background?.mode === "aurora" ? <div className="fixed inset-0 z-0 pointer-events-none" style={{background:"radial-gradient(circle at 15% 15%, rgba(37,99,235,.35), transparent 32%), radial-gradient(circle at 85% 10%, rgba(124,58,237,.30), transparent 30%), radial-gradient(circle at 50% 85%, rgba(6,182,212,.18), transparent 32%)"}} /> : null}
+      <div className="relative z-10">
       {/* 1. Hero Section */}
-      <section data-design-section="hero" className="relative pt-12 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-8 overflow-hidden">
+      <section data-design-section="hero" className="relative pt-12 pb-14 sm:pt-20 sm:pb-20 px-4 sm:px-8 overflow-hidden" style={{ minHeight: siteDesign?.homepage?.heroMinHeight, textAlign: siteDesign?.homepage?.heroAlignment }}>
         {/* Background glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/15 to-purple-600/15 blur-[140px] rounded-full pointer-events-none" />
         
@@ -303,7 +305,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 2. Problem Section */}
-      <section data-design-section="problem" className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
+      <section data-design-section="problem" className="py-16 px-4 sm:px-8 border-b border-slate-800/80" hidden={siteDesign?.homepage?.showProblem === false}>
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
           <div>
             <span className="text-[11px] font-black uppercase tracking-wider text-rose-400">The problem</span>
@@ -367,6 +369,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ) : null}
       
       {/* 4. Dashboard Preview */}
+      {(siteDesign?.homepage?.showDashboardPreview ?? true) ? (
       <section data-design-section="dashboard" className="py-16 px-4 sm:px-8 border-b border-slate-800/80">
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-10">
@@ -401,8 +404,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
+      </section>
+      ) : null}
+
       {/* 2. Omnichannel Pillars Bento Grid */}
-      <section className="py-16 px-4 sm:px-8 bg-slate-900/40 border-y border-slate-800/80">
+      <section data-design-section="benefits" className="py-16 px-4 sm:px-8 bg-slate-900/40 border-y border-slate-800/80" hidden={siteDesign?.homepage?.showBenefits === false}>
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
@@ -432,7 +438,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       {/* 3. Pricing Matrix Section */}
       {(siteDesign?.homepage?.showPricing ?? true) ? (
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <section data-design-section="pricing" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-bold mb-3">
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -570,7 +576,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ) : null}
 
       {/* 6. Final CTA */}
-      <section className="py-16 px-4 sm:px-8">
+      <section data-design-section="cta" className="py-16 px-4 sm:px-8">
         <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-br from-blue-950/80 via-slate-900 to-indigo-950/70 border border-blue-500/20 p-8 sm:p-12 text-center">
           <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">Ready to give your team an AI employee?</h2>
           <p className="text-sm text-slate-400 max-w-2xl mx-auto mt-3 leading-relaxed">Start with AgentDesk, test the AI receptionist, and see how customer conversations can move from first response to follow-up.</p>
@@ -582,7 +588,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* 7. FAQ Section */}
-      <section className="py-16 px-4 sm:px-8 max-w-4xl mx-auto border-t border-slate-800">
+      {(siteDesign?.homepage?.showFaq ?? true) ? (
+      <section data-design-section="faq" className="py-16 px-4 sm:px-8 max-w-4xl mx-auto border-t border-slate-800">
         <div className="text-center mb-10">
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             Frequently Asked Questions
@@ -620,8 +627,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
+      </section>
+      ) : null}
+
       {/* 8. Footer */}
-      <footer className="border-t border-slate-800 py-10 px-4 sm:px-8 text-center text-xs text-slate-500">
+      <footer data-design-section="footer" className="border-t border-slate-800 py-10 px-4 sm:px-8 text-center text-xs text-slate-500">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 font-bold text-slate-300">
             <Bot className="w-4 h-4 text-blue-400" />
@@ -645,6 +655,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </footer>
+
+      </div>
 
       {/* AgentDesk Checkout Modal (Starter, Growth, Scale) */}
       <AgentDeskCheckoutModal
