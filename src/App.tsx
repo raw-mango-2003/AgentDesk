@@ -201,6 +201,13 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
+  const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab;
+  const livePageStyle: React.CSSProperties = {
+    backgroundColor: globalDesign?.pages?.dashboard?.backgroundColor || globalDesign?.brand?.backgroundColor || undefined,
+    color: globalDesign?.brand?.textColor || undefined,
+    fontFamily: globalDesign?.typography?.bodyFont || undefined,
+    borderRadius: String(Number(globalDesign?.pages?.dashboard?.radius || globalDesign?.appearance?.radius || 18)) + 'px'
+  };
 
   useEffect(() => {
     safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }).then((result: any) => {

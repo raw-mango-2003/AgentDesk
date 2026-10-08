@@ -162,6 +162,13 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
   const configuredImage = normalizeAssetUrl(design.background?.imageUrl || '');
   const configuredVideo = normalizeAssetUrl(design.background?.videoUrl || '');
   const heroImage = configuredImage || images.hero;
+  const editorHome = design.editor?.pages?.home;
+  const editorHero = editorHome?.sections?.find((section: any) => section.name === 'hero' || section.label?.toLowerCase() === 'hero') || editorHome?.sections?.[0];
+  const editorHeading = editorHero?.elements?.find((element: any) => element.type === 'heading');
+  const editorBody = editorHero?.elements?.find((element: any) => element.type === 'text');
+  const liveHeroHeadline = editorHeading?.text || design.homepage?.heroHeadline || FALLBACK_DESIGN.homepage.heroHeadline;
+  const liveHeroSubheadline = editorBody?.text || design.homepage?.heroSubheadline || FALLBACK_DESIGN.homepage.heroSubheadline;
+
 
   const cssVars = useMemo(() => ({
     '--lux-primary': primary,
@@ -188,7 +195,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
   return (
     <main
       className={`min-h-screen overflow-x-hidden bg-[#080808] text-white transition-opacity duration-200 ${designReady ? 'opacity-100' : 'opacity-0'} ${motion ? '' : '[&_*]:!transition-none'}`}
-      style={{ ...cssVars, backgroundColor: background, color: text }}
+      style={{ ...cssVars, backgroundColor: background, color: text, fontSize: `${Number(design.typography?.baseSize || 16)}px` }}
     >
       <style>{`
         .lux-display { font-family: var(--lux-heading-font, Inter, ui-sans-serif, system-ui); letter-spacing: -0.045em; }
@@ -246,7 +253,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </nav>
 
-        <section className="relative min-h-[760px] md:min-h-[88svh] flex items-end pt-28 pb-12 sm:pb-16">
+        <section className="relative flex items-end pt-28 pb-12 sm:pb-16" style={{ minHeight: `${Number(editorHero?.height || design.homepage?.heroMinHeight || 760)}px` }}>
           <img src={heroImage} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover opacity-75" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/55 to-black/10" />
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-transparent" />
@@ -255,10 +262,10 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
             <div className="max-w-4xl lux-reveal">
               <p className="mb-5 text-[10px] font-semibold uppercase tracking-[.32em]" style={{ color: primary }}>AI customer operations platform</p>
               <h1 className="lux-display max-w-4xl text-5xl leading-[.94] sm:text-7xl lg:text-[7.5rem] font-semibold">
-                {design.homepage?.heroHeadline || FALLBACK_DESIGN.homepage.heroHeadline}
+                {liveHeroHeadline}
               </h1>
               <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-                {design.homepage?.heroSubheadline || FALLBACK_DESIGN.homepage.heroSubheadline}
+                {liveHeroSubheadline}
               </p>
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
                 <button onClick={handleGetStarted} className="group inline-flex items-center justify-center gap-3 rounded-full px-7 py-4 text-xs font-semibold uppercase tracking-[.18em] text-black cursor-pointer transition-transform hover:-translate-y-1" style={{ backgroundColor: primary }}>

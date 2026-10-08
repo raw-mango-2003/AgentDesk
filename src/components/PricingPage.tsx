@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { safeFetchJson } from '../lib/apiClient';
 import { 
   CheckCircle2, 
   Sparkles, 
@@ -56,6 +57,22 @@ export const PricingPage: React.FC<PricingPageProps> = ({
   onWorkspaceCreated
 }) => {
   const [currency, setCurrency] = useState<CurrencyCode>(() => getRecommendedCurrency());
+  const [siteDesign, setSiteDesign] = useState<any>(null);
+
+  useEffect(() => {
+    safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } }).then((result: any) => {
+      if (result?.success && result.design) setSiteDesign(result.design);
+    }).catch(() => {});
+  }, []);
+
+  const pricingPage = siteDesign?.editor?.pages?.pricing;
+  const pricingHero = pricingPage?.sections?.find((section: any) => section.name === 'header' || section.name === 'hero') || pricingPage?.sections?.[0];
+  const pricingHeading = pricingHero?.elements?.find((element: any) => element.type === 'heading')?.text;
+  const pricingBody = pricingHero?.elements?.find((element: any) => element.type === 'text')?.text;
+  const pageBackground = siteDesign?.pages?.pricing?.backgroundColor || siteDesign?.brand?.backgroundColor || '#080808';
+  const pageText = siteDesign?.brand?.textColor || '#f4f1e9';
+  const primary = siteDesign?.brand?.primaryColor || siteDesign?.pages?.pricing?.highlightColor || '#b8a47e';
+  const radius = Number(siteDesign?.pages?.pricing?.cardRadius || siteDesign?.appearance?.radius || 22);
   
   // Checkout Modal State for Starter, Growth, Scale
   const [checkoutModal, setCheckoutModal] = useState<{
@@ -114,7 +131,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
   const POPULAR_CURRENCIES: CurrencyCode[] = ['INR', 'USD', 'GBP'];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-600 selection:text-white pb-24 w-full overflow-x-clip">
+    <div className="min-h-screen font-sans selection:bg-blue-600 selection:text-white pb-24 w-full overflow-x-clip" style={{ backgroundColor: pageBackground, color: pageText, fontFamily: siteDesign?.typography?.bodyFont || undefined, borderRadius: `${radius}px` }}>
       {/* 1. Hero Section */}
       <section className="relative pt-12 sm:pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-center w-full max-w-7xl mx-auto overflow-hidden">
         {/* Background Ambient Glow */}
@@ -127,14 +144,14 @@ export const PricingPage: React.FC<PricingPageProps> = ({
           </div>
 
           <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15] mb-5 break-words">
-            Turn every customer interaction into measurable{' '}
+            {pricingHeading || 'Turn every customer interaction into measurable'}{' '}
             <span className="text-blue-400">
               revenue.
             </span>
           </h1>
 
           <p className="text-sm sm:text-base md:text-lg text-slate-300 max-w-3xl mx-auto leading-relaxed mb-6 font-normal">
-            One AI customer operations platform for reception, lead capture, qualification, follow-up, appointments and CRM.
+            {pricingBody || 'One AI customer operations platform for reception, lead capture, qualification, follow-up, appointments and CRM.'}
           </p>
 
           {/* Currency Indicator */}

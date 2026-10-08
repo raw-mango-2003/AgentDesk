@@ -14,6 +14,30 @@ const bool = (v: unknown, fallback: boolean) => typeof v === 'boolean' ? v : fal
 const oneOf = <T extends string>(v: unknown, values: readonly T[], fallback: T): T => values.includes(v as T) ? v as T : fallback;
 const color = (v: unknown, fallback: string) => typeof v === 'string' && HEX.test(v) ? v : fallback;
 
+function sanitizeEditor(input: any) {
+  const pages = input && typeof input === 'object' && input.pages && typeof input.pages === 'object' ? input.pages : {};
+  const clean: Record<string, any> = {};
+  for (const [pageId, rawPage] of Object.entries(pages).slice(0, 40)) {
+    if (!rawPage || typeof rawPage !== 'object') continue;
+    const p: any = rawPage;
+    const sections = Array.isArray(p.sections) ? p.sections.slice(0, 80) : [];
+    clean[String(pageId).slice(0, 80)] = {
+      title: str(p.title, 240, ''), subtitle: str(p.subtitle, 500, ''),
+      sections: sections.map((raw: any, index: number) => ({
+        id: str(raw?.id, 120, 'section_' + index), name: str(raw?.name, 80, 'section'), label: str(raw?.label, 120, 'Section'),
+        visible: bool(raw?.visible, true), height: clamp(raw?.height, 80, 1600, 300), padding: clamp(raw?.padding, 0, 240, 40),
+        background: color(raw?.background, ''), align: oneOf(raw?.align, ['left','center','right'] as const, 'center'),
+        elements: (Array.isArray(raw?.elements) ? raw.elements.slice(0, 80) : []).map((rawEl: any, elIndex: number) => ({
+          id: str(rawEl?.id, 120, 'element_' + elIndex), type: oneOf(rawEl?.type, ['heading','text','button','image','shape'] as const, 'text'),
+          text: str(rawEl?.text, 2000, ''), imageUrl: str(rawEl?.imageUrl, 1200000, ''), x: clamp(rawEl?.x, 0, 100, 50), y: clamp(rawEl?.y, 0, 100, 50),
+          width: clamp(rawEl?.width, 1, 100, 50), fontSize: clamp(rawEl?.fontSize, 8, 160, 16), weight: clamp(rawEl?.weight, 100, 900, 400), color: color(rawEl?.color, '')
+        }))
+      }))
+    };
+  }
+  return { activePage: str(input?.activePage, 80, 'home'), pages: clean };
+}
+
 function sanitizeDesign(input: any): SiteDesignConfig {
   const d = structuredClone(DEFAULT_SITE_DESIGN);
   if (!input || typeof input !== 'object') return d;
@@ -99,6 +123,7 @@ function sanitizeDesign(input: any): SiteDesignConfig {
   d.pages.pricing.highlightColor = color(input.pages?.pricing?.highlightColor, d.pages.pricing.highlightColor);
   d.pages.public.maxWidth = clamp(input.pages?.public?.maxWidth, 900, 1800, d.pages.public.maxWidth);
   d.pages.public.pagePadding = clamp(input.pages?.public?.pagePadding, 8, 80, d.pages.public.pagePadding);
+  (d as any).editor = sanitizeEditor(input.editor);
   return d;
 }
 
