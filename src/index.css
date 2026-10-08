@@ -346,3 +346,53 @@ html, body, #root {
 .agentdesk-public-pricing-shell [class*="rounded-3xl"] {
   border-radius: 24px;
 }
+
+/* AgentDesk premium console visual system. */
+.agentdesk-console-shell {
+  --ad-pink:#ff2f86; --ad-pink-soft:#ff5aa5; --ad-black:#070709;
+  --ad-panel:#101014; --ad-panel-2:#15151a; --ad-line:#26232b;
+  --ad-copy:#f7f3f7; --ad-muted:#9a97a1;
+  position:relative; max-width:1600px !important; padding-left:280px !important;
+  background:radial-gradient(circle at 78% 8%,rgba(255,47,134,.07),transparent 28rem),linear-gradient(180deg,rgba(255,255,255,.012),transparent 28rem);
+}
+.agentdesk-console-shell::before{content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;background:radial-gradient(circle at 72% 8%,rgba(255,47,134,.055),transparent 26rem),#070709;}
+.agentdesk-console-shell>.agentdesk-sidebar{
+  position:fixed;z-index:40;top:16px;left:16px;bottom:16px;width:240px;display:flex;flex-direction:column;
+  padding:16px 12px;border:1px solid rgba(255,255,255,.075);border-radius:20px;background:rgba(9,9,12,.94);
+  box-shadow:0 24px 70px rgba(0,0,0,.42),inset -1px 0 0 rgba(255,47,134,.07);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.agentdesk-sidebar-brand{display:flex;align-items:center;gap:10px;padding:6px 10px 16px;margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,.06);}
+.agentdesk-sidebar-brand-mark{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;color:#fff;background:linear-gradient(145deg,#ff2f86,#c91563);box-shadow:0 0 28px rgba(255,47,134,.2);}
+.agentdesk-sidebar-nav{flex:1;overflow:auto;padding:4px 2px;}
+.agentdesk-sidebar-section{margin:14px 6px 6px;color:#696670;font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;}
+.agentdesk-sidebar-item{width:100%;min-height:38px;display:flex;align-items:center;gap:10px;padding:8px 10px;margin:2px 0;border:1px solid transparent;border-radius:10px;color:#aaa7b0;background:transparent;font-size:11px;font-weight:650;text-align:left;transition:background 160ms ease,color 160ms ease,border-color 160ms ease,box-shadow 160ms ease,transform 160ms ease;}
+.agentdesk-sidebar-item:hover{color:#f5f2f7;background:rgba(255,255,255,.045);}
+.agentdesk-sidebar-item[data-active="true"]{color:#fff;background:linear-gradient(90deg,rgba(255,47,134,.17),rgba(255,47,134,.055));border-color:rgba(255,47,134,.24);box-shadow:inset 3px 0 0 #ff2f86,0 8px 24px rgba(255,47,134,.08);}
+.agentdesk-sidebar-item[data-active="true"] svg{color:#ff5aa5 !important;filter:drop-shadow(0 0 7px rgba(255,47,134,.35));}
+.agentdesk-sidebar-item svg{width:15px;height:15px;color:#6f6b75;}
+.agentdesk-sidebar-footer{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);}
+.agentdesk-console-shell .agentdesk-legacy-module-tabs{display:none !important;}
+.agentdesk-console-shell .bg-slate-950{background-color:#070709 !important;}
+.agentdesk-console-shell .bg-slate-900{background-color:#101014 !important;}
+.agentdesk-console-shell .bg-slate-800{background-color:#15151a !important;}
+.agentdesk-console-shell .bg-slate-700{background-color:#1d1c22 !important;}
+.agentdesk-console-shell [class*="border-slate-"]{border-color:#26232b !important;}
+.agentdesk-console-shell [class*="text-slate-100"],.agentdesk-console-shell [class*="text-slate-200"]{color:#e9e5eb !important;}
+.agentdesk-console-shell [class*="text-slate-300"]{color:#c1bdc6 !important;}
+.agentdesk-console-shell [class*="text-slate-400"]{color:#9a97a1 !important;}
+.agentdesk-console-shell [class*="text-slate-500"]{color:#77737e !important;}
+.agentdesk-console-shell [class*="bg-blue-600"]{background-color:#ff2f86 !important;color:#08080a !important;}
+.agentdesk-console-shell [class*="hover:bg-blue-500"]:hover,.agentdesk-console-shell [class*="hover:bg-blue-600"]:hover{background-color:#ff5aa5 !important;}
+.agentdesk-console-shell [class*="text-blue-"]{color:#ff5aa5 !important;}
+.agentdesk-console-shell [class*="border-blue-"]{border-color:rgba(255,47,134,.35) !important;}
+.agentdesk-console-shell [class*="shadow-blue-"]{box-shadow:0 12px 32px rgba(255,47,134,.16) !important;}
+.agentdesk-console-shell [class*="bg-indigo-600"],.agentdesk-console-shell [class*="bg-purple-600"]{background-color:#b91c63 !important;color:#fff !important;}
+.agentdesk-console-shell [class*="text-indigo-"],.agentdesk-console-shell [class*="text-purple-"]{color:#ff8bbb !important;}
+.agentdesk-console-shell [class*="border-indigo-"],.agentdesk-console-shell [class*="border-purple-"]{border-color:rgba(255,47,134,.28) !important;}
+.agentdesk-console-shell .rounded-3xl{border-radius:18px !important;}
+.agentdesk-console-shell .rounded-2xl{border-radius:14px !important;}
+.agentdesk-console-shell .rounded-xl{border-radius:10px !important;}
+.agentdesk-console-shell [class*="shadow-2xl"]{box-shadow:0 24px 70px rgba(0,0,0,.36) !important;}
+.agentdesk-console-shell button{letter-spacing:-.01em;}
+@media(max-width:1279px){.agentdesk-console-shell{padding-left:16px !important;}.agentdesk-console-shell>.agentdesk-sidebar{display:none;}}
+@media(max-width:640px){.agentdesk-console-shell{padding-left:12px !important;padding-right:12px !important;}}

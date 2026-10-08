@@ -810,9 +810,31 @@ export default function App() {
             }}
           />
         ) : (
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+          <div className="agentdesk-console-shell max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
+            <aside className="agentdesk-sidebar" aria-label="AgentDesk primary navigation">
+              <div className="agentdesk-sidebar-brand">
+                <div className="agentdesk-sidebar-brand-mark"><Sparkles className="w-4 h-4" /></div>
+                <div className="min-w-0"><div className="text-sm font-black tracking-tight text-white">AgentDesk</div><div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500">RevenueOS</div></div>
+              </div>
+              <div className="agentdesk-sidebar-nav">
+                <div className="agentdesk-sidebar-section">Workspace</div>
+                {[
+                  {id:'overview',label:'Overview',icon:LayoutDashboard},{id:'voice_receptionist',label:'AI Voice Receptionist',icon:PhoneCall},{id:'missed_calls',label:'Missed Call Recovery',icon:PhoneMissed},{id:'leads',label:'Leads & Qualification',icon:Users},{id:'crm',label:'CRM & Deals',icon:Users},{id:'conversations',label:'Conversations',icon:MessageSquare},{id:'appointments',label:'Appointments',icon:Calendar},{id:'estimates',label:'Estimates',icon:FileText},{id:'reviews',label:'Reviews',icon:Star}
+                ].map(item=>{const Icon=item.icon;const active=activeTab===item.id;return <button key={item.id} type="button" className="agentdesk-sidebar-item" data-active={active} onClick={()=>navigateTab(item.id as SaaSNavTab)}><Icon className="shrink-0"/><span className="truncate">{item.label}</span></button>})}
+                <div className="agentdesk-sidebar-section">Automation</div>
+                {[
+                  {id:'followup',label:'Follow-Up Cadence',icon:Repeat},{id:'reengagement',label:'Re-Engagement',icon:RotateCcw},{id:'outreach',label:'Cold Outreach',icon:Send},{id:'knowledge',label:'Knowledge Base',icon:Database}
+                ].map(item=>{const Icon=item.icon;const active=activeTab===item.id;return <button key={item.id} type="button" className="agentdesk-sidebar-item" data-active={active} onClick={()=>navigateTab(item.id as SaaSNavTab)}><Icon className="shrink-0"/><span className="truncate">{item.label}</span></button>})}
+                <div className="agentdesk-sidebar-section">Workspace Settings</div>
+                {[
+                  {id:'integrations',label:'Integrations',icon:Sliders},{id:'billing',label:'Billing & Usage',icon:CreditCard},{id:'localization',label:'Localization',icon:Globe},{id:'embed',label:'Deploy & Embed',icon:Code},{id:'account_credentials',label:'Account & Credentials',icon:KeyRound}
+                ].map(item=>{const Icon=item.icon;const active=activeTab===item.id;return <button key={item.id} type="button" className="agentdesk-sidebar-item" data-active={active} onClick={()=>navigateTab(item.id as SaaSNavTab)}><Icon className="shrink-0"/><span className="truncate">{item.label}</span></button>})}
+                {currentUser?.role==='PLATFORM_ADMIN'&&<button type="button" className="agentdesk-sidebar-item" data-active={activeTab==='admin'} onClick={()=>navigateTab('admin')}><ShieldCheck className="shrink-0"/><span className="truncate">Platform Admin</span></button>}
+              </div>
+              <div className="agentdesk-sidebar-footer"><div className="px-2 py-2 text-[10px] text-slate-500 truncate">{business?.name||'Workspace Console'}</div><button type="button" onClick={()=>setShowCopilot(true)} className="agentdesk-sidebar-item" data-active="false"><Sparkles className="shrink-0 text-pink-400"/><span>Copilot</span></button></div>
+            </aside>
             {/* SaaS Workspace Header & Bento Navigation Tabs */}
-            <div className="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-xl">
+            <div className="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-xl agentdesk-workspace-header">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
                 {/* Business Workspace Switcher / Tenant Banner */}
                 <div className="relative">
@@ -953,7 +975,7 @@ export default function App() {
               </div>
 
               {/* Omnichannel Suite Tabs Bar (Desktop: Horizontal, Mobile: Mobile Drawer) */}
-              <div className="hidden xl:flex items-center gap-1.5 pt-4 overflow-x-auto pb-1 text-xs">
+              <div className="agentdesk-legacy-module-tabs hidden xl:flex items-center gap-1.5 pt-4 overflow-x-auto pb-1 text-xs">
                 {/* 1. Overview */}
                 <button
                   onClick={() => navigateTab('overview')}

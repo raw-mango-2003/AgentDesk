@@ -6,7 +6,7 @@
  * baseline here is safe because migration 001 contains only idempotent CREATE
  * TABLE/INDEX and ALTER TABLE ... IF NOT EXISTS statements.
  */
-import * as baselineMigration from './migrations/001_baseline.js';
+import * as baselineMigration from './001_baseline.js';
 
 export const version = '005_baseline_schema_reconciliation';
 export const description = 'Reconcile missing additive baseline tables and columns';
