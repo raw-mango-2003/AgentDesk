@@ -564,7 +564,7 @@ authRouter.post('/clerk/sync', async (req: Request, res: Response) => {
         mustChangePassword: false
       });
     } else {
-      const updates: Partial<UserRecord> = {
+      const updates: any = {
         emailVerified: true,
         status: user.status === 'PENDING' ? 'ACTIVE' : user.status
       };
