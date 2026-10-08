@@ -196,7 +196,7 @@ export function VisualEditorRuntime() {
       send({ type: 'agentdesk-visual-editor-drag', selectedId: drag.id, x: Number(nextX.toFixed(2)), y: Number(nextY.toFixed(2)) });
     };
 
-    const handlePointerUp = () => { drag = null; };
+    const handlePointerUp = () => { if (drag) send({ type: 'agentdesk-visual-editor-drag-end', selectedId: drag.id }); drag = null; };
 
     window.addEventListener('message', handleMessage);
     document.addEventListener('click', handleClick, true);
