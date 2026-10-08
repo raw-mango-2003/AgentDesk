@@ -370,8 +370,7 @@ export default function App() {
       window.location.href
     );
 
-    return (
-    visualEditorRuntime) => {
+    return () => {
       window.history.scrollRestoration = previousScrollRestoration;
     };
   }, []);
