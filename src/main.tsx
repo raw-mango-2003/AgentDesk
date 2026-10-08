@@ -34,34 +34,17 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | 
 }
 
 installGlobalHaptics();
-initSentry();
-initPostHog();
 
 try {
   const rootEl = document.getElementById('root');
   if (rootEl) {
-    const clerkPublishableKey = String(import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || '').trim();
-    const appTree = (
-      <AppErrorBoundary>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </AppErrorBoundary>
-    );
-
     createRoot(rootEl).render(
       <StrictMode>
-        {clerkPublishableKey ? (
-          <ClerkProvider
-            publishableKey={clerkPublishableKey}
-            signInUrl="/sign-in"
-            signUpUrl="/sign-up"
-            signInFallbackRedirectUrl="/"
-            signUpFallbackRedirectUrl="/"
-          >
-            <ClerkSessionBridge>{appTree}</ClerkSessionBridge>
-          </ClerkProvider>
-        ) : appTree}
+        <AppErrorBoundary>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </AppErrorBoundary>
       </StrictMode>,
     );
   }
