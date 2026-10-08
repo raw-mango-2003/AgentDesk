@@ -47,8 +47,8 @@ const FALLBACK_DESIGN = {
   navigation: { sticky: true, showLogin: true, showGetStarted: true, showDemo: true, blur: 18 },
   buttons: { radius: 999, shadow: true, hoverLift: true, uppercase: false },
   homepage: {
-    heroHeadline: 'The AI employee that never leaves the desk.',
-    heroSubheadline: 'AgentDesk answers, qualifies, follows up and books, so your team can focus on the conversations that deserve a human.',
+    heroHeadline: 'Your AI receptionist for every customer enquiry.',
+    heroSubheadline: 'AgentDesk responds instantly, captures and qualifies leads, follows up, books appointments, and hands conversations to your team when a human is needed.',
     heroMinHeight: 760,
     heroAlignment: 'left'
   }
@@ -213,7 +213,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_25%,rgba(255,255,255,.12),transparent_30%)]" />
           <div className="relative mx-auto w-full max-w-7xl px-5 sm:px-8">
             <div className="max-w-4xl lux-reveal">
-              <p className="mb-5 text-[10px] font-semibold uppercase tracking-[.32em]" style={{ color: primary }}>AI employee platform</p>
+              <p className="mb-5 text-[10px] font-semibold uppercase tracking-[.32em]" style={{ color: primary }}>AI customer operations platform</p>
               <h1 className="lux-display max-w-4xl text-5xl leading-[.94] sm:text-7xl lg:text-[7.5rem] font-semibold">
                 {design.homepage?.heroHeadline || FALLBACK_DESIGN.homepage.heroHeadline}
               </h1>
@@ -222,7 +222,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
               </p>
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
                 <button onClick={handleGetStarted} className="group inline-flex items-center justify-center gap-3 rounded-full px-7 py-4 text-xs font-semibold uppercase tracking-[.18em] text-black cursor-pointer transition-transform hover:-translate-y-1" style={{ backgroundColor: primary }}>
-                  Build your AI employee
+                  Build your AI receptionist
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </button>
                 <button onClick={onOpenDemo} className="inline-flex items-center justify-center gap-3 rounded-full border border-white/20 bg-white/5 px-7 py-4 text-xs font-semibold uppercase tracking-[.18em] text-white backdrop-blur-md hover:bg-white/10 cursor-pointer">
@@ -230,7 +230,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
                 </button>
               </div>
               <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-[10px] uppercase tracking-[.18em] text-white/50">
-                <span className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> Managed operations</span>
+                <span className="flex items-center gap-2"><ShieldCheck className="h-3.5 w-3.5" /> Managed AI operations</span>
                 <span className="flex items-center gap-2"><Globe2 className="h-3.5 w-3.5" /> Multi-tenant</span>
                 <span className="flex items-center gap-2"><Zap className="h-3.5 w-3.5" /> Built for response speed</span>
               </div>
@@ -242,8 +242,8 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-12 lg:gap-24 items-end">
               <div>
-                <p className="text-[10px] uppercase tracking-[.32em]" style={{ color: primary }}>The experience</p>
-                <h2 className="lux-display mt-5 text-4xl sm:text-6xl font-medium leading-[.98]">Every enquiry deserves an immediate first response.</h2>
+                <p className="text-[10px] uppercase tracking-[.32em]" style={{ color: primary }}>The AgentDesk experience</p>
+                <h2 className="lux-display mt-5 text-4xl sm:text-6xl font-medium leading-[.98]">Respond to every enquiry, without adding another person to your team.</h2>
               </div>
               <p className="max-w-xl text-sm sm:text-base leading-7" style={{ color: muted }}>
                 AgentDesk turns the first moments of a customer conversation into a structured workflow. Respond. Understand intent. Capture the lead. Move the customer forward. Bring in your team when the moment calls for a human.
@@ -283,7 +283,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div>
                 <p className="text-[10px] uppercase tracking-[.32em]" style={{ color: primary }}>Capabilities</p>
-                <h2 className="lux-display mt-4 text-4xl sm:text-6xl font-medium">One employee. Many moments.</h2>
+                <h2 className="lux-display mt-4 text-4xl sm:text-6xl font-medium">One system for every customer conversation.</h2>
               </div>
               <button onClick={onOpenDemo} className="inline-flex items-center gap-3 self-start md:self-auto text-[11px] uppercase tracking-[.2em] text-white/65 hover:text-white cursor-pointer">
                 See it in action <ArrowRight className="h-4 w-4" />
