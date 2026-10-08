@@ -406,7 +406,7 @@ export const DesignStudio: React.FC = () => {
         <div className="flex items-center gap-2">
           <button type="button" onClick={openLivePreview} className="px-3 py-2 rounded-lg border border-white/10 text-xs font-semibold flex gap-2 items-center"><Eye className="w-4 h-4" />Live preview</button>
           <button type="button" onClick={reset} className="p-2 rounded-lg border border-white/10"><RotateCcw className="w-4 h-4" /></button>
-          <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-lg bg-blue-600 text-xs font-bold flex gap-2 items-center"><Save className="w-4 h-4" />{busy ? 'Saving...' : saved ? 'Published' : 'Publish'}</button>
+          <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-lg bg-[#b8a47e] text-xs font-bold flex gap-2 items-center"><Save className="w-4 h-4" />{busy ? 'Saving...' : saved ? 'Published' : 'Publish'}</button>
         </div>
       </header>
       {error && <div className="px-4 py-2 bg-red-950/80 text-xs text-red-200 border-b border-red-500/20">{error}</div>}
@@ -430,12 +430,12 @@ export const DesignStudio: React.FC = () => {
             <AddButton onClick={addSection}><Plus /> Section</AddButton>
           </Panel>}
           {tool === 'pages' && <Panel title="Pages">
-            {PAGE_DEFS.map(([id, label]) => <button key={id} type="button" onClick={() => { setPageId(id); setTarget(null); }} className={'w-full text-left px-3 py-2.5 rounded-lg text-sm mb-1 ' + (pageId === id ? 'bg-blue-600/20 text-blue-200' : 'text-slate-400 hover:bg-white/5')}>{label}</button>)}
+            {PAGE_DEFS.map(([id, label]) => <button key={id} type="button" onClick={() => { setPageId(id); setTarget(null); }} className={'w-full text-left px-3 py-2.5 rounded-lg text-sm mb-1 ' + (pageId === id ? 'bg-[#b8a47e]/20 text-[#d8c49a]' : 'text-slate-400 hover:bg-white/5')}>{label}</button>)}
           </Panel>}
           {tool === 'layers' && <Panel title="Layers">
             {currentPage.sections.map((section: any, index: number) => <div key={section.id} className="mb-2">
-              <button type="button" onClick={() => setTarget({kind:'section',id:section.id})} className={'w-full text-left px-2 py-2 rounded bg-white/5 text-xs ' + (target?.id === section.id ? 'ring-1 ring-blue-500' : '')}>{section.label || section.name}</button>
-              <div className="pl-3 pt-1">{section.elements.map((e: any) => <button key={e.id} type="button" onClick={() => setTarget({kind:'element',id:e.id})} className={'block w-full text-left px-2 py-1.5 text-[11px] text-slate-400 rounded ' + (target?.id === e.id ? 'bg-blue-600/20 text-blue-200' : '')}>{e.type}: {e.text || 'media'}</button>)}</div>
+              <button type="button" onClick={() => setTarget({kind:'section',id:section.id})} className={'w-full text-left px-2 py-2 rounded bg-white/5 text-xs ' + (target?.id === section.id ? 'ring-1 ring-[#b8a47e]' : '')}>{section.label || section.name}</button>
+              <div className="pl-3 pt-1">{section.elements.map((e: any) => <button key={e.id} type="button" onClick={() => setTarget({kind:'element',id:e.id})} className={'block w-full text-left px-2 py-1.5 text-[11px] text-slate-400 rounded ' + (target?.id === e.id ? 'bg-[#b8a47e]/20 text-[#d8c49a]' : '')}>{e.type}: {e.text || 'media'}</button>)}</div>
               <div className="flex gap-1 mt-1">
                 <SmallButton onClick={() => moveSection(index, -1)}><ArrowUp /></SmallButton>
                 <SmallButton onClick={() => moveSection(index, 1)}><ArrowDown /></SmallButton>
@@ -445,7 +445,7 @@ export const DesignStudio: React.FC = () => {
           {tool === 'templates' && <Panel title="Templates">
             <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
               <div className="text-xs font-semibold text-white mb-1">Start from a real direction</div>
-              <div className="text-[11px] leading-4 text-slate-500">These are visual presets for AgentDesk. We will use the connected Figma workflow to bring in a real Community template after you connect Figma.</div>
+              <div className="text-[11px] leading-4 text-slate-500">These are AgentDesk visual directions. The connected Figma workspace is now available for template research and design handoff.</div>
             </div>
             {TEMPLATE_PRESETS.map((preset: any) => <button key={preset.id} type="button" onClick={() => applyTemplate(preset)} className="w-full text-left p-3 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] mb-2">
               <div className="h-16 rounded-lg mb-3" style={{background:preset.background,border:'1px solid rgba(255,255,255,.08)'}}>
@@ -455,7 +455,7 @@ export const DesignStudio: React.FC = () => {
               <div className="text-xs font-semibold text-white">{preset.name}</div>
               <div className="text-[10px] leading-4 text-slate-500 mt-1">{preset.description}</div>
             </button>)}
-            <a href="https://www.figma.com/templates/web-design-inspiration/" target="_blank" rel="noreferrer" className="block text-center text-xs text-blue-300 hover:text-blue-200 mt-3">Browse free Figma website templates ↗</a>
+            <a href="https://www.figma.com/templates/web-design-inspiration/" target="_blank" rel="noreferrer" className="block text-center text-xs text-[#d8c49a] hover:text-[#d8c49a] mt-3">Browse free Figma website templates ↗</a>
           </Panel>}
           {tool === 'style' && <Panel title="Global style">
             <Color label="Primary" value={design.brand.primaryColor} onChange={v => updatePath(['brand','primaryColor'],v)} />
@@ -541,8 +541,8 @@ export const DesignStudio: React.FC = () => {
 const CanvasNav = ({design}:{design:Design}) => <div style={{background:'rgba(10,10,10,.82)',backdropFilter:'blur(18px)',borderBottom:'1px solid rgba(255,255,255,.08)'}} className="h-14 px-5 flex items-center justify-between sticky top-0 z-10"><div className="font-black text-sm">{design.site.name}</div><div className="flex gap-2"><span className="text-[10px] text-white/50 px-2 py-1">Products</span><span className="text-[10px] text-white/50 px-2 py-1">Pricing</span><span className="text-[10px] text-white/50 px-2 py-1">Contact</span><button style={{background:design.brand.primaryColor,borderRadius:design.buttons.radius}} className="px-3 py-1.5 text-[10px] font-bold">Get Started</button></div></div>;
 
 const CanvasSection = ({section,design,selected,selectedElementId,onSelect,onSelectElement,onDrag,onDoubleText}:{section:any,design:Design,selected:boolean,selectedElementId:string,onSelect:(id:string)=>void,onSelectElement:(id:string)=>void,onDrag:(e:React.PointerEvent,el:any)=>void,onDoubleText:(id:string,text:string)=>void}) => (
-  <section onPointerDown={() => onSelect(section.id)} style={{minHeight:section.height||280,padding:section.padding||40,background:section.background||'transparent',textAlign:section.align||'center'}} className={'relative overflow-hidden border-2 ' + (selected ? 'border-blue-500/70' : 'border-transparent hover:border-blue-500/30')}>
-    {selected && <div className="absolute left-2 top-2 z-20 px-2 py-1 bg-blue-600 text-[9px] uppercase font-bold rounded">{section.label || section.name}</div>}
+  <section onPointerDown={() => onSelect(section.id)} style={{minHeight:section.height||280,padding:section.padding||40,background:section.background||'transparent',textAlign:section.align||'center'}} className={'relative overflow-hidden border-2 ' + (selected ? 'border-[#b8a47e]/70' : 'border-transparent hover:border-[#b8a47e]/30')}>
+    {selected && <div className="absolute left-2 top-2 z-20 px-2 py-1 bg-[#b8a47e] text-[9px] uppercase font-bold rounded">{section.label || section.name}</div>}
     {section.elements.map((e:any)=><CanvasElement key={e.id} element={e} design={design} selected={selectedElementId===e.id} onSelect={(ev)=>{ev.stopPropagation();onSelectElement(e.id)}} onDrag={onDrag} onDoubleText={onDoubleText}/>)}
   </section>
 );
@@ -563,7 +563,7 @@ const ElementInspector=({element,onChange,onUpload}:{element:any,onChange:(p:any
 
 const Panel=({title,children}:{title:string,children:React.ReactNode})=><><div className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-3">{title}</div>{children}</>;
 const AddButton=({children,onClick}:{children:React.ReactNode,onClick:()=>void})=><button type="button" onClick={onClick} className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-sm mb-2"><span className="w-5 h-5 flex items-center justify-center">{children && React.Children.toArray(children)[0]}</span>{React.Children.toArray(children)[1]}</button>;
-const Tool=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-3 rounded-xl '+(active?'bg-blue-600/20 text-blue-300':'text-slate-500 hover:text-white')} title="Tool">{children}</button>;
+const Tool=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-3 rounded-xl '+(active?'bg-[#b8a47e]/20 text-[#d8c49a]':'text-slate-500 hover:text-white')} title="Tool">{children}</button>;
 const IconButton=({onClick,disabled,children,label}:{onClick:()=>void,disabled?:boolean,children:React.ReactNode,label:string})=><button type="button" title={label} disabled={disabled} onClick={onClick} className="p-1.5 rounded text-slate-400 hover:text-white disabled:opacity-30">{children}</button>;
 const Device=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-1.5 rounded '+(active?'bg-white/10 text-white':'text-slate-500')}>{children}</button>;
 const SmallButton=({onClick,children}:{onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className="p-1 rounded bg-white/5 text-slate-500"><span className="w-3 h-3 block">{children}</span></button>;
@@ -571,4 +571,4 @@ const Input=({label,value,onChange}:{label:string,value:string,onChange:(v:strin
 const Color=({label,value,onChange}:{label:string,value:string,onChange:(v:string)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<input type="color" value={value||'#000000'} onChange={e=>onChange(e.target.value)} className="w-9 h-7 bg-transparent"/></label>;
 const Select=({label,value,options,onChange}:{label:string,value:string,options:string[],onChange:(v:string)=>void})=><label className="block text-xs text-slate-400">{label}<select value={value} onChange={e=>onChange(e.target.value)} className="mt-1 w-full bg-[#181a1f] border border-white/10 rounded-lg px-3 py-2 text-sm text-white">{options.map(o=><option key={o} value={o}>{o}</option>)}</select></label>;
 const Range=({label,value,min,max,step=1,onChange}:{label:string,value:number,min:number,max:number,step?:number,onChange:(v:number)=>void})=><label className="block text-xs text-slate-400">{label}<div className="flex gap-2 items-center mt-1"><input className="w-full" type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><span className="w-10 text-right text-white text-[11px]">{Number(value).toFixed(step<1?1:0)}</span></div></label>;
-const Toggle=({label,value,onChange}:{label:string,value:boolean,onChange:(v:boolean)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<button type="button" onClick={()=>onChange(!value)} className={'w-9 h-5 rounded-full p-0.5 '+(value?'bg-blue-600':'bg-white/10')}><span className={'block w-4 h-4 rounded-full bg-white '+(value?'translate-x-4':'')}/></button></label>;
+const Toggle=({label,value,onChange}:{label:string,value:boolean,onChange:(v:boolean)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<button type="button" onClick={()=>onChange(!value)} className={'w-9 h-5 rounded-full p-0.5 '+(value?'bg-[#b8a47e]':'bg-white/10')}><span className={'block w-4 h-4 rounded-full bg-white '+(value?'translate-x-4':'')}/></button></label>;
