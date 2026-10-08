@@ -87,7 +87,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     return (
       <div className="p-8 text-center text-slate-500">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-sm">Loading your AI workspace...</p>
+        <p className="text-sm">Loading your workspace...</p>
       </div>
     );
   }
@@ -114,7 +114,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
           <button 
             onClick={() => onNavigateTab('billing')}
-            className="px-3 py-1.5 bg-white shadow-sm border border-slate-200 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all shrink-0"
+            className="px-3 py-1.5 bg-[#101014] shadow-[0_16px_45px_rgba(0,0,0,.16)] border border-white/[0.07] rounded-xl text-xs font-bold hover:bg-white/[0.025] transition-all shrink-0"
           >
             Manage Plan
           </button>
@@ -122,12 +122,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       )}
 
       {/* AI Employee Command Center */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950/70 p-6 sm:p-8 text-white shadow-2xl">
-        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-500/10 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-[#0a0a0d] via-[#101014] to-[#1a0a14] p-6 sm:p-8 text-white shadow-2xl">
+        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-pink-400/[0.07]0/10 blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
             <div className="flex flex-wrap items-center gap-2.5 mb-3">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/15 text-blue-200 text-[11px] font-bold border border-blue-400/20">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-pink-400/[0.07]0/15 text-pink-200 text-[11px] font-bold border border-pink-400/20">
                 <Bot className="w-3.5 h-3.5" /> AI EMPLOYEE
               </span>
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
@@ -150,14 +150,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <div className="flex flex-col sm:flex-row gap-3 shrink-0">
             <button
               onClick={onOpenDemoWidget}
-              className="px-5 py-3 rounded-xl bg-white text-slate-950 hover:bg-slate-100 text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg"
+              className="px-5 py-3 rounded-xl bg-[#101014] text-slate-950 hover:bg-white/[0.06] text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg"
             >
               <Sparkles className="w-4 h-4" />
               Test My AI
             </button>
             <button
               onClick={() => onNavigateTab('knowledge')}
-              className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold border border-white/15 transition-all flex items-center justify-center gap-2"
+              className="px-5 py-3 rounded-xl bg-[#101014]/10 hover:bg-[#101014]/15 text-white text-xs font-bold border border-white/15 transition-all flex items-center justify-center gap-2"
             >
               Train AI
               <ArrowRight className="w-3.5 h-3.5" />
@@ -172,9 +172,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             { icon: Repeat, title: 'Follows up', text: 'Without manual chasing' },
             { icon: Calendar, title: 'Books', text: 'Appointments' }
           ].map(({ icon: Icon, title, text }) => (
-            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
-                <Icon className="w-4 h-4 text-blue-300" />
+            <div key={title} className="rounded-2xl border border-white/10 bg-[#101014]/[0.04] p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-pink-400/[0.07]0/15 flex items-center justify-center shrink-0">
+                <Icon className="w-4 h-4 text-pink-300" />
               </div>
               <div>
                 <div className="text-xs font-bold text-white">{title}</div>
@@ -187,21 +187,21 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
       {/* Onboarding Checklist Widget */}
       {onboarding && (
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm">
+        <div className="bg-[#101014] border border-white/[0.07] rounded-2xl p-6 shadow-[0_16px_45px_rgba(0,0,0,.16)]">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                <h2 className="font-bold text-slate-900 text-base">Get your AI employee ready</h2>
-                <span className="px-2.5 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded-full border border-blue-200">
+                <CheckCircle2 className="w-5 h-5 text-pink-300" />
+                <h2 className="font-bold text-white text-base">Finish your setup</h2>
+                <span className="px-2.5 py-0.5 bg-pink-400/[0.07] text-pink-300 text-xs font-bold rounded-full border border-pink-400/20">
                   {onboarding.completed} / {onboarding.total}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">A few setup steps now means less work for your team later.</p>
+              <p className="text-xs text-slate-500 mt-1">A few minutes here means less manual work later.</p>
             </div>
-            <div className="w-full sm:w-48 bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-200">
+            <div className="w-full sm:w-48 bg-white/[0.06] h-2.5 rounded-full overflow-hidden border border-white/[0.07]">
               <div 
-                className="bg-blue-600 h-full transition-all duration-500" 
+                className="bg-pink-500 h-full transition-all duration-500" 
                 style={{ width: `${(onboarding.completed / onboarding.total) * 100}%` }} 
               />
             </div>
@@ -218,12 +218,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                 }}
                 className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
                   (st.isCompleted ?? st.completed) 
-                    ? 'bg-slate-50/80 border-slate-200 opacity-90' 
-                    : 'bg-blue-50/30 border-blue-200 hover:border-blue-400'
+                    ? 'bg-white/[0.025] border-white/[0.07] opacity-90' 
+                    : 'bg-pink-400/[0.07]/30 border-pink-400/20 hover:border-blue-400'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-900">{st.title}</span>
+                  <span className="text-xs font-bold text-white">{st.title}</span>
                   {(st.isCompleted ?? st.completed) ? (
                     <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                   ) : (
@@ -239,71 +239,71 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
       {/* Outcome Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Customer Chats</span><div className="p-2 bg-blue-50 text-blue-600 rounded-2xl"><MessageSquare className="w-4 h-4" /></div></div>
-          <div className="text-3xl font-black text-slate-900">{analytics.totalConversations}</div>
+        <div className="bg-[#101014] border border-white/[0.07] p-5 rounded-2xl shadow-[0_16px_45px_rgba(0,0,0,.16)] hover:shadow-[0_20px_55px_rgba(0,0,0,.2)] transition-shadow">
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Customer Chats</span><div className="p-2 bg-pink-400/[0.07] text-pink-300 rounded-2xl"><MessageSquare className="w-4 h-4" /></div></div>
+          <div className="text-3xl font-black text-white">{analytics.totalConversations}</div>
           <div className="text-[11px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1"><TrendingUp className="w-3.5 h-3.5" /><span>Conversations handled</span></div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Voice Minutes</span><div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl"><Mic className="w-4 h-4" /></div></div>
-          <div className="text-3xl font-black text-indigo-900">{voiceUsed}m</div>
-          <div className="text-[11px] text-indigo-600 font-bold mt-1.5">{voiceUsed} / {voiceLimit} included mins</div>
+        <div className="bg-[#101014] border border-white/[0.07] p-5 rounded-2xl shadow-[0_16px_45px_rgba(0,0,0,.16)] hover:shadow-[0_20px_55px_rgba(0,0,0,.2)] transition-shadow">
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Voice Minutes</span><div className="p-2 bg-violet-400/[0.07] text-violet-300 rounded-2xl"><Mic className="w-4 h-4" /></div></div>
+          <div className="text-3xl font-black text-violet-200">{voiceUsed}m</div>
+          <div className="text-[11px] text-violet-300 font-bold mt-1.5">{voiceUsed} / {voiceLimit} included mins</div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-[#101014] border border-white/[0.07] p-5 rounded-2xl shadow-[0_16px_45px_rgba(0,0,0,.16)] hover:shadow-[0_20px_55px_rgba(0,0,0,.2)] transition-shadow">
           <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Resolved</span><div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl"><CheckCircle className="w-4 h-4" /></div></div>
-          <div className="text-3xl font-black text-slate-900">{analytics.aiResolvedCount}</div>
+          <div className="text-3xl font-black text-white">{analytics.aiResolvedCount}</div>
           <div className="text-[11px] text-emerald-600 font-bold mt-1.5">Handled without handoff</div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-[#101014] border border-white/[0.07] p-5 rounded-2xl shadow-[0_16px_45px_rgba(0,0,0,.16)] hover:shadow-[0_20px_55px_rgba(0,0,0,.2)] transition-shadow">
           <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Team Handoffs</span><div className="p-2 bg-amber-50 text-amber-600 rounded-2xl"><AlertTriangle className="w-4 h-4" /></div></div>
-          <div className="text-3xl font-black text-slate-900">{analytics.humanHandoffCount}</div>
+          <div className="text-3xl font-black text-white">{analytics.humanHandoffCount}</div>
           <div className="text-[11px] text-amber-600 font-bold mt-1.5">Needs your team</div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Leads Captured</span><div className="p-2 bg-purple-50 text-purple-600 rounded-2xl"><Users className="w-4 h-4" /></div></div>
-          <div className="text-3xl font-black text-slate-900">{analytics.leadsCapturedCount}</div>
-          <div className="text-[11px] text-purple-600 font-bold mt-1.5">Potential customers</div>
+        <div className="bg-[#101014] border border-white/[0.07] p-5 rounded-2xl shadow-[0_16px_45px_rgba(0,0,0,.16)] hover:shadow-[0_20px_55px_rgba(0,0,0,.2)] transition-shadow">
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Leads Captured</span><div className="p-2 bg-pink-400/[0.07] text-pink-300 rounded-2xl"><Users className="w-4 h-4" /></div></div>
+          <div className="text-3xl font-black text-white">{analytics.leadsCapturedCount}</div>
+          <div className="text-[11px] text-pink-300 font-bold mt-1.5">Potential customers</div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 p-5 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Resolution</span><div className="p-2 bg-blue-50 text-blue-600 rounded-2xl"><Bot className="w-4 h-4" /></div></div>
-          <div className="text-3xl font-black text-blue-600">{analytics.aiResolutionRate}%</div>
-          <div className="w-full bg-slate-100 h-2.5 rounded-full mt-2.5 overflow-hidden p-0.5 border border-slate-200/60"><div className="bg-blue-600 h-full rounded-full transition-all" style={{ width: `${analytics.aiResolutionRate}%` }} /></div>
+        <div className="bg-[#101014] border border-white/[0.07] p-5 rounded-2xl shadow-[0_16px_45px_rgba(0,0,0,.16)] hover:shadow-[0_20px_55px_rgba(0,0,0,.2)] transition-shadow">
+          <div className="flex items-center justify-between text-slate-500 mb-2"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AI Resolution</span><div className="p-2 bg-pink-400/[0.07] text-pink-300 rounded-2xl"><Bot className="w-4 h-4" /></div></div>
+          <div className="text-3xl font-black text-pink-300">{analytics.aiResolutionRate}%</div>
+          <div className="w-full bg-white/[0.06] h-2.5 rounded-full mt-2.5 overflow-hidden p-0.5 border border-white/[0.07]/60"><div className="bg-pink-500 h-full rounded-full transition-all" style={{ width: `${analytics.aiResolutionRate}%` }} /></div>
         </div>
       </div>
 
       {/* Main Grid: Recent Conversations + Activity Chart */}
       <div className="grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
-            <div><h2 className="font-bold text-lg text-slate-900">What your AI is handling</h2><p className="text-xs text-slate-500">Recent customer conversations and outcomes</p></div>
-            <button onClick={() => onNavigateTab('conversations')} className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1"><span>View All</span><ChevronRight className="w-4 h-4" /></button>
+        <div className="lg:col-span-2 bg-[#101014] border border-white/[0.07] rounded-2xl p-6 shadow-[0_16px_45px_rgba(0,0,0,.16)]">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/[0.06]">
+            <div><h2 className="font-bold text-lg text-white">Live customer activity</h2><p className="text-xs text-slate-500">The latest work handled by your AI employee</p></div>
+            <button onClick={() => onNavigateTab('conversations')} className="text-xs text-pink-300 font-semibold hover:text-pink-300 flex items-center gap-1"><span>View All</span><ChevronRight className="w-4 h-4" /></button>
           </div>
 
           <div className="space-y-3">
             {(conversations || []).slice(0, 4).map((conv) => (
-              <div key={conv.id} onClick={() => onNavigateTab('conversations')} className="p-4 border border-slate-200/70 hover:border-blue-300 rounded-xl flex items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/80 transition-all">
+              <div key={conv.id} onClick={() => onNavigateTab('conversations')} className="p-4 border border-white/[0.06] hover:border-pink-400/25 rounded-xl flex items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.025] transition-all">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-sm shrink-0">{conv.customerName ? conv.customerName.charAt(0) : 'C'}</div>
-                  <div><div className="font-semibold text-slate-900 text-sm flex items-center gap-2"><span>{conv.customerName || 'Anonymous Visitor'}</span>{conv.leadCaptured && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-semibold rounded-full">Lead Captured</span>}</div><p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{conv.messages?.[conv.messages.length - 1]?.text || 'No messages'}</p></div>
+                  <div className="w-10 h-10 rounded-full bg-pink-400/[0.08] text-pink-300 font-bold flex items-center justify-center text-sm shrink-0">{conv.customerName ? conv.customerName.charAt(0) : 'C'}</div>
+                  <div><div className="font-semibold text-white text-sm flex items-center gap-2"><span>{conv.customerName || 'Anonymous Visitor'}</span>{conv.leadCaptured && <span className="px-2 py-0.5 bg-pink-400/[0.08] text-pink-300 text-[10px] font-semibold rounded-full">Lead Captured</span>}</div><p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{conv.messages?.[conv.messages.length - 1]?.text || 'No messages'}</p></div>
                 </div>
-                <div className="text-right shrink-0"><span className={`inline-block px-2.5 py-1 text-[11px] font-semibold rounded-full ${conv.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : conv.status === 'HUMAN_REQUIRED' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}`}>{(conv.status || 'OPEN').replace('_', ' ')}</span><div className="text-[10px] text-slate-400 mt-1">{new Date(conv.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>
+                <div className="text-right shrink-0"><span className={`inline-block px-2.5 py-1 text-[11px] font-semibold rounded-full ${conv.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : conv.status === 'HUMAN_REQUIRED' ? 'bg-amber-100 text-amber-800' : 'bg-pink-400/[0.08] text-pink-200'}`}>{(conv.status || 'OPEN').replace('_', ' ')}</span><div className="text-[10px] text-slate-400 mt-1">{new Date(conv.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div></div>
               </div>
             ))}
           </div>
 
           {(unanswered || []).length > 0 && (
-            <div className="mt-6 border-t border-slate-100 pt-6">
-              <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><HelpCircle className="w-4 h-4 text-amber-600" /><h3 className="font-bold text-slate-900 text-sm">Questions AI couldn't answer</h3></div><span className="text-[11px] text-slate-500">Teach AI once</span></div>
+            <div className="mt-6 border-t border-white/[0.06] pt-6">
+              <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><HelpCircle className="w-4 h-4 text-amber-600" /><h3 className="font-bold text-white text-sm">Questions AI couldn't answer</h3></div><span className="text-[11px] text-slate-500">Teach AI once</span></div>
               <div className="space-y-3">
                 {(unanswered || []).map((uq) => (
                   <div key={uq.id} className="p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl">
-                    <div className="flex items-start justify-between gap-3 mb-1.5"><div><div className="text-xs font-bold text-slate-900">"{uq.question}"</div><div className="text-[10px] text-amber-700 font-medium">Asked {uq.count || 1} times • Reason: {uq.reason || 'Not in KB'}</div></div>{answeringId !== uq.id ? <button onClick={() => { setAnsweringId(uq.id); setAnswerDraft(''); }} className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg shrink-0">+ Teach AI</button> : <button onClick={() => setAnsweringId(null)} className="px-2 py-1 bg-slate-200 text-slate-700 text-[11px] font-medium rounded-lg shrink-0">Cancel</button>}</div>
-                    {answeringId === uq.id && <div className="mt-2 space-y-2"><textarea value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder="Type the authoritative answer..." className="w-full text-xs p-2.5 bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" rows={2} /><button onClick={() => handleAddUnansweredToKB(uq.id)} className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm">Save & Add to Knowledge Base</button></div>}
+                    <div className="flex items-start justify-between gap-3 mb-1.5"><div><div className="text-xs font-bold text-white">"{uq.question}"</div><div className="text-[10px] text-amber-700 font-medium">Asked {uq.count || 1} times • Reason: {uq.reason || 'Not in KB'}</div></div>{answeringId !== uq.id ? <button onClick={() => { setAnsweringId(uq.id); setAnswerDraft(''); }} className="px-2.5 py-1 bg-pink-500 hover:bg-pink-400 text-white text-[11px] font-bold rounded-lg shrink-0">+ Teach AI</button> : <button onClick={() => setAnsweringId(null)} className="px-2 py-1 bg-slate-200 text-slate-300 text-[11px] font-medium rounded-lg shrink-0">Cancel</button>}</div>
+                    {answeringId === uq.id && <div className="mt-2 space-y-2"><textarea value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder="Type the authoritative answer..." className="w-full text-xs p-2.5 bg-[#101014] border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-400 focus:outline-none" rows={2} /><button onClick={() => handleAddUnansweredToKB(uq.id)} className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-[0_16px_45px_rgba(0,0,0,.16)]">Save & Add to Knowledge Base</button></div>}
                   </div>
                 ))}
               </div>
@@ -312,15 +312,15 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-3">
-            <div className="flex items-center justify-between mb-2"><h3 className="font-bold text-slate-900 text-sm">Make your AI smarter</h3><Bot className="w-4 h-4 text-blue-600" /></div>
-            <button onClick={() => onNavigateTab('knowledge')} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center gap-3 group"><div className="p-2 bg-blue-100 text-blue-700 rounded-lg group-hover:scale-110 transition-transform"><Plus className="w-4 h-4" /></div><div><div className="text-xs font-semibold text-slate-900">Add Knowledge FAQ</div><div className="text-[11px] text-slate-500">Give your AI better answers</div></div></button>
-            <button onClick={() => onNavigateTab('agent-settings')} className="w-full text-left p-3 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50/50 transition-all flex items-center gap-3 group"><div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg group-hover:scale-110 transition-transform"><Bot className="w-4 h-4" /></div><div><div className="text-xs font-semibold text-slate-900">Customize AI Employee</div><div className="text-[11px] text-slate-500">Name, tone & behavior</div></div></button>
+          <div className="bg-[#101014] border border-white/[0.07] rounded-2xl p-6 shadow-[0_16px_45px_rgba(0,0,0,.16)] space-y-3">
+            <div className="flex items-center justify-between mb-2"><h3 className="font-bold text-white text-sm">AI command center</h3><Bot className="w-4 h-4 text-pink-300" /></div>
+            <button onClick={() => onNavigateTab('knowledge')} className="w-full text-left p-3 rounded-xl border border-white/[0.07] hover:border-pink-400/25 hover:bg-pink-400/[0.07]/50 transition-all flex items-center gap-3 group"><div className="p-2 bg-pink-400/[0.08] text-pink-300 rounded-lg group-hover:scale-110 transition-transform"><Plus className="w-4 h-4" /></div><div><div className="text-xs font-semibold text-white">Add Knowledge FAQ</div><div className="text-[11px] text-slate-500">Give your AI better answers</div></div></button>
+            <button onClick={() => onNavigateTab('agent-settings')} className="w-full text-left p-3 rounded-xl border border-white/[0.07] hover:border-pink-400/25 hover:bg-pink-400/[0.07]/50 transition-all flex items-center gap-3 group"><div className="p-2 bg-indigo-100 text-indigo-700 rounded-lg group-hover:scale-110 transition-transform"><Bot className="w-4 h-4" /></div><div><div className="text-xs font-semibold text-white">Customize AI Employee</div><div className="text-[11px] text-slate-500">Name, tone & behavior</div></div></button>
           </div>
 
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-bold text-slate-900 text-sm mb-3">What customers ask</h3>
-            <div className="space-y-2.5">{(analytics.topQuestions || []).map((q, idx) => <div key={idx} className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded-lg"><span className="text-slate-700 font-medium truncate max-w-[200px]">{q.question}</span><span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-bold rounded-full text-[10px]">{q.count}x</span></div>)}</div>
+          <div className="bg-[#101014] border border-white/[0.07] rounded-2xl p-6 shadow-[0_16px_45px_rgba(0,0,0,.16)]">
+            <h3 className="font-bold text-white text-sm mb-3">Most asked by customers</h3>
+            <div className="space-y-2.5">{(analytics.topQuestions || []).map((q, idx) => <div key={idx} className="flex items-center justify-between text-xs p-2 bg-white/[0.025] rounded-lg"><span className="text-slate-300 font-medium truncate max-w-[200px]">{q.question}</span><span className="px-2 py-0.5 bg-pink-400/[0.08] text-pink-300 font-bold rounded-full text-[10px]">{q.count}x</span></div>)}</div>
           </div>
         </div>
       </div>
