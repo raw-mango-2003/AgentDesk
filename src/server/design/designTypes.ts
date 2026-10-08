@@ -5,6 +5,7 @@ export type IconStyle = 'filled' | 'outline' | 'duotone' | 'minimal';
 
 export interface SiteDesignConfig {
   version: 2;
+  editor?: VisualEditorConfig;
   site: {
     name: string;
     publicDomain: string;
