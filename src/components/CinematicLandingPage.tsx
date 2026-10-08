@@ -99,6 +99,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
   onNavigatePlatformLogin
 }) => {
   const [design, setDesign] = useState<any>(FALLBACK_DESIGN);
+  const [designReady, setDesignReady] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
