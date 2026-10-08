@@ -99,6 +99,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
   onNavigatePlatformLogin
 }) => {
   const [design, setDesign] = useState<any>(FALLBACK_DESIGN);
+  const [designReady, setDesignReady] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   useEffect(() => {
@@ -106,8 +107,11 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
     safeFetchJson<any>('/api/site-design', { cache: 'no-store' })
       .then((data) => {
         if (active && data?.success && data.design) setDesign(data.design);
+        if (active) setDesignReady(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setDesignReady(true);
+      });
     return () => { active = false; };
   }, []);
 
@@ -147,7 +151,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
 
   return (
     <main
-      className={`min-h-screen overflow-x-hidden bg-[#080808] text-white ${motion ? '' : '[&_*]:!transition-none'}`}
+      className={`min-h-screen overflow-x-hidden bg-[#080808] text-white transition-opacity duration-200 ${designReady ? 'opacity-100' : 'opacity-0'} ${motion ? '' : '[&_*]:!transition-none'}`}
       style={{ ...cssVars, backgroundColor: background, color: text }}
     >
       <style>{`
