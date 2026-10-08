@@ -95,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initAuth();
-    return () => window.removeEventListener('agentdesk:clerk-synced', handleClerkSynced as EventListener);
   }, []);
 
   const refreshAuth = async () => {
