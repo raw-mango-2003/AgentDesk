@@ -151,14 +151,14 @@ export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
     pageDescription: 'AI employee platform for customer conversations.'
   },
   brand: {
-    primaryColor: '#2563EB',
-    secondaryColor: '#0F172A',
-    accentColor: '#7C3AED',
-    backgroundColor: '#020617',
-    surfaceColor: '#0F172A',
-    textColor: '#F8FAFC',
-    mutedTextColor: '#94A3B8',
-    borderColor: '#1E293B',
+    primaryColor: '#FF2F86',
+    secondaryColor: '#0B0B0E',
+    accentColor: '#FF5AA5',
+    backgroundColor: '#070709',
+    surfaceColor: '#101014',
+    textColor: '#F7F3F7',
+    mutedTextColor: '#9A97A1',
+    borderColor: '#26232B',
     successColor: '#22C55E',
     dangerColor: '#EF4444'
   },
@@ -187,12 +187,12 @@ export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
     videoUrl: '',
     overlayColor: '#020617',
     overlayOpacity: 0.32,
-    gradientStart: '#2563EB',
-    gradientEnd: '#7C3AED',
+    gradientStart: '#0B0B0E',
+    gradientEnd: '#1A0A14',
     gradientAngle: 135
   },
   navigation: {
-    style: 'glass',
+    style: 'solid',
     sticky: true,
     showLogin: true,
     showGetStarted: true,
@@ -200,8 +200,8 @@ export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
     blur: 18
   },
   buttons: {
-    style: 'gradient',
-    radius: 16,
+    style: 'solid',
+    radius: 12,
     shadow: true,
     hoverLift: true,
     uppercase: false
@@ -210,7 +210,7 @@ export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
     style: 'outline',
     size: 20,
     strokeWidth: 1.8,
-    color: '#60A5FA',
+    color: '#FF5AA5',
     opacity: 1,
     container: true,
     containerRadius: 12
@@ -232,9 +232,9 @@ export const DEFAULT_SITE_DESIGN: SiteDesignConfig = {
     heroBackgroundMode: 'aurora'
   },
   pages: {
-    dashboard: { backgroundColor: '#020617', surfaceColor: '#0F172A', radius: 18, density: 'comfortable' },
-    login: { backgroundColor: '#020617', surfaceColor: '#0F172A', showLogo: true },
-    pricing: { backgroundColor: '#020617', surfaceColor: '#0F172A', cardRadius: 22, highlightColor: '#2563EB' },
+    dashboard: { backgroundColor: '#070709', surfaceColor: '#101014', radius: 14, density: 'comfortable' },
+    login: { backgroundColor: '#070709', surfaceColor: '#101014', showLogo: true },
+    pricing: { backgroundColor: '#070709', surfaceColor: '#101014', cardRadius: 18, highlightColor: '#FF2F86' },
     public: { maxWidth: 1200, pagePadding: 24 }
   }
 };
