@@ -107,8 +107,11 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
     safeFetchJson<any>('/api/site-design', { cache: 'no-store' })
       .then((data) => {
         if (active && data?.success && data.design) setDesign(data.design);
+        if (active) setDesignReady(true);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        if (active) setDesignReady(true);
+      });
     return () => { active = false; };
   }, []);
 
