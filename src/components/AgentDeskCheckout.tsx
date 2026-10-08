@@ -90,14 +90,30 @@ const getCheckoutErrorMessage = (value: unknown, fallback: string): string => {
   if (typeof value === 'string' && value.trim()) return value.trim();
   if (value && typeof value === 'object') {
     const record = value as Record<string, unknown>;
-    const candidates = [record.message, record.description, record.error, record.error_description, record.reason];
+    const nestedError = record.error;
+
+    const candidates: unknown[] = [
+      record.message,
+      record.description,
+      record.error_description,
+      record.reason,
+      typeof nestedError === 'string' ? nestedError : undefined,
+      nestedError && typeof nestedError === 'object'
+        ? (nestedError as Record<string, unknown>).message
+        : undefined,
+      nestedError && typeof nestedError === 'object'
+        ? (nestedError as Record<string, unknown>).description
+        : undefined,
+      nestedError && typeof nestedError === 'object'
+        ? (nestedError as Record<string, unknown>).reason
+        : undefined
+    ];
+
     for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return candidate.trim();
+      }
     }
-    try {
-      const serialized = JSON.stringify(value);
-      if (serialized && serialized !== '{}') return serialized;
-    } catch {}
   }
   return fallback;
 };
@@ -612,7 +628,25 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
       const sessionData = await sessionRes.json().catch(() => ({}));
       if (!sessionRes.ok || !sessionData.orderId) {
-        throw new Error(getCheckoutErrorMessage(sessionData.error, 'Payment service temporarily unavailable. Please try again.'));
+        const serverMessage = getCheckoutErrorMessage(
+          sessionData,
+          ''
+        );
+        const errorCode = typeof sessionData?.code === 'string'
+          ? sessionData.code
+          : typeof sessionData?.error?.code === 'string'
+            ? sessionData.error.code
+            : '';
+
+        const statusHint = !serverMessage && sessionRes.status
+          ? ` (HTTP ${sessionRes.status})`
+          : '';
+
+        const codeHint = errorCode ? ` [${errorCode}]` : '';
+
+        throw new Error(
+          `${serverMessage || 'Payment service temporarily unavailable. Please try again.'}${codeHint}${statusHint}`
+        );
       }
 
       // 4. Ensure Razorpay SDK script is ready
@@ -624,6 +658,13 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       // 5. Open standard Razorpay Checkout Modal
       const rzpKey = sessionData.keyId || sessionData.payment?.raw?.key || '';
       const orderId = sessionData.orderId;
+
+      if (!rzpKey) {
+        throw new Error('Payment gateway public key is missing from the checkout session [PAYMENT_GATEWAY_CONFIGURATION_ERROR].');
+      }
+      if (!orderId) {
+        throw new Error('Razorpay order ID is missing from the checkout session [RAZORPAY_ORDER_MISSING].');
+      }
 
       const orderDesc = currency !== 'INR'
         ? `AgentDesk ${calculation.planName} Plan (${formatCurrencyAmount(calculation.total_due_today, currency)} ${currency}) - Charged in INR`
@@ -759,7 +800,26 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       const rzpInstance = new (window as any).Razorpay(rzpOptions);
       rzpInstance.on('payment.failed', (resp: any) => {
         setPaymentFailed(true);
-        setError('Payment was declined or could not be completed. Please try another payment method or try again.');
+
+        const paymentError = resp?.error;
+        const description = typeof paymentError?.description === 'string'
+          ? paymentError.description.trim()
+          : '';
+        const reason = typeof paymentError?.reason === 'string'
+          ? paymentError.reason.trim()
+          : '';
+        const code = typeof paymentError?.code === 'string'
+          ? paymentError.code.trim()
+          : '';
+
+        const detail = description || reason;
+        const suffix = code ? ` [RZP_${code}]` : '';
+
+        setError(
+          detail
+            ? `${detail}${suffix}`
+            : `Payment was declined or could not be completed. Please try another payment method or try again.${suffix}`
+        );
         setLoading(false);
       });
       rzpInstance.open();
