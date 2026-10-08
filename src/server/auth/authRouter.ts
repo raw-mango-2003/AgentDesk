@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { clerkClient, getAuth } from '@clerk/express';
 import crypto from 'crypto';
 import { 
   getUserByEmail, 
@@ -503,6 +504,104 @@ authRouter.post('/signup', authRateLimiter, async (req: Request, res: Response) 
     return res.status(500).json({
       success: false,
       error: err.message || 'Internal server error during account creation.'
+    });
+  }
+});
+
+// ----------------------------------------------------
+// 1A. CLERK SESSION BRIDGE
+// ----------------------------------------------------
+authRouter.post('/clerk/sync', async (req: Request, res: Response) => {
+  try {
+    if (!process.env.CLERK_SECRET_KEY) {
+      return res.status(503).json({
+        success: false,
+        error: { code: 'CLERK_NOT_CONFIGURED', message: 'Clerk authentication is not configured.' }
+      });
+    }
+
+    const { isAuthenticated, userId } = getAuth(req);
+    if (!isAuthenticated || !userId) {
+      return res.status(401).json({
+        success: false,
+        error: { code: 'CLERK_AUTH_REQUIRED', message: 'A valid Clerk session is required.' }
+      });
+    }
+
+    const clerkUser = await clerkClient.users.getUser(userId);
+    const primaryEmail = clerkUser.emailAddresses.find(
+      email => email.id === clerkUser.primaryEmailAddressId
+    )?.emailAddress || clerkUser.emailAddresses[0]?.emailAddress;
+
+    if (!primaryEmail) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'CLERK_EMAIL_REQUIRED', message: 'A verified email address is required for AgentDesk.' }
+      });
+    }
+
+    const cleanEmail = primaryEmail.toLowerCase().trim();
+    const displayName = [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ').trim() || cleanEmail.split('@')[0];
+
+    let user = await getUserByEmailAsync(cleanEmail);
+
+    if (user?.status === 'DISABLED' || user?.status === 'SUSPENDED') {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCOUNT_DISABLED', message: 'This AgentDesk account is not active.' }
+      });
+    }
+
+    if (!user) {
+      const generatedPassword = crypto.randomBytes(32).toString('hex');
+      user = await createUserAsync({
+        name: displayName,
+        email: cleanEmail,
+        passwordPlain: generatedPassword,
+        role: 'BUSINESS_ADMIN',
+        status: 'ACTIVE',
+        emailVerified: true,
+        mustChangePassword: false
+      });
+    } else {
+      const updates: any = {
+        emailVerified: true,
+        status: user.status === 'PENDING' ? 'ACTIVE' : user.status
+      };
+      if (displayName && displayName !== user.name) updates.name = displayName;
+      user = (await updateUserAsync(user.id, updates)) || user;
+    }
+
+    const session = await createSession(user.id, user.email, user.role, user.tenantId);
+    const csrfToken = setSessionCookie(res, session.token, req);
+
+    analyticsService.track('clerk_login_success', {
+      provider: 'clerk',
+      role: user.role
+    }, user.id);
+
+    return res.json({
+      success: true,
+      csrfToken,
+      user: sanitizeUser(user),
+      onboardingPending: !user.tenantId || user.status === 'PENDING',
+      tenant: user.tenantId ? (() => {
+        const tenant = getTenant(user.tenantId);
+        return tenant ? {
+          id: tenant.id,
+          name: tenant.name,
+          status: tenant.status || tenant.planStatus,
+          plan: tenant.plan,
+          currency: tenant.currency,
+          subscriptionState: tenant.subscriptionState
+        } : null;
+      })() : null
+    });
+  } catch (err: any) {
+    console.error('[ClerkSyncError]', err);
+    return res.status(500).json({
+      success: false,
+      error: { code: 'CLERK_SYNC_FAILED', message: 'Unable to establish the AgentDesk session from Clerk.' }
     });
   }
 });

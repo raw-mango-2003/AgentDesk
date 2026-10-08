@@ -240,3 +240,25 @@ html, body, #root {
   transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 .ad-design-button:hover { transform: translateY(-2px); }
+
+
+/* Shared public visual system: pricing uses the same dark/gold language as the homepage. */
+.agentdesk-public-pricing-shell {
+  min-height: 100vh;
+  background: #080808;
+  color: #f4f1e9;
+}
+.agentdesk-public-pricing-shell .bg-slate-950 { background-color: #080808 !important; }
+.agentdesk-public-pricing-shell .bg-slate-900 { background-color: #121212 !important; }
+.agentdesk-public-pricing-shell .bg-slate-800 { background-color: #181818 !important; }
+.agentdesk-public-pricing-shell [class*="border-slate-8"],
+.agentdesk-public-pricing-shell [class*="border-slate-7"] { border-color: #2a2926 !important; }
+.agentdesk-public-pricing-shell .text-white { color: #f4f1e9 !important; }
+.agentdesk-public-pricing-shell .text-slate-100,
+.agentdesk-public-pricing-shell .text-slate-200,
+.agentdesk-public-pricing-shell .text-slate-300 { color: #d7d2c8 !important; }
+.agentdesk-public-pricing-shell .text-slate-400,
+.agentdesk-public-pricing-shell .text-slate-500 { color: #aaa59a !important; }
+.agentdesk-public-pricing-shell .text-blue-400 { color: #b8a47e !important; }
+.agentdesk-public-pricing-shell .bg-blue-600 { background-color: #b8a47e !important; color: #080808 !important; }
+.agentdesk-public-pricing-shell .bg-indigo-600 { background-color: #b8a47e !important; color: #080808 !important; }

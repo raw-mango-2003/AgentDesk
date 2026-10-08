@@ -49,6 +49,8 @@ import { integrationsRouter } from './src/server/integrationsRouter.js';
 import { gmailService, integrationStore, notificationService, syncLeadToSpreadsheet, voiceCallService } from './src/server/integrations/index.js';
 import { storageService } from './src/server/integrations/index.js';
 import { designRouter } from './src/server/design/designRouter.js';
+import { clerkMiddleware } from '@clerk/express';
+import { captureServerException } from './src/server/observability.js';
 
 import { validateEnvironmentOnStartup } from './src/server/envValidator.js';
 import { generalApiRateLimiter, clientErrorRateLimiter } from './src/server/integrations/rateLimiter.js';
@@ -96,6 +98,13 @@ const appDirectory = getAppDirectory();
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 app.disable('x-powered-by');
+
+if (process.env.CLERK_SECRET_KEY && process.env.CLERK_PUBLISHABLE_KEY) {
+  app.use(clerkMiddleware());
+  console.log('[Diagnostic] Clerk middleware: enabled');
+} else {
+  console.log('[Diagnostic] Clerk middleware: disabled (optional integration not configured)');
+}
 
 // Enable trust proxy for Google Cloud Run / reverse proxies so req.ip, req.secure, and protocol are accurate
 app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : 1);
@@ -282,7 +291,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // If request is authenticated with an Authorization Bearer header, browser cross-site ambient cookies
   // are not relied upon; custom headers prevent standard CSRF.
   const authHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization.trim() : '';
-  if (authHeader && /^Bearer\s+[a-f0-9_.-]+/i.test(authHeader)) {
+  if (authHeader && /^Bearer\s+/i.test(authHeader)) {
     return next();
   }
 
@@ -3629,6 +3638,7 @@ async function startServer() {
   // Global API error handler ensuring any unhandled backend exception in /api returns JSON
   app.use('/api', (err: any, req: Request, res: Response, _next: NextFunction) => {
     console.error(`[API Global Error] ${req.method} ${req.originalUrl}:`, err);
+    captureServerException(err, { method: req.method, path: req.path });
     const status = typeof err.status === 'number' && err.status >= 400 && err.status < 600 ? err.status : 500;
     res.status(status).json({
       success: false,
