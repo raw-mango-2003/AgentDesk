@@ -1,7 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
-import { LandingPage } from './components/LandingPage';
+import { CinematicLandingPage } from './components/CinematicLandingPage';
 const DashboardOverview = lazy(() => import('./components/DashboardOverview').then(module => ({ default: module.DashboardOverview })));
 const VoiceReceptionistDashboard = lazy(() => import('./components/VoiceReceptionistDashboard').then(module => ({ default: module.VoiceReceptionistDashboard })));
 const MissedCallTextBackDashboard = lazy(() => import('./components/MissedCallTextBackDashboard').then(module => ({ default: module.MissedCallTextBackDashboard })));
@@ -711,7 +711,7 @@ export default function App() {
             }}
           />
         ) : currentView === 'landing' ? (
-          <LandingPage
+          <CinematicLandingPage
             onOpenDemo={() => setShowDemoWidget(true)}
             onOpenAuth={() => handleNavigate('login')}
             onNavigateGetStarted={() => handleNavigate('onboarding')}
