@@ -55,30 +55,51 @@ const PAGE_COPY: Record<string, { title: string; subtitle: string; sections: str
   dashboard: { title: 'Your workspace.', subtitle: 'Everything your team needs in one place.', sections: ['sidebar', 'header', 'content'] }
 };
 
-const getPage = (design: Design, id: string) => {
-  if (!design.editor?.pages?.[id]) {
-    const copy = PAGE_COPY[id] || { title: PAGE_DEFS.find(p => p[0] === id)?.[1] || id, subtitle: 'Edit this page visually in the canvas.', sections: ['header', 'content', 'footer'] };
-    design.editor = design.editor || { pages: {} };
-    design.editor.pages[id] = {
-      title: copy.title, subtitle: copy.subtitle,
-      sections: copy.sections.map((name, i) => ({
-        id: id + '_' + name, name, label: name.replace(/[-_]/g, ' '),
-        visible: true, height: name === 'hero' ? 560 : 260,
-        background: '', padding: 40, align: 'center',
+const buildPage = (design: Design, id: string) => {
+  const copy = PAGE_COPY[id] || { title: PAGE_DEFS.find(p => p[0] === id)?.[1] || id, subtitle: 'Edit this page visually.', sections: ['header', 'content'] };
+  design.editor = design.editor || { pages: {} };
+  design.editor.pages[id] = {
+    title: copy.title,
+    subtitle: copy.subtitle,
+    sections: copy.sections.map((name, i) => {
+      const sectionCopy = SECTION_COPY[name] || { title: name.replace(/[-_]/g, ' ').replace(/\\b\\w/g, (m: string) => m.toUpperCase()), body: 'Edit this section directly in the canvas.' };
+      const hero = name === 'hero';
+      return {
+        id: id + '_' + name,
+        name,
+        label: name.replace(/[-_]/g, ' '),
+        visible: true,
+        height: hero ? 600 : name === 'footer' ? 180 : 300,
+        background: hero ? '#0b0b0b' : i % 2 ? '#0d0d0d' : '#080808',
+        padding: hero ? 56 : 44,
+        align: hero ? 'left' : 'center',
         elements: [
-          { id: id + '_' + name + '_heading', type: 'heading', text: name === 'hero' ? copy.title : name.replace(/[-_]/g, ' '), x: 50, y: 32, width: 70, fontSize: name === 'hero' ? 46 : 30, weight: 700, color: '' },
-          { id: id + '_' + name + '_body', type: 'text', text: name === 'hero' ? copy.subtitle : 'Click any element to edit it directly.', x: 50, y: 54, width: 60, fontSize: 16, weight: 400, color: '' }
+          { id: id + '_' + name + '_heading', type: 'heading', text: hero ? copy.title : sectionCopy.title, x: hero ? 36 : 50, y: hero ? 34 : 32, width: hero ? 68 : 74, fontSize: hero ? 54 : 32, weight: 700, color: '#f4f1e9' },
+          { id: id + '_' + name + '_body', type: 'text', text: hero ? copy.subtitle : sectionCopy.body, x: hero ? 36 : 50, y: hero ? 55 : 53, width: hero ? 58 : 64, fontSize: hero ? 18 : 16, weight: 400, color: '#b8b2a7' },
+          ...(hero ? [{ id: id + '_' + name + '_button', type: 'button', text: 'Get Started', x: 36, y: 72, width: 22, fontSize: 14, weight: 700, color: '#080808' }] : [])
         ]
-      }))
-    };
-  }
+      };
+    })
+  };
+  return design.editor.pages[id];
+};
+
+const getPage = (design: Design, id: string) => {
+  if (!design.editor?.pages?.[id]) return buildPage(design, id);
   return design.editor.pages[id];
 };
 
 const ensureEditor = (source: Design) => {
   const next = clone(source || DEFAULT);
   next.editor = next.editor || { pages: {} };
-  for (const [id] of PAGE_DEFS) getPage(next, id);
+  for (const [id] of PAGE_DEFS) {
+    const page = next.editor.pages?.[id];
+    const isPlaceholder = page && page.sections?.length <= 3 && page.sections?.some((s: any) =>
+      s.elements?.some((e: any) => e.text === 'Click any element to edit it directly.' || e.text === 'header' || e.text === 'content')
+    );
+    if (!page || isPlaceholder) buildPage(next, id);
+    else getPage(next, id);
+  }
   next.editor.activePage = next.editor.activePage || 'home';
   return next;
 };
@@ -92,7 +113,7 @@ export const DesignStudio: React.FC = () => {
   const [pageId, setPageId] = useState('home');
   const [target, setTarget] = useState<Target | null>(null);
   const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [tool, setTool] = useState<'elements' | 'pages' | 'layers' | 'style'>('elements');
+  const [tool, setTool] = useState<'elements' | 'pages' | 'layers' | 'style' | 'templates'>('elements');
   const [history, setHistory] = useState<Design[]>([]);
   const [future, setFuture] = useState<Design[]>([]);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -177,6 +198,31 @@ export const DesignStudio: React.FC = () => {
     const element = { id: uid('el'), type, x: 50, y: 70, ...defaults[type] };
     commit(next => { const p = getPage(next, pageId); p.sections[0].elements.push(element); });
     setTarget({ kind: 'element', id: element.id });
+  };
+
+  const applyTemplate = (preset: any) => {
+    commit(next => {
+      next.brand.primaryColor = preset.primary;
+      next.brand.backgroundColor = preset.background;
+      next.brand.surfaceColor = preset.surface;
+      next.appearance.radius = preset.radius;
+      next.pages = next.pages || {};
+      next.pages.public = { ...(next.pages.public || {}), maxWidth: 1240, pagePadding: 24 };
+      const page = getPage(next, pageId);
+      page.sections.forEach((section: any, index: number) => {
+        section.background = index === 0 ? preset.background : index % 2 ? preset.surface : preset.background;
+        section.elements.forEach((element: any) => {
+          if (element.type !== 'button') element.color = element.type === 'heading' ? '#f4f1e9' : '#b8b2a7';
+        });
+      });
+    });
+  };
+
+  const openLivePreview = () => {
+    const paths: Record<string, string> = { home: '/', pricing: '/pricing', login: '/login' };
+    const path = paths[pageId];
+    if (path) window.open(path, '_blank', 'noopener,noreferrer');
+    else window.open('/dashboard', '_blank', 'noopener,noreferrer');
   };
 
   const addSection = () => {
@@ -274,8 +320,11 @@ export const DesignStudio: React.FC = () => {
     <div className="min-h-full h-full bg-[#070809] text-white flex flex-col overflow-hidden">
       <header className="h-14 shrink-0 border-b border-white/10 bg-[#0b0c0f] flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <div className="font-black">Visual Studio</div>
-          <div className="text-[10px] text-slate-500 border border-white/10 rounded px-2 py-1">ALL PAGES</div>
+          <div>
+            <div className="font-black tracking-tight">Website Builder</div>
+            <div className="text-[10px] text-slate-500 mt-0.5">Edit the real AgentDesk experience</div>
+          </div>
+          <div className="text-[10px] text-slate-500 border border-white/10 rounded px-2 py-1">SITE-WIDE</div>
           <div className="flex items-center gap-1 ml-2">
             <IconButton label="Undo" onClick={undo} disabled={!history.length}><Undo2 /></IconButton>
             <IconButton label="Redo" onClick={redo} disabled={!future.length}><Redo2 /></IconButton>
@@ -287,6 +336,7 @@ export const DesignStudio: React.FC = () => {
           <Device active={device === 'mobile'} onClick={() => setDevice('mobile')}><Smartphone /></Device>
         </div>
         <div className="flex items-center gap-2">
+          <button type="button" onClick={openLivePreview} className="px-3 py-2 rounded-lg border border-white/10 text-xs font-semibold flex gap-2 items-center"><Eye className="w-4 h-4" />Live preview</button>
           <button type="button" onClick={reset} className="p-2 rounded-lg border border-white/10"><RotateCcw className="w-4 h-4" /></button>
           <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-lg bg-blue-600 text-xs font-bold flex gap-2 items-center"><Save className="w-4 h-4" />{busy ? 'Saving...' : saved ? 'Published' : 'Publish'}</button>
         </div>
@@ -299,6 +349,7 @@ export const DesignStudio: React.FC = () => {
           <Tool active={tool === 'pages'} onClick={() => setTool('pages')}><LayoutTemplate /></Tool>
           <Tool active={tool === 'layers'} onClick={() => setTool('layers')}><Layers3 /></Tool>
           <Tool active={tool === 'style'} onClick={() => setTool('style')}><Palette /></Tool>
+          <Tool active={tool === 'templates'} onClick={() => setTool('templates')}><LayoutTemplate /></Tool>
         </aside>
 
         <aside className="w-64 shrink-0 border-r border-white/10 bg-[#101114] p-3 overflow-y-auto">
@@ -323,6 +374,21 @@ export const DesignStudio: React.FC = () => {
               </div>
             </div>)}
           </Panel>}
+          {tool === 'templates' && <Panel title="Templates">
+            <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-xs font-semibold text-white mb-1">Start from a real direction</div>
+              <div className="text-[11px] leading-4 text-slate-500">These are visual presets for AgentDesk. We will use the connected Figma workflow to bring in a real Community template after you connect Figma.</div>
+            </div>
+            {TEMPLATE_PRESETS.map((preset: any) => <button key={preset.id} type="button" onClick={() => applyTemplate(preset)} className="w-full text-left p-3 rounded-xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] mb-2">
+              <div className="h-16 rounded-lg mb-3" style={{background:preset.background,border:'1px solid rgba(255,255,255,.08)'}}>
+                <div className="h-2 w-20 rounded-full m-3" style={{background:preset.primary}} />
+                <div className="h-2 w-32 rounded-full mx-3 bg-white/15" />
+              </div>
+              <div className="text-xs font-semibold text-white">{preset.name}</div>
+              <div className="text-[10px] leading-4 text-slate-500 mt-1">{preset.description}</div>
+            </button>)}
+            <a href="https://www.figma.com/templates/web-design-inspiration/" target="_blank" rel="noreferrer" className="block text-center text-xs text-blue-300 hover:text-blue-200 mt-3">Browse free Figma website templates ↗</a>
+          </Panel>}
           {tool === 'style' && <Panel title="Global style">
             <Color label="Primary" value={design.brand.primaryColor} onChange={v => updatePath(['brand','primaryColor'],v)} />
             <Color label="Background" value={design.brand.backgroundColor} onChange={v => updatePath(['brand','backgroundColor'],v)} />
@@ -334,8 +400,8 @@ export const DesignStudio: React.FC = () => {
         </aside>
 
         <main className="flex-1 min-w-0 bg-[#17181b] overflow-auto" ref={canvasRef}>
-          <div className="min-h-full py-8 flex justify-center">
-            <div style={{ width: canvasWidth, maxWidth: 'calc(100vw - 410px)' }} className="bg-white shadow-2xl rounded-sm overflow-hidden">
+          <div className="min-h-full py-6 flex justify-center">
+            <div style={{ width: canvasWidth, maxWidth: 'calc(100vw - 410px)' }} className="bg-black shadow-2xl rounded-xl overflow-hidden border border-white/10">
               <div className="relative" style={{ background: design.brand.backgroundColor, color: design.brand.textColor, fontFamily: design.typography.bodyFont }}>
                 <CanvasNav design={design} />
                 {currentPage.sections.map((section: any) => section.visible !== false && (
@@ -364,7 +430,10 @@ export const DesignStudio: React.FC = () => {
 
         <aside className="w-72 shrink-0 border-l border-white/10 bg-[#101114] p-4 overflow-y-auto">
           <div className="flex items-center justify-between mb-4"><div className="font-bold text-sm">Properties</div>{target && <button type="button" onClick={removeSelected} className="p-1.5 rounded border border-red-500/20 text-red-300"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
-          {!target && <div className="text-xs text-slate-500 leading-5">Select anything on the canvas. You can move it, resize it, edit its text and change its visual properties here.</div>}
+          {!target && <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-400">
+              <div className="text-white font-semibold mb-1">Nothing selected</div>
+              Click a real section or element in the page preview. Drag it on the canvas, then use these controls to change the content and visual treatment.
+            </div>}
           {target?.kind === 'section' && selectedSection && <SectionInspector section={selectedSection} onChange={updateSelected} />}
           {target?.kind === 'element' && selectedElement && <ElementInspector element={selectedElement} onChange={updateSelected} onUpload={uploadImage} />}
         </aside>
