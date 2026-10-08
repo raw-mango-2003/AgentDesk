@@ -118,6 +118,8 @@ export const DesignStudio: React.FC = () => {
   const [future, setFuture] = useState<Design[]>([]);
   const [previewNonce, setPreviewNonce] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const previewFrameRef = useRef<HTMLIFrameElement>(null);
+  const dragSnapshotRef = useRef<Design | null>(null);
 
   useEffect(() => {
     safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
@@ -148,6 +150,71 @@ export const DesignStudio: React.FC = () => {
   });
 
   const currentPage = useMemo(() => getPage(design, pageId), [design, pageId]);
+
+  const sendDraftToPreview = () => {
+    const frame = previewFrameRef.current;
+    if (!frame?.contentWindow) return;
+    frame.contentWindow.postMessage({
+      type: 'agentdesk-visual-editor-sync',
+      selectedId: target?.kind === 'element' ? target.id : '',
+      payload: {
+        pageId,
+        sections: currentPage.sections,
+        brand: design.brand,
+        typography: design.typography
+      }
+    }, window.location.origin);
+  };
+
+  useEffect(() => {
+    const handlePreviewMessage = (event: MessageEvent) => {
+      const frame = previewFrameRef.current;
+      if (event.origin !== window.location.origin || !frame?.contentWindow || event.source !== frame.contentWindow) return;
+      if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.type === 'agentdesk-visual-editor-ready') {
+        window.requestAnimationFrame(sendDraftToPreview);
+        return;
+      }
+      if (event.data.type === 'agentdesk-visual-editor-select') {
+        const id = String(event.data.selectedId || '');
+        if (id) setTarget({ kind: 'element', id });
+        return;
+      }
+      if (event.data.type === 'agentdesk-visual-editor-drag') {
+        const id = String(event.data.selectedId || '');
+        const x = Number(event.data.x);
+        const y = Number(event.data.y);
+        if (!id || !Number.isFinite(x) || !Number.isFinite(y)) return;
+        if (!dragSnapshotRef.current) dragSnapshotRef.current = clone(design);
+        setDesign((current: Design) => {
+          const next = clone(current);
+          const page = getPage(next, pageId);
+          const element = page.sections.flatMap((section: any) => section.elements).find((item: any) => item.id === id);
+          if (element) {
+            element.x = Math.max(0, Math.min(100, x));
+            element.y = Math.max(0, Math.min(100, y));
+          }
+          return next;
+        });
+        setSaved(false);
+        return;
+      }
+      if (event.data.type === 'agentdesk-visual-editor-drag-end') {
+        if (dragSnapshotRef.current) {
+          setHistory(history => [...history.slice(-39), dragSnapshotRef.current as Design]);
+          dragSnapshotRef.current = null;
+          setFuture([]);
+        }
+      }
+    };
+    window.addEventListener('message', handlePreviewMessage);
+    return () => window.removeEventListener('message', handlePreviewMessage);
+  }, [design, pageId]);
+
+  useEffect(() => {
+    sendDraftToPreview();
+  }, [design, pageId, target]);
+
 
   const publish = async () => {
     setBusy(true); setError('');
@@ -420,6 +487,8 @@ export const DesignStudio: React.FC = () => {
                 <span className="text-slate-600">Publish to apply draft changes</span>
               </div>
               <iframe
+                ref={previewFrameRef}
+                onLoad={sendDraftToPreview}
                 key={pageId + ':' + previewNonce}
                 title={'AgentDesk ' + (PAGE_DEFS.find(([id]) => id === pageId)?.[1] || pageId) + ' preview'}
                 src={(() => {
@@ -459,7 +528,7 @@ export const DesignStudio: React.FC = () => {
           <div className="flex items-center justify-between mb-4"><div className="font-bold text-sm">Properties</div>{target && <button type="button" onClick={removeSelected} className="p-1.5 rounded border border-red-500/20 text-red-300"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
           {!target && <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-400">
               <div className="text-white font-semibold mb-1">Nothing selected</div>
-              Click a real section or element in the page preview. Drag it on the canvas, then use these controls to change the content and visual treatment.
+              Click any real element in the live page to select it. Drag it directly in the page preview, then use these controls to change its content and visual treatment. Changes are draft-only until Publish.
             </div>}
           {target?.kind === 'section' && selectedSection && <SectionInspector section={selectedSection} onChange={updateSelected} />}
           {target?.kind === 'element' && selectedElement && <ElementInspector element={selectedElement} onChange={updateSelected} onUpload={uploadImage} />}
