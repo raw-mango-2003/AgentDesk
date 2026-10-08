@@ -81,7 +81,7 @@ function sanitizeDesign(input: any): SiteDesignConfig {
   d.homepage.heroMinHeight = clamp(input.homepage?.heroMinHeight, 420, 1000, d.homepage.heroMinHeight);
   d.homepage.heroBackgroundMode = oneOf(input.homepage?.heroBackgroundMode, ['solid','gradient','image','video','aurora','particles','shapes','glass'] as const, d.homepage.heroBackgroundMode);
   if (Array.isArray(input.homepage?.sectionOrder)) {
-    const allowed = new Set(['hero','problem','poster','dashboard','benefits','integrations','pricing','faq']);
+    const allowed = new Set(['hero','problem','poster','dashboard','benefits','pricing','cta','faq','footer']);
     const order = input.homepage.sectionOrder.filter((x: unknown): x is string => typeof x === 'string' && allowed.has(x));
     if (order.length) d.homepage.sectionOrder = Array.from(new Set<string>(order));
   }
