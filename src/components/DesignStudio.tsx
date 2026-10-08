@@ -27,7 +27,7 @@ const DEFAULT: Design = {
     heroSubheadline: 'Let AgentDesk handle the first response, capture the enquiry, qualify the lead, and keep follow-up moving.',
     showPosterProcess: true, showBenefits: true, showIntegrations: true, showPricing: true, showFaq: true,
     showDashboardPreview: true, showProblem: true, showTrustBar: true,
-    sectionOrder: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'integrations', 'pricing', 'faq'],
+    sectionOrder: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'],
     heroAlignment: 'center', heroMinHeight: 720, heroBackgroundMode: 'aurora'
   },
   pages: {
