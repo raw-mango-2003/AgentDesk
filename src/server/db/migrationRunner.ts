@@ -3,13 +3,17 @@ import * as baselineMigration from './migrations/001_baseline.js';
 import * as leadDeduplicationMigration from './migrations/002_lead_deduplication.js';
 import * as siteDesignMigration from './migrations/003_department_design.js';
 import * as paymentSchemaRepairMigration from './migrations/004_payment_schema_repair.js';
-import * as baselineSchemaReconciliationMigration from './migrations/005_baseline_schema_reconciliation.js';
-
 export interface DbMigration {
   version: string;
   description: string;
   sql: string;
 }
+
+const baselineSchemaReconciliationMigration: DbMigration = {
+  version: '005_baseline_schema_reconciliation',
+  description: 'Reconcile missing additive baseline tables and columns',
+  sql: baselineMigration.sql
+};
 
 const MIGRATIONS: DbMigration[] = [
   baselineMigration,
