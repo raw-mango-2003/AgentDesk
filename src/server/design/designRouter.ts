@@ -117,6 +117,7 @@ async function requirePlatformAdmin(req: Request, res: Response) {
 }
 
 designRouter.get('/site-design', async (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, max-age=0, must-revalidate');
   try { return res.json({ success: true, design: await getDesign() }); }
   catch (err) { console.error('[DesignRouter] Failed to read:', err); return res.json({ success: true, design: DEFAULT_SITE_DESIGN }); }
 });
