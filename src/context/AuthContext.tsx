@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, UserRole } from '../types';
 import { safeFetchJson } from '../lib/apiClient';
+import { identifyUser, resetAnalyticsIdentity } from '../lib/observability';
 
 export interface TenantInfo {
   id: string;
@@ -88,6 +89,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    const handleClerkSynced = () => {
+      fetchSessionUser().catch(() => undefined);
+    };
+    window.addEventListener('agentdesk:clerk-synced', handleClerkSynced as EventListener);
     const initAuth = async () => {
       setLoading(true);
       await fetchSessionUser();
@@ -95,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initAuth();
+    return () => window.removeEventListener('agentdesk:clerk-synced', handleClerkSynced as EventListener);
   }, []);
 
   const refreshAuth = async () => {
@@ -312,6 +318,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentUser(null);
     setCurrentTenant(null);
     setActiveBusinessIdState('');
+    resetAnalyticsIdentity();
+    window.dispatchEvent(new Event('agentdesk:logout'));
     localStorage.removeItem('agentdesk_auth_user');
     localStorage.removeItem('agentdesk_active_tenant_id');
 
@@ -324,6 +332,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Local auth state is already cleared.
     }
   };
+
+  useEffect(() => {
+    if (currentUser) {
+      identifyUser(currentUser);
+    }
+  }, [currentUser]);
 
   const isAuthenticated = !!currentUser;
   const isPlatformAdmin = currentUser?.role === 'PLATFORM_ADMIN';
