@@ -1,3 +1,20 @@
+const normalizeAssetUrl=(raw:string)=>{
+  const value=String(raw||'').trim();
+  if(!value)return '';
+  try{
+    const u=new URL(value,window.location.origin);
+    const host=u.hostname.toLowerCase();
+    const drive=u.pathname.match(/^\\/file\\/d\\/([^/]+)/);
+    if((host==='drive.google.com'||host==='docs.google.com')&&drive?.[1]) return 'https://drive.google.com/uc?export=view&id='+encodeURIComponent(drive[1]);
+    if(host==='dropbox.com'||host.endsWith('.dropbox.com')){u.searchParams.set('raw','1');return u.toString();}
+    if(host==='github.com'){
+      const parts=u.pathname.split('/').filter(Boolean);
+      const i=parts.indexOf('blob');
+      if(i===2&&parts.length>=5)return 'https://raw.githubusercontent.com/'+parts[0]+'/'+parts[1]+'/'+parts[3]+'/'+parts.slice(4).join('/');
+    }
+    return u.toString();
+  }catch{return value;}
+};
 import React, { useEffect, useState } from 'react';
 import { 
   Bot, 
