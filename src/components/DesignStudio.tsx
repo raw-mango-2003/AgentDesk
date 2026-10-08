@@ -49,6 +49,28 @@ const PAGE_DEFS = [
   ['platform-admin', 'Platform Admin']
 ] as const;
 
+const SECTION_COPY: Record<string, { title: string; body: string }> = {
+  hero: { title: 'Make every customer enquiry count.', body: 'Give your team a single operating layer for conversations, leads and follow-up.' },
+  problem: { title: 'Stop losing enquiries.', body: 'Turn missed calls, slow replies and scattered conversations into a consistent customer experience.' },
+  poster: { title: 'From first contact to booked work.', body: 'Capture the enquiry, qualify the opportunity and keep the next action moving.' },
+  dashboard: { title: 'See customer operations clearly.', body: 'Bring calls, leads, follow-ups and outcomes into one workspace.' },
+  benefits: { title: 'Built around the work that matters.', body: 'Automate repetitive customer operations while keeping your team in control.' },
+  pricing: { title: 'Choose the right operating layer.', body: 'Start simple and scale AgentDesk as customer volume grows.' },
+  cta: { title: 'Ready to make customer operations easier?', body: 'Start with AgentDesk and give every enquiry a clear next step.' },
+  faq: { title: 'Frequently asked questions.', body: 'Answers to the most common questions about AgentDesk.' },
+  footer: { title: 'AgentDesk', body: 'AI customer operations for growing businesses.' },
+  header: { title: 'Manage your workspace.', body: 'Configure this area of AgentDesk from one place.' },
+  plans: { title: 'Plans and usage.', body: 'Review available plans, limits and included capabilities.' },
+  auth: { title: 'Sign in securely.', body: 'Access your AgentDesk workspace.' },
+  sidebar: { title: 'Your workspace.', body: 'Move between customer operations tools.' },
+  content: { title: 'Customer operations.', body: 'Review activity, performance and next actions.' },
+  usage: { title: 'Usage overview.', body: 'Track the activity included in your current plan.' },
+  plan: { title: 'Current plan.', body: 'Manage your subscription and available upgrades.' },
+  settings: { title: 'Regional settings.', body: 'Configure localization preferences for your workspace.' },
+  snippet: { title: 'Deploy AgentDesk.', body: 'Use the deployment options to bring AgentDesk into your customer experience.' },
+  security: { title: 'Account security.', body: 'Manage credentials and access for your workspace.' }
+};
+
 const PAGE_COPY: Record<string, { title: string; subtitle: string; sections: string[] }> = {
   home: { title: 'Your AI employee for every customer conversation.', subtitle: 'Turn enquiries into conversations, leads and booked work.', sections: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'] },
   pricing: { title: 'Simple pricing that scales with your business.', subtitle: 'Choose the plan that fits your customer operations.', sections: ['header', 'plans', 'faq', 'cta', 'footer'] },
