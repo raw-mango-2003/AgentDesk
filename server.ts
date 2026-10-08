@@ -99,6 +99,13 @@ const app = express();
 const PORT = Number(process.env.PORT || 3000);
 app.disable('x-powered-by');
 
+if (process.env.CLERK_SECRET_KEY && process.env.CLERK_PUBLISHABLE_KEY) {
+  app.use(clerkMiddleware());
+  console.log('[Diagnostic] Clerk middleware: enabled');
+} else {
+  console.log('[Diagnostic] Clerk middleware: disabled (optional integration not configured)');
+}
+
 // Enable trust proxy for Google Cloud Run / reverse proxies so req.ip, req.secure, and protocol are accurate
 app.set('trust proxy', process.env.TRUST_PROXY === 'true' ? true : 1);
 
