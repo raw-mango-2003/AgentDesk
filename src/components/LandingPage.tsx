@@ -403,8 +403,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </section>
-
-      </section>
       ) : null}
 
       {/* 2. Omnichannel Pillars Bento Grid */}
@@ -625,8 +623,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           ))}
         </div>
-      </section>
-
       </section>
       ) : null}
 
