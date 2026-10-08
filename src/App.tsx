@@ -642,6 +642,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+      <VisualEditorRuntime />
       {/* Top Navbar */}
       <Navbar
         currentView={currentView}
