@@ -71,6 +71,13 @@ const SECTION_COPY: Record<string, { title: string; body: string }> = {
   security: { title: 'Account security.', body: 'Manage credentials and access for your workspace.' }
 };
 
+const TEMPLATE_PRESETS = [
+  { id: 'agentdesk-premium', name: 'AgentDesk Premium', description: 'Black workspace with a restrained pink signal accent.', primary: '#FF2F86', background: '#070709', surface: '#101014', radius: 14 },
+  { id: 'eclipse-dark', name: 'Eclipse Dark', description: 'Dense dark product workspace with quiet chrome.', primary: '#FF2F86', background: '#08080A', surface: '#111116', radius: 12 },
+  { id: 'themesberg-neutral', name: 'Themesberg Neutral', description: 'Clean admin foundation with strong hierarchy and compact controls.', primary: '#E8E2D8', background: '#0A0A0B', surface: '#141416', radius: 10 },
+  { id: 'cadence-sales', name: 'Cadence Sales', description: 'Pipeline-first workspace for deals, activity and revenue.', primary: '#FF5AA5', background: '#09090C', surface: '#15151A', radius: 12 }
+] as const;
+
 const PAGE_COPY: Record<string, { title: string; subtitle: string; sections: string[] }> = {
   home: { title: 'Your AI employee for every customer conversation.', subtitle: 'Turn enquiries into conversations, leads and booked work.', sections: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'] },
   pricing: { title: 'Simple pricing that scales with your business.', subtitle: 'Choose the plan that fits your customer operations.', sections: ['header', 'plans', 'faq', 'cta', 'footer'] },
