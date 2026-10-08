@@ -13,25 +13,25 @@ type Target = { kind: 'section' | 'element'; id: string };
 const DEFAULT: Design = {
   version: 2,
   site: { name: 'AgentDesk', publicDomain: '', logoUrl: '', faviconUrl: '', pageTitle: 'AgentDesk', pageDescription: '' },
-  brand: { primaryColor: '#2563EB', secondaryColor: '#0F172A', accentColor: '#7C3AED', backgroundColor: '#020617', surfaceColor: '#0F172A', textColor: '#F8FAFC', mutedTextColor: '#94A3B8', borderColor: '#1E293B', successColor: '#22C55E', dangerColor: '#EF4444' },
+  brand: { primaryColor: '#FF2F86', secondaryColor: '#0B0B0E', accentColor: '#FF5AA5', backgroundColor: '#070709', surfaceColor: '#101014', textColor: '#F7F3F7', mutedTextColor: '#9A97A1', borderColor: '#26232B', successColor: '#4ADE80', dangerColor: '#FB7185' },
   typography: { headingFont: 'Inter', bodyFont: 'Inter', baseSize: 16, headingWeight: 700, letterSpacing: -0.02, lineHeight: 1.5 },
-  appearance: { theme: 'dark', radius: 18, shadow: 'medium', material: 'glass', glassBlur: 18, glassOpacity: 0.62, glassSaturation: 150, animationSpeed: 1, enableMotion: true },
-  background: { mode: 'aurora', imageUrl: '', videoUrl: '', overlayColor: '#020617', overlayOpacity: 0.32, gradientStart: '#2563EB', gradientEnd: '#7C3AED', gradientAngle: 135 },
-  navigation: { style: 'glass', sticky: true, showLogin: true, showGetStarted: true, showDemo: true, blur: 18 },
-  buttons: { style: 'gradient', radius: 16, shadow: true, hoverLift: true, uppercase: false },
-  icons: { style: 'outline', size: 20, strokeWidth: 1.8, color: '#60A5FA', opacity: 1, container: true, containerRadius: 12 },
+  appearance: { theme: 'dark', radius: 14, shadow: 'medium', material: 'elevated', glassBlur: 16, glassOpacity: 0.82, glassSaturation: 130, animationSpeed: 1, enableMotion: true },
+  background: { mode: 'gradient', imageUrl: '', videoUrl: '', overlayColor: '#070709', overlayOpacity: 0.55, gradientStart: '#0B0B0E', gradientEnd: '#1A0A14', gradientAngle: 135 },
+  navigation: { style: 'solid', sticky: true, showLogin: true, showGetStarted: true, showDemo: true, blur: 16 },
+  buttons: { style: 'solid', radius: 12, shadow: true, hoverLift: true, uppercase: false },
+  icons: { style: 'outline', size: 20, strokeWidth: 1.8, color: '#FF5AA5', opacity: 1, container: true, containerRadius: 10 },
   homepage: {
     heroHeadline: 'Your AI employee for every customer conversation.',
     heroSubheadline: 'Let AgentDesk handle the first response, capture the enquiry, qualify the lead, and keep follow-up moving.',
     showPosterProcess: true, showBenefits: true, showIntegrations: true, showPricing: true, showFaq: true,
     showDashboardPreview: true, showProblem: true, showTrustBar: true,
     sectionOrder: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'],
-    heroAlignment: 'center', heroMinHeight: 720, heroBackgroundMode: 'aurora'
+    heroAlignment: 'left', heroMinHeight: 720, heroBackgroundMode: 'gradient'
   },
   pages: {
-    dashboard: { backgroundColor: '#020617', surfaceColor: '#0F172A', radius: 18, density: 'comfortable' },
-    login: { backgroundColor: '#020617', surfaceColor: '#0F172A', showLogo: true },
-    pricing: { backgroundColor: '#020617', surfaceColor: '#0F172A', cardRadius: 22, highlightColor: '#2563EB' },
+    dashboard: { backgroundColor: '#070709', surfaceColor: '#101014', radius: 14, density: 'comfortable' },
+    login: { backgroundColor: '#070709', surfaceColor: '#101014', showLogo: true },
+    pricing: { backgroundColor: '#070709', surfaceColor: '#101014', cardRadius: 18, highlightColor: '#FF2F86' },
     public: { maxWidth: 1200, pagePadding: 24 }
   }
 };
@@ -97,12 +97,12 @@ const buildPage = (design: Design, id: string) => {
         label: name.replace(/[-_]/g, ' '),
         visible: true,
         height: hero ? 600 : name === 'footer' ? 180 : 300,
-        background: hero ? '#0b0b0b' : i % 2 ? '#0d0d0d' : '#080808',
+        background: hero ? '#0A0A0D' : i % 2 ? '#101014' : '#08080A',
         padding: hero ? 56 : 44,
         align: hero ? 'left' : 'center',
         elements: [
-          { id: id + '_' + name + '_heading', type: 'heading', text: hero ? copy.title : sectionCopy.title, x: hero ? 36 : 50, y: hero ? 34 : 32, width: hero ? 68 : 74, fontSize: hero ? 54 : 32, weight: 700, color: '#f4f1e9' },
-          { id: id + '_' + name + '_body', type: 'text', text: hero ? copy.subtitle : sectionCopy.body, x: hero ? 36 : 50, y: hero ? 55 : 53, width: hero ? 58 : 64, fontSize: hero ? 18 : 16, weight: 400, color: '#b8b2a7' },
+          { id: id + '_' + name + '_heading', type: 'heading', text: hero ? copy.title : sectionCopy.title, x: hero ? 36 : 50, y: hero ? 34 : 32, width: hero ? 68 : 74, fontSize: hero ? 54 : 32, weight: 700, color: '#F7F3F7' },
+          { id: id + '_' + name + '_body', type: 'text', text: hero ? copy.subtitle : sectionCopy.body, x: hero ? 36 : 50, y: hero ? 55 : 53, width: hero ? 58 : 64, fontSize: hero ? 18 : 16, weight: 400, color: '#9A97A1' },
           ...(hero ? [{ id: id + '_' + name + '_button', type: 'button', text: 'Get Started', x: 36, y: 72, width: 22, fontSize: 14, weight: 700, color: '#080808' }] : [])
         ]
       };
