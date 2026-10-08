@@ -4,7 +4,7 @@ const normalizeAssetUrl=(raw:string)=>{
   try{
     const u=new URL(value,window.location.origin);
     const host=u.hostname.toLowerCase();
-    const drive=u.pathname.match(/^\\/file\\/d\\/([^/]+)/);
+    const drive=u.pathname.match(/^\/file\/d\/([^/]+)/);
     if((host==='drive.google.com'||host==='docs.google.com')&&drive?.[1]) return 'https://drive.google.com/uc?export=view&id='+encodeURIComponent(drive[1]);
     if(host==='dropbox.com'||host.endsWith('.dropbox.com')){u.searchParams.set('raw','1');return u.toString();}
     if(host==='github.com'){
