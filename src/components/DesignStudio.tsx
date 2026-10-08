@@ -116,6 +116,7 @@ export const DesignStudio: React.FC = () => {
   const [tool, setTool] = useState<'elements' | 'pages' | 'layers' | 'style' | 'templates'>('elements');
   const [history, setHistory] = useState<Design[]>([]);
   const [future, setFuture] = useState<Design[]>([]);
+  const [previewNonce, setPreviewNonce] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -153,7 +154,7 @@ export const DesignStudio: React.FC = () => {
     try {
       const r: any = await safeFetchJson('/api/site-design', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(design) });
       if (!r.success) throw new Error(r.error?.message || r.message || 'Publish failed.');
-      setDesign(ensureEditor(r.design || design)); setSaved(true);
+      setDesign(ensureEditor(r.design || design)); setSaved(true); setPreviewNonce(n => n + 1);
     } catch (e: any) { setError(e?.message || 'Publish failed.'); }
     finally { setBusy(false); }
   };
@@ -400,30 +401,56 @@ export const DesignStudio: React.FC = () => {
         </aside>
 
         <main className="flex-1 min-w-0 bg-[#17181b] overflow-auto" ref={canvasRef}>
-          <div className="min-h-full py-6 flex justify-center">
-            <div style={{ width: canvasWidth, maxWidth: 'calc(100vw - 410px)' }} className="bg-black shadow-2xl rounded-xl overflow-hidden border border-white/10">
-              <div className="relative" style={{ background: design.brand.backgroundColor, color: design.brand.textColor, fontFamily: design.typography.bodyFont }}>
-                <CanvasNav design={design} />
-                {currentPage.sections.map((section: any) => section.visible !== false && (
-                  <CanvasSection
-                    key={section.id}
-                    section={section}
-                    design={design}
-                    selected={target?.id === section.id}
-                    selectedElementId={target?.kind === 'element' ? target.id : ''}
-                    onSelect={(id) => setTarget({kind:'section',id})}
-                    onSelectElement={(id) => setTarget({kind:'element',id})}
-                    onDrag={dragElement}
-                    onDoubleText={(id, text) => {
-                      const sectionId = section.id;
-                      commit(next => {
-                        const e = getPage(next, pageId).sections.find((s:any)=>s.id===sectionId)?.elements.find((x:any)=>x.id===id);
-                        if (e) e.text = text;
-                      });
-                    }}
-                  />
-                ))}
+          <div className="min-h-full py-6 px-5 flex justify-center">
+            <div
+              style={{
+                width: canvasWidth,
+                maxWidth: 'calc(100vw - 410px)',
+                minHeight: device === 'mobile' ? 844 : device === 'tablet' ? 900 : 760
+              }}
+              className="bg-black shadow-2xl rounded-xl overflow-hidden border border-white/10"
+            >
+              <div className="h-9 px-3 flex items-center justify-between border-b border-white/10 bg-[#0b0c0f] text-[10px] text-slate-400">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>LIVE AGENTDESK PAGE</span>
+                  <span className="text-slate-600">•</span>
+                  <span>{PAGE_DEFS.find(([id]) => id === pageId)?.[1] || pageId}</span>
+                </div>
+                <span className="text-slate-600">Publish to apply draft changes</span>
               </div>
+              <iframe
+                key={pageId + ':' + previewNonce}
+                title={'AgentDesk ' + (PAGE_DEFS.find(([id]) => id === pageId)?.[1] || pageId) + ' preview'}
+                src={(() => {
+                  const paths: Record<string, string> = {
+                    home: '/',
+                    pricing: '/pricing',
+                    login: '/login',
+                    dashboard: '/dashboard',
+                    voice: '/dashboard/voice-receptionist',
+                    'missed-call': '/dashboard/missed-calls',
+                    leads: '/dashboard/leads',
+                    crm: '/dashboard/crm',
+                    'follow-up': '/dashboard/followup',
+                    're-engagement': '/dashboard/reengagement',
+                    reviews: '/dashboard/reviews',
+                    appointments: '/dashboard/appointments',
+                    estimates: '/dashboard/estimates',
+                    'cold-outreach': '/dashboard/outreach',
+                    integrations: '/dashboard/integrations',
+                    'knowledge-base': '/dashboard/knowledge',
+                    conversations: '/dashboard/conversations',
+                    'platform-admin': '/admin'
+                  };
+                  return paths[pageId] || '/dashboard';
+                })()}
+                className="block w-full border-0 bg-black"
+                style={{
+                  height: device === 'mobile' ? 844 : device === 'tablet' ? 900 : 900,
+                  pointerEvents: 'auto'
+                }}
+              />
             </div>
           </div>
         </main>
