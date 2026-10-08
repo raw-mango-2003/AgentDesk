@@ -4,6 +4,10 @@ import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
 import './index.css';
 import { installGlobalHaptics } from './lib/haptics';
+import { ClerkProvider } from '@clerk/react';
+import { ClerkSessionBridge } from './components/auth/ClerkSessionBridge.tsx';
+import { initPostHog } from './lib/observability';
+import { initSentry, captureClientException } from './lib/sentry';
 
 class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | null}> {
   state = { error: null as Error | null };
@@ -14,6 +18,7 @@ class AppErrorBoundary extends Component<{children: ReactNode}, {error: Error | 
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[AgentDesk] Application render error:', error, info);
+    captureClientException(error, { componentStack: info.componentStack || undefined });
   }
 
   render() {
