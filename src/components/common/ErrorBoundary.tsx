@@ -1,6 +1,4 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { captureClientException } from '../../lib/sentry';
-
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -35,7 +33,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    captureClientException(error, { componentStack: errorInfo.componentStack || undefined });
     console.error('[ErrorBoundary caught error]:', error, errorInfo);
     this.setState({
       error,
