@@ -1,21 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Eye, RotateCcw, Save, Sparkles, Monitor, Smartphone, Tablet,
-  ChevronUp, ChevronDown, Palette, Type, Layers, Image as ImageIcon,
-  MousePointer2, Navigation, LayoutTemplate
+  AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, ChevronDown, Eye,
+  Image as ImageIcon, Layers3, Monitor, MousePointer2, Palette, Plus, Redo2,
+  RotateCcw, Save, Smartphone, Square, Tablet, Trash2, Type, Undo2, Upload,
+  LayoutTemplate, Move, Settings2
 } from 'lucide-react';
 import { safeFetchJson } from '../lib/apiClient';
 
 type Design = any;
+type Target = { kind: 'section' | 'element'; id: string };
 
 const DEFAULT: Design = {
   version: 2,
   site: { name: 'AgentDesk', publicDomain: '', logoUrl: '', faviconUrl: '', pageTitle: 'AgentDesk', pageDescription: '' },
-  brand: {
-    primaryColor: '#2563EB', secondaryColor: '#0F172A', accentColor: '#7C3AED',
-    backgroundColor: '#020617', surfaceColor: '#0F172A', textColor: '#F8FAFC',
-    mutedTextColor: '#94A3B8', borderColor: '#1E293B', successColor: '#22C55E', dangerColor: '#EF4444'
-  },
+  brand: { primaryColor: '#2563EB', secondaryColor: '#0F172A', accentColor: '#7C3AED', backgroundColor: '#020617', surfaceColor: '#0F172A', textColor: '#F8FAFC', mutedTextColor: '#94A3B8', borderColor: '#1E293B', successColor: '#22C55E', dangerColor: '#EF4444' },
   typography: { headingFont: 'Inter', bodyFont: 'Inter', baseSize: 16, headingWeight: 700, letterSpacing: -0.02, lineHeight: 1.5 },
   appearance: { theme: 'dark', radius: 18, shadow: 'medium', material: 'glass', glassBlur: 18, glassOpacity: 0.62, glassSaturation: 150, animationSpeed: 1, enableMotion: true },
   background: { mode: 'aurora', imageUrl: '', videoUrl: '', overlayColor: '#020617', overlayOpacity: 0.32, gradientStart: '#2563EB', gradientEnd: '#7C3AED', gradientAngle: 135 },
@@ -38,404 +36,374 @@ const DEFAULT: Design = {
   }
 };
 
-const FONTS = ['Inter', 'system-ui', 'Arial', 'Helvetica', 'Georgia', 'Trebuchet MS', 'Verdana'];
-const TABS: Array<[string, any, string]> = [
-  ['theme', Palette, 'Theme'], ['background', ImageIcon, 'Background'],
-  ['type', Type, 'Typography'], ['nav', Navigation, 'Navigation'],
-  ['buttons', MousePointer2, 'Buttons'], ['icons', Sparkles, 'Icons'],
-  ['pages', LayoutTemplate, 'Pages'], ['homepage', Layers, 'Homepage']
-];
+const clone = (v: any) => JSON.parse(JSON.stringify(v));
+const uid = (prefix: string) => prefix + '_' + Math.random().toString(36).slice(2, 9);
 
-const clone = (value: any) => JSON.parse(JSON.stringify(value));
+const PAGE_DEFS = [
+  ['home', 'Homepage'], ['pricing', 'Pricing'], ['login', 'Login'], ['dashboard', 'Dashboard'],
+  ['voice', 'Voice Receptionist'], ['missed-call', 'Missed Call Text Back'], ['leads', 'Leads'],
+  ['crm', 'CRM'], ['follow-up', 'Follow Up'], ['re-engagement', 'Re-engagement'], ['reviews', 'Reviews'],
+  ['appointments', 'Appointments'], ['estimates', 'Estimates'], ['cold-outreach', 'Cold Outreach'],
+  ['integrations', 'Integrations'], ['knowledge-base', 'Knowledge Base'], ['conversations', 'Conversations'],
+  ['platform-admin', 'Platform Admin']
+] as const;
 
-const normalizeAssetUrl = (raw: string) => {
-  const value = String(raw || '').trim();
-  if (!value) return '';
-  try {
-    const url = new URL(value, window.location.origin);
-    const host = url.hostname.toLowerCase();
-    const drive = url.pathname.match(/^\/file\/d\/([^/]+)/);
-    if ((host === 'drive.google.com' || host === 'docs.google.com') && drive?.[1]) {
-      return 'https://drive.google.com/uc?export=view&id=' + encodeURIComponent(drive[1]);
-    }
-    if (host === 'dropbox.com' || host.endsWith('.dropbox.com')) {
-      url.searchParams.set('raw', '1');
-      return url.toString();
-    }
-    if (host === 'github.com') {
-      const parts = url.pathname.split('/').filter(Boolean);
-      const index = parts.indexOf('blob');
-      if (index === 2 && parts.length >= 5) {
-        return 'https://raw.githubusercontent.com/' + parts[0] + '/' + parts[1] + '/' + parts[3] + '/' + parts.slice(4).join('/');
-      }
-    }
-    return url.toString();
-  } catch {
-    return value;
+const PAGE_COPY: Record<string, { title: string; subtitle: string; sections: string[] }> = {
+  home: { title: 'Your AI employee for every customer conversation.', subtitle: 'Turn enquiries into conversations, leads and booked work.', sections: ['hero', 'problem', 'poster', 'dashboard', 'benefits', 'pricing', 'cta', 'faq', 'footer'] },
+  pricing: { title: 'Simple pricing that scales with your business.', subtitle: 'Choose the plan that fits your customer operations.', sections: ['header', 'plans', 'faq', 'cta', 'footer'] },
+  login: { title: 'Welcome back.', subtitle: 'Sign in to your AgentDesk workspace.', sections: ['auth'] },
+  dashboard: { title: 'Your workspace.', subtitle: 'Everything your team needs in one place.', sections: ['sidebar', 'header', 'content'] }
+};
+
+const getPage = (design: Design, id: string) => {
+  if (!design.editor?.pages?.[id]) {
+    const copy = PAGE_COPY[id] || { title: PAGE_DEFS.find(p => p[0] === id)?.[1] || id, subtitle: 'Edit this page visually in the canvas.', sections: ['header', 'content', 'footer'] };
+    design.editor = design.editor || { pages: {} };
+    design.editor.pages[id] = {
+      title: copy.title, subtitle: copy.subtitle,
+      sections: copy.sections.map((name, i) => ({
+        id: id + '_' + name, name, label: name.replace(/[-_]/g, ' '),
+        visible: true, height: name === 'hero' ? 560 : 260,
+        background: '', padding: 40, align: 'center',
+        elements: [
+          { id: id + '_' + name + '_heading', type: 'heading', text: name === 'hero' ? copy.title : name.replace(/[-_]/g, ' '), x: 50, y: 32, width: 70, fontSize: name === 'hero' ? 46 : 30, weight: 700, color: '' },
+          { id: id + '_' + name + '_body', type: 'text', text: name === 'hero' ? copy.subtitle : 'Click any element to edit it directly.', x: 50, y: 54, width: 60, fontSize: 16, weight: 400, color: '' }
+        ]
+      }))
+    };
   }
+  return design.editor.pages[id];
+};
+
+const ensureEditor = (source: Design) => {
+  const next = clone(source || DEFAULT);
+  next.editor = next.editor || { pages: {} };
+  for (const [id] of PAGE_DEFS) getPage(next, id);
+  next.editor.activePage = next.editor.activePage || 'home';
+  return next;
 };
 
 export const DesignStudio: React.FC = () => {
-  const [design, setDesign] = useState<Design>(DEFAULT);
+  const [design, setDesign] = useState<Design>(() => ensureEditor(DEFAULT));
   const [loading, setLoading] = useState(true);
-  const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  const [tab, setTab] = useState('theme');
-  const [device, setDevice] = useState('desktop');
+  const [pageId, setPageId] = useState('home');
+  const [target, setTarget] = useState<Target | null>(null);
+  const [device, setDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [tool, setTool] = useState<'elements' | 'pages' | 'layers' | 'style'>('elements');
+  const [history, setHistory] = useState<Design[]>([]);
+  const [future, setFuture] = useState<Design[]>([]);
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     safeFetchJson('/api/site-design', { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } })
-      .then((result: any) => {
-        if (result.success && result.design) setDesign(result.design);
+      .then((r: any) => {
+        const next = ensureEditor(r?.success && r.design ? r.design : DEFAULT);
+        setDesign(next);
+        setPageId(next.editor.activePage || 'home');
       })
-      .catch((e: any) => setError(e?.message || 'Could not load design.'))
+      .catch((e: any) => setError(e?.message || 'Could not load Visual Studio.'))
       .finally(() => setLoading(false));
   }, []);
 
-  const update = (path: string[], value: any) => {
-    setDesign((current: Design) => {
+  const commit = (mutate: (next: Design) => void) => {
+    setDesign(current => {
       const next = clone(current);
-      let target = next;
-      path.slice(0, -1).forEach((key) => { target = target[key]; });
-      target[path[path.length - 1]] = value;
+      mutate(next);
+      setHistory(h => [...h.slice(-39), current]);
+      setFuture([]);
       return next;
     });
     setSaved(false);
   };
 
+  const updatePath = (path: string[], value: any) => commit(next => {
+    let obj = next;
+    path.slice(0, -1).forEach(k => { obj[k] = obj[k] || {}; obj = obj[k]; });
+    obj[path[path.length - 1]] = value;
+  });
+
+  const currentPage = useMemo(() => getPage(design, pageId), [design, pageId]);
+
   const publish = async () => {
-    setBusy(true);
-    setError('');
+    setBusy(true); setError('');
     try {
-      const result: any = await safeFetchJson('/api/site-design', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(design)
-      });
-      if (!result.success) throw new Error(result.error?.message || result.message || 'Publish failed.');
-      setDesign(result.design || design);
-      setSaved(true);
-    } catch (e: any) {
-      setError(e?.message || 'Publish failed.');
-    } finally {
-      setBusy(false);
-    }
+      const r: any = await safeFetchJson('/api/site-design', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(design) });
+      if (!r.success) throw new Error(r.error?.message || r.message || 'Publish failed.');
+      setDesign(ensureEditor(r.design || design)); setSaved(true);
+    } catch (e: any) { setError(e?.message || 'Publish failed.'); }
+    finally { setBusy(false); }
   };
 
   const reset = async () => {
     if (!window.confirm('Reset the Visual Studio design?')) return;
     setBusy(true);
-    setError('');
     try {
-      const result: any = await safeFetchJson('/api/site-design/reset', { method: 'POST' });
-      if (!result.success) throw new Error(result.error?.message || result.message || 'Reset failed.');
-      setDesign(result.design || DEFAULT);
-    } catch (e: any) {
-      setError(e?.message || 'Reset failed.');
-    } finally {
-      setBusy(false);
-    }
+      const r: any = await safeFetchJson('/api/site-design/reset', { method: 'POST' });
+      if (!r.success) throw new Error(r.error?.message || r.message || 'Reset failed.');
+      setDesign(ensureEditor(r.design || DEFAULT)); setHistory([]); setFuture([]); setTarget(null);
+    } catch (e: any) { setError(e?.message || 'Reset failed.'); }
+    finally { setBusy(false); }
+  };
+
+  const undo = () => {
+    if (!history.length) return;
+    const previous = history[history.length - 1];
+    setFuture(f => [design, ...f.slice(0, 39)]);
+    setHistory(h => h.slice(0, -1));
+    setDesign(previous);
+  };
+
+  const redo = () => {
+    if (!future.length) return;
+    const next = future[0];
+    setHistory(h => [...h.slice(-39), design]);
+    setFuture(f => f.slice(1));
+    setDesign(next);
+  };
+
+  const addElement = (type: 'heading' | 'text' | 'button' | 'image' | 'shape') => {
+    const section = currentPage.sections[0];
+    if (!section) return;
+    const defaults: Record<string, any> = {
+      heading: { text: 'New heading', fontSize: 34, weight: 700, width: 70 },
+      text: { text: 'New text block', fontSize: 16, weight: 400, width: 60 },
+      button: { text: 'Button', fontSize: 14, weight: 700, width: 28 },
+      image: { text: '', fontSize: 14, weight: 400, width: 40, imageUrl: '' },
+      shape: { text: '', fontSize: 14, weight: 400, width: 30 }
+    };
+    const element = { id: uid('el'), type, x: 50, y: 70, ...defaults[type] };
+    commit(next => { const p = getPage(next, pageId); p.sections[0].elements.push(element); });
+    setTarget({ kind: 'element', id: element.id });
+  };
+
+  const addSection = () => {
+    const section = { id: uid('section'), name: 'section', label: 'New section', visible: true, height: 300, background: '', padding: 40, align: 'center', elements: [{ id: uid('el'), type: 'heading', text: 'New section', x: 50, y: 35, width: 70, fontSize: 32, weight: 700, color: '' }] };
+    commit(next => getPage(next, pageId).sections.push(section));
+    setTarget({ kind: 'section', id: section.id });
+  };
+
+  const moveSection = (index: number, direction: number) => commit(next => {
+    const sections = getPage(next, pageId).sections;
+    const ni = index + direction;
+    if (ni >= 0 && ni < sections.length) [sections[index], sections[ni]] = [sections[ni], sections[index]];
+  });
+
+  const selectedSection = currentPage.sections.find((s: any) => s.id === (target?.kind === 'section' ? target.id : currentPage.sections.find((s: any) => s.elements.some((e: any) => e.id === target?.id))?.id));
+  const selectedElement = currentPage.sections.flatMap((s: any) => s.elements).find((e: any) => e.id === (target?.kind === 'element' ? target.id : ''));
+  const canvasWidth = device === 'desktop' ? 1180 : device === 'tablet' ? 768 : 390;
+
+  const dragElement = (event: React.PointerEvent, element: any) => {
+    event.stopPropagation();
+    const startX = event.clientX, startY = event.clientY;
+    const startLeft = element.x, startTop = element.y;
+    const section = currentPage.sections.find((s: any) => s.elements.some((e: any) => e.id === element.id));
+    const rect = (event.currentTarget as HTMLElement).parentElement?.getBoundingClientRect();
+    if (!rect || !section) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    const move = (ev: PointerEvent) => {
+      const x = Math.max(2, Math.min(98, startLeft + ((ev.clientX - startX) / rect.width) * 100));
+      const y = Math.max(2, Math.min(96, startTop + ((ev.clientY - startY) / rect.height) * 100));
+      setDesign((current: Design) => {
+        const next = clone(current);
+        const p = getPage(next, pageId);
+        const el = p.sections.flatMap((s: any) => s.elements).find((e: any) => e.id === element.id);
+        if (el) { el.x = Number(x.toFixed(2)); el.y = Number(y.toFixed(2)); }
+        return next;
+      });
+      setSaved(false);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setHistory(h => [...h.slice(-39), design]);
+      setFuture([]);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
   };
 
   const uploadImage = (file: File) => {
-    setError('');
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file.');
-      return;
-    }
-    if (file.size > 12 * 1024 * 1024) {
-      setError('Image must be smaller than 12 MB.');
-      return;
-    }
+    if (!file.type.startsWith('image/') || file.size > 12 * 1024 * 1024) { setError('Choose an image smaller than 12 MB.'); return; }
     const reader = new FileReader();
     reader.onload = () => {
-      const source = String(reader.result || '');
+      const src = String(reader.result || '');
       const image = new Image();
       image.onload = () => {
         const scale = Math.min(1, 1600 / image.width, 1000 / image.height);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(image.width * scale));
-        canvas.height = Math.max(1, Math.round(image.height * scale));
-        const context = canvas.getContext('2d');
-        if (!context) {
-          setError('Could not prepare image.');
-          return;
-        }
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const compressed = canvas.toDataURL('image/webp', 0.82);
-        if (compressed.length > 1200000) {
-          setError('Image is still too large. Choose a smaller image.');
-          return;
-        }
-        update(['background', 'imageUrl'], compressed);
-        update(['background', 'mode'], 'image');
+        const c = document.createElement('canvas'); c.width = Math.max(1, image.width * scale); c.height = Math.max(1, image.height * scale);
+        const ctx = c.getContext('2d'); if (!ctx) return;
+        ctx.drawImage(image, 0, 0, c.width, c.height);
+        const compressed = c.toDataURL('image/webp', .82);
+        if (selectedElement) updateSelected({ imageUrl: compressed });
       };
-      image.onerror = () => setError('Could not read image.');
-      image.src = source;
+      image.src = src;
     };
-    reader.onerror = () => setError('Could not read image.');
     reader.readAsDataURL(file);
   };
 
-  const moveSection = (index: number, direction: number) => {
-    const sections = [...design.homepage.sectionOrder];
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= sections.length) return;
-    [sections[index], sections[nextIndex]] = [sections[nextIndex], sections[index]];
-    update(['homepage', 'sectionOrder'], sections);
+  function updateSelected(patch: any) {
+    if (!target) return;
+    commit(next => {
+      const p = getPage(next, pageId);
+      if (target.kind === 'section') {
+        const s = p.sections.find((x: any) => x.id === target.id);
+        if (s) Object.assign(s, patch);
+      } else {
+        const e = p.sections.flatMap((s: any) => s.elements).find((x: any) => x.id === target.id);
+        if (e) Object.assign(e, patch);
+      }
+    });
+  }
+
+  const removeSelected = () => {
+    if (!target) return;
+    commit(next => {
+      const p = getPage(next, pageId);
+      if (target.kind === 'section') p.sections = p.sections.filter((s: any) => s.id !== target.id);
+      else p.sections.forEach((s: any) => { s.elements = s.elements.filter((e: any) => e.id !== target.id); });
+    });
+    setTarget(null);
   };
 
   if (loading) return <div className="p-8 text-slate-400">Loading Visual Studio...</div>;
 
-  const background = design.background.mode === 'gradient'
-    ? 'linear-gradient(' + design.background.gradientAngle + 'deg,' + design.background.gradientStart + ',' + design.background.gradientEnd + ')'
-    : design.background.mode === 'glass'
-      ? 'radial-gradient(circle at 20% 10%,rgba(37,99,235,.35),transparent 40%),radial-gradient(circle at 80% 20%,rgba(124,58,237,.3),transparent 40%)'
-      : design.background.mode === 'aurora'
-        ? 'radial-gradient(circle at 20% 20%,rgba(37,99,235,.42),transparent 35%),radial-gradient(circle at 80% 10%,rgba(124,58,237,.35),transparent 38%),' + design.brand.backgroundColor
-        : design.brand.backgroundColor;
-
   return (
-    <div className="min-h-full bg-[#05070c] text-white flex flex-col">
-      <header className="h-16 border-b border-white/10 bg-black/40 backdrop-blur-xl flex items-center justify-between px-5 sticky top-0 z-30">
-        <div>
-          <div className="text-[10px] tracking-[.25em] font-black text-blue-400">AGENTDESK CONTROL CENTER</div>
-          <div className="font-black text-lg">Visual Studio</div>
+    <div className="min-h-full h-full bg-[#070809] text-white flex flex-col overflow-hidden">
+      <header className="h-14 shrink-0 border-b border-white/10 bg-[#0b0c0f] flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <div className="font-black">Visual Studio</div>
+          <div className="text-[10px] text-slate-500 border border-white/10 rounded px-2 py-1">ALL PAGES</div>
+          <div className="flex items-center gap-1 ml-2">
+            <IconButton label="Undo" onClick={undo} disabled={!history.length}><Undo2 /></IconButton>
+            <IconButton label="Redo" onClick={redo} disabled={!future.length}><Redo2 /></IconButton>
+          </div>
         </div>
-
-        <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
-          <DeviceButton active={device === 'desktop'} onClick={() => setDevice('desktop')} icon={<Monitor className="w-4 h-4" />} />
-          <DeviceButton active={device === 'tablet'} onClick={() => setDevice('tablet')} icon={<Tablet className="w-4 h-4" />} />
-          <DeviceButton active={device === 'mobile'} onClick={() => setDevice('mobile')} icon={<Smartphone className="w-4 h-4" />} />
+        <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+          <Device active={device === 'desktop'} onClick={() => setDevice('desktop')}><Monitor /></Device>
+          <Device active={device === 'tablet'} onClick={() => setDevice('tablet')}><Tablet /></Device>
+          <Device active={device === 'mobile'} onClick={() => setDevice('mobile')}><Smartphone /></Device>
         </div>
-
-        <div className="flex gap-2">
-          <button type="button" onClick={reset} disabled={busy} className="p-2 rounded-xl border border-white/10 disabled:opacity-40">
-            <RotateCcw className="w-4 h-4" />
-          </button>
-          <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold flex gap-2 items-center">
-            <Save className="w-4 h-4" />
-            {busy ? 'Saving...' : saved ? 'Published' : 'Publish'}
-          </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={reset} className="p-2 rounded-lg border border-white/10"><RotateCcw className="w-4 h-4" /></button>
+          <button type="button" onClick={publish} disabled={busy} className="px-4 py-2 rounded-lg bg-blue-600 text-xs font-bold flex gap-2 items-center"><Save className="w-4 h-4" />{busy ? 'Saving...' : saved ? 'Published' : 'Publish'}</button>
         </div>
       </header>
-
-      {error ? <div className="mx-5 mt-3 rounded-xl border border-red-500/30 bg-red-950/70 px-4 py-3 text-xs text-red-200">{error}</div> : null}
+      {error && <div className="px-4 py-2 bg-red-950/80 text-xs text-red-200 border-b border-red-500/20">{error}</div>}
 
       <div className="flex flex-1 min-h-0">
-        <aside className="w-64 shrink-0 border-r border-white/10 bg-[#090b11] p-3 overflow-y-auto">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500 font-black px-2 mb-2">Design system</div>
-          {TABS.map(([id, Icon, label]) => (
-            <button
-              type="button"
-              key={id}
-              onClick={() => setTab(id)}
-              className={'w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm mb-1 ' + (tab === id ? 'bg-blue-600/15 text-blue-300 border border-blue-500/20' : 'text-slate-400 hover:bg-white/5')}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </button>
-          ))}
+        <aside className="w-16 shrink-0 border-r border-white/10 bg-[#0b0c0f] flex flex-col items-center py-3 gap-2">
+          <Tool active={tool === 'elements'} onClick={() => setTool('elements')}><Plus /></Tool>
+          <Tool active={tool === 'pages'} onClick={() => setTool('pages')}><LayoutTemplate /></Tool>
+          <Tool active={tool === 'layers'} onClick={() => setTool('layers')}><Layers3 /></Tool>
+          <Tool active={tool === 'style'} onClick={() => setTool('style')}><Palette /></Tool>
         </aside>
 
-        <section className="w-[360px] shrink-0 border-r border-white/10 bg-[#0b0e15] p-4 overflow-y-auto">
-          <h2 className="font-black text-lg mb-4">{tab === 'theme' ? 'Theme & Material' : tab === 'background' ? 'Background & Motion' : tab === 'type' ? 'Typography' : tab === 'nav' ? 'Navigation' : tab === 'buttons' ? 'Buttons' : tab === 'icons' ? 'Icon System' : tab === 'pages' ? 'All Pages' : 'Homepage Builder'}</h2>
+        <aside className="w-64 shrink-0 border-r border-white/10 bg-[#101114] p-3 overflow-y-auto">
+          {tool === 'elements' && <Panel title="Add to canvas">
+            <AddButton onClick={() => addElement('heading')}><Type /> Heading</AddButton>
+            <AddButton onClick={() => addElement('text')}><Type /> Text</AddButton>
+            <AddButton onClick={() => addElement('button')}><MousePointer2 /> Button</AddButton>
+            <AddButton onClick={() => addElement('image')}><ImageIcon /> Image</AddButton>
+            <AddButton onClick={() => addElement('shape')}><Square /> Shape</AddButton>
+            <AddButton onClick={addSection}><Plus /> Section</AddButton>
+          </Panel>}
+          {tool === 'pages' && <Panel title="Pages">
+            {PAGE_DEFS.map(([id, label]) => <button key={id} type="button" onClick={() => { setPageId(id); setTarget(null); }} className={'w-full text-left px-3 py-2.5 rounded-lg text-sm mb-1 ' + (pageId === id ? 'bg-blue-600/20 text-blue-200' : 'text-slate-400 hover:bg-white/5')}>{label}</button>)}
+          </Panel>}
+          {tool === 'layers' && <Panel title="Layers">
+            {currentPage.sections.map((section: any, index: number) => <div key={section.id} className="mb-2">
+              <button type="button" onClick={() => setTarget({kind:'section',id:section.id})} className={'w-full text-left px-2 py-2 rounded bg-white/5 text-xs ' + (target?.id === section.id ? 'ring-1 ring-blue-500' : '')}>{section.label || section.name}</button>
+              <div className="pl-3 pt-1">{section.elements.map((e: any) => <button key={e.id} type="button" onClick={() => setTarget({kind:'element',id:e.id})} className={'block w-full text-left px-2 py-1.5 text-[11px] text-slate-400 rounded ' + (target?.id === e.id ? 'bg-blue-600/20 text-blue-200' : '')}>{e.type}: {e.text || 'media'}</button>)}</div>
+              <div className="flex gap-1 mt-1">
+                <SmallButton onClick={() => moveSection(index, -1)}><ArrowUp /></SmallButton>
+                <SmallButton onClick={() => moveSection(index, 1)}><ArrowDown /></SmallButton>
+              </div>
+            </div>)}
+          </Panel>}
+          {tool === 'style' && <Panel title="Global style">
+            <Color label="Primary" value={design.brand.primaryColor} onChange={v => updatePath(['brand','primaryColor'],v)} />
+            <Color label="Background" value={design.brand.backgroundColor} onChange={v => updatePath(['brand','backgroundColor'],v)} />
+            <Color label="Text" value={design.brand.textColor} onChange={v => updatePath(['brand','textColor'],v)} />
+            <Range label="Radius" value={design.appearance.radius} min={0} max={40} onChange={v => updatePath(['appearance','radius'],v)} />
+            <Select label="Heading font" value={design.typography.headingFont} options={['Inter','system-ui','Arial','Helvetica','Georgia','Trebuchet MS','Verdana']} onChange={v => updatePath(['typography','headingFont'],v)} />
+            <Select label="Body font" value={design.typography.bodyFont} options={['Inter','system-ui','Arial','Helvetica','Georgia','Trebuchet MS','Verdana']} onChange={v => updatePath(['typography','bodyFont'],v)} />
+          </Panel>}
+        </aside>
 
-          {tab === 'theme' && (
-            <>
-              {Object.keys(design.brand).map((key) => (
-                <ColorControl key={key} label={key.replace(/([A-Z])/g, ' $1')} value={design.brand[key]} onChange={(value) => update(['brand', key], value)} />
-              ))}
-              <SelectControl label="Material" value={design.appearance.material} options={['solid', 'glass', 'soft-glass', 'frosted', 'transparent', 'elevated']} onChange={(value) => update(['appearance', 'material'], value)} />
-              <RangeControl label="Corner radius" value={design.appearance.radius} min={0} max={40} onChange={(value) => update(['appearance', 'radius'], value)} />
-              <RangeControl label="Glass blur" value={design.appearance.glassBlur} min={0} max={40} onChange={(value) => update(['appearance', 'glassBlur'], value)} />
-              <ToggleControl label="Motion & animations" value={design.appearance.enableMotion} onChange={(value) => update(['appearance', 'enableMotion'], value)} />
-            </>
-          )}
-
-          {tab === 'background' && (
-            <>
-              <SelectControl label="Background mode" value={design.background.mode} options={['solid', 'gradient', 'image', 'video', 'aurora', 'particles', 'shapes', 'glass']} onChange={(value) => update(['background', 'mode'], value)} />
-              <label className="block text-xs text-slate-400 mb-3">
-                Background image
-                <label className="mt-1 flex items-center justify-center gap-2 w-full px-3 py-3 rounded-xl border border-dashed border-white/15 bg-white/5 hover:bg-white/10 cursor-pointer text-xs text-slate-300">
-                  <ImageIcon className="w-4 h-4" />
-                  Upload image
-                  <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) uploadImage(file); event.currentTarget.value = ''; }} />
-                </label>
-              </label>
-              <InputControl label="Image URL" value={design.background.imageUrl?.startsWith('data:image/') ? '' : design.background.imageUrl} onChange={(value) => update(['background', 'imageUrl'], value)} />
-              <InputControl label="Video URL" value={design.background.videoUrl} onChange={(value) => update(['background', 'videoUrl'], value)} />
-              <ColorControl label="Gradient start" value={design.background.gradientStart} onChange={(value) => update(['background', 'gradientStart'], value)} />
-              <ColorControl label="Gradient end" value={design.background.gradientEnd} onChange={(value) => update(['background', 'gradientEnd'], value)} />
-              <RangeControl label="Overlay opacity" value={design.background.overlayOpacity} min={0} max={1} step={0.05} onChange={(value) => update(['background', 'overlayOpacity'], value)} />
-            </>
-          )}
-
-          {tab === 'type' && (
-            <>
-              <SelectControl label="Heading font" value={design.typography.headingFont} options={FONTS} onChange={(value) => update(['typography', 'headingFont'], value)} />
-              <SelectControl label="Body font" value={design.typography.bodyFont} options={FONTS} onChange={(value) => update(['typography', 'bodyFont'], value)} />
-              <RangeControl label="Base size" value={design.typography.baseSize} min={12} max={24} onChange={(value) => update(['typography', 'baseSize'], value)} />
-              <RangeControl label="Heading weight" value={design.typography.headingWeight} min={400} max={900} step={100} onChange={(value) => update(['typography', 'headingWeight'], value)} />
-              <RangeControl label="Line height" value={design.typography.lineHeight} min={1} max={2.2} step={0.1} onChange={(value) => update(['typography', 'lineHeight'], value)} />
-            </>
-          )}
-
-          {tab === 'nav' && (
-            <>
-              <SelectControl label="Navigation style" value={design.navigation.style} options={['minimal', 'floating', 'glass', 'solid']} onChange={(value) => update(['navigation', 'style'], value)} />
-              <ToggleControl label="Sticky navigation" value={design.navigation.sticky} onChange={(value) => update(['navigation', 'sticky'], value)} />
-              <ToggleControl label="Show Sign In" value={design.navigation.showLogin} onChange={(value) => update(['navigation', 'showLogin'], value)} />
-              <ToggleControl label="Show Get Started" value={design.navigation.showGetStarted} onChange={(value) => update(['navigation', 'showGetStarted'], value)} />
-              <ToggleControl label="Show Demo" value={design.navigation.showDemo} onChange={(value) => update(['navigation', 'showDemo'], value)} />
-            </>
-          )}
-
-          {tab === 'buttons' && (
-            <>
-              <SelectControl label="Button style" value={design.buttons.style} options={['solid', 'gradient', 'glass', 'outline', 'ghost', 'pill']} onChange={(value) => update(['buttons', 'style'], value)} />
-              <RangeControl label="Button radius" value={design.buttons.radius} min={0} max={40} onChange={(value) => update(['buttons', 'radius'], value)} />
-              <ToggleControl label="Button shadow" value={design.buttons.shadow} onChange={(value) => update(['buttons', 'shadow'], value)} />
-              <ToggleControl label="Hover lift" value={design.buttons.hoverLift} onChange={(value) => update(['buttons', 'hoverLift'], value)} />
-              <ToggleControl label="Uppercase labels" value={design.buttons.uppercase} onChange={(value) => update(['buttons', 'uppercase'], value)} />
-            </>
-          )}
-
-          {tab === 'icons' && (
-            <>
-              <SelectControl label="Icon theme" value={design.icons.style} options={['filled', 'outline', 'duotone', 'minimal']} onChange={(value) => update(['icons', 'style'], value)} />
-              <RangeControl label="Icon size" value={design.icons.size} min={12} max={64} onChange={(value) => update(['icons', 'size'], value)} />
-              <RangeControl label="Stroke width" value={design.icons.strokeWidth} min={0.5} max={4} step={0.1} onChange={(value) => update(['icons', 'strokeWidth'], value)} />
-              <ColorControl label="Icon color" value={design.icons.color} onChange={(value) => update(['icons', 'color'], value)} />
-            </>
-          )}
-
-          {tab === 'pages' && (
-            <>
-              <ColorControl label="Dashboard background" value={design.pages.dashboard.backgroundColor} onChange={(value) => update(['pages', 'dashboard', 'backgroundColor'], value)} />
-              <ColorControl label="Dashboard surface" value={design.pages.dashboard.surfaceColor} onChange={(value) => update(['pages', 'dashboard', 'surfaceColor'], value)} />
-              <SelectControl label="Dashboard density" value={design.pages.dashboard.density} options={['compact', 'comfortable', 'spacious']} onChange={(value) => update(['pages', 'dashboard', 'density'], value)} />
-              <ColorControl label="Login background" value={design.pages.login.backgroundColor} onChange={(value) => update(['pages', 'login', 'backgroundColor'], value)} />
-              <ColorControl label="Login surface" value={design.pages.login.surfaceColor} onChange={(value) => update(['pages', 'login', 'surfaceColor'], value)} />
-              <ColorControl label="Pricing highlight" value={design.pages.pricing.highlightColor} onChange={(value) => update(['pages', 'pricing', 'highlightColor'], value)} />
-            </>
-          )}
-
-          {tab === 'homepage' && (
-            <>
-              <InputControl label="Hero headline" value={design.homepage.heroHeadline} onChange={(value) => update(['homepage', 'heroHeadline'], value)} />
-              <InputControl label="Hero subheadline" value={design.homepage.heroSubheadline} onChange={(value) => update(['homepage', 'heroSubheadline'], value)} />
-              <SelectControl label="Hero alignment" value={design.homepage.heroAlignment} options={['left', 'center', 'right']} onChange={(value) => update(['homepage', 'heroAlignment'], value)} />
-              <RangeControl label="Hero height" value={design.homepage.heroMinHeight} min={420} max={1000} onChange={(value) => update(['homepage', 'heroMinHeight'], value)} />
-              <div className="text-xs font-bold mt-5 mb-2">Section order</div>
-              {design.homepage.sectionOrder.map((section: string, index: number) => (
-                <div key={section} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 mb-1">
-                  <span className="text-xs flex-1 capitalize">{section}</span>
-                  <button type="button" onClick={() => moveSection(index, -1)} className="p-1"><ChevronUp className="w-3 h-3" /></button>
-                  <button type="button" onClick={() => moveSection(index, 1)} className="p-1"><ChevronDown className="w-3 h-3" /></button>
-                </div>
-              ))}
-              <ToggleControl label="Show problem" value={design.homepage.showProblem} onChange={(value) => update(['homepage', 'showProblem'], value)} />
-              <ToggleControl label="Show process" value={design.homepage.showPosterProcess} onChange={(value) => update(['homepage', 'showPosterProcess'], value)} />
-              <ToggleControl label="Show benefits" value={design.homepage.showBenefits} onChange={(value) => update(['homepage', 'showBenefits'], value)} />
-              <ToggleControl label="Show integrations" value={design.homepage.showIntegrations} onChange={(value) => update(['homepage', 'showIntegrations'], value)} />
-              <ToggleControl label="Show pricing" value={design.homepage.showPricing} onChange={(value) => update(['homepage', 'showPricing'], value)} />
-              <ToggleControl label="Show FAQ" value={design.homepage.showFaq} onChange={(value) => update(['homepage', 'showFaq'], value)} />
-            </>
-          )}
-        </section>
-
-        <main className="flex-1 p-5 overflow-auto bg-[#11141b]">
-          <div className="flex justify-center">
-            <div className={device === 'desktop' ? 'w-full max-w-[1200px]' : device === 'tablet' ? 'w-[768px] max-w-full' : 'w-[390px] max-w-full'}>
-              <div
-                style={{ background, borderRadius: design.appearance.radius, minHeight: design.homepage.heroMinHeight, color: design.brand.textColor, fontFamily: design.typography.bodyFont }}
-                className="relative overflow-hidden shadow-2xl"
-              >
-                {design.background.mode === 'image' && design.background.imageUrl ? (
-                  <img src={normalizeAssetUrl(design.background.imageUrl)} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />
-                ) : null}
-                {design.background.mode === 'video' && design.background.videoUrl ? (
-                  <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70">
-                    <source src={normalizeAssetUrl(design.background.videoUrl)} />
-                  </video>
-                ) : null}
-                <div className="relative z-10 p-5">
-                  <div style={{ backdropFilter: 'blur(' + design.navigation.blur + 'px)', background: 'rgba(255,255,255,.07)', borderRadius: design.appearance.radius }} className="h-14 px-4 flex items-center justify-between border border-white/10">
-                    <div className="font-black">{design.site.name}</div>
-                    <button type="button" style={{ background: design.brand.primaryColor, borderRadius: design.buttons.radius }} className="px-3 py-2 text-white text-xs">Get Started</button>
-                  </div>
-                  <section style={{ minHeight: Math.min(design.homepage.heroMinHeight, 650), textAlign: design.homepage.heroAlignment }} className="flex flex-col justify-center py-16 px-6">
-                    <div className="inline-flex self-center gap-2 text-xs px-3 py-1.5 rounded-full border border-white/10 bg-white/5">
-                      <Sparkles style={{ color: design.icons.color }} className="w-3 h-3" /> AI EMPLOYEE PLATFORM
-                    </div>
-                    <h1 style={{ fontFamily: design.typography.headingFont, fontWeight: design.typography.headingWeight, letterSpacing: design.typography.letterSpacing + 'em' }} className="text-5xl md:text-7xl mt-6 leading-tight">
-                      {design.homepage.heroHeadline}
-                    </h1>
-                    <p style={{ fontSize: design.typography.baseSize, lineHeight: design.typography.lineHeight }} className="max-w-2xl mt-5 text-white/65 mx-auto">
-                      {design.homepage.heroSubheadline}
-                    </p>
-                    <div className="flex justify-center gap-3 mt-8">
-                      <button type="button" style={{ background: design.brand.primaryColor, borderRadius: design.buttons.radius }} className="px-5 py-3 text-sm font-bold text-white">Get Started</button>
-                      <button type="button" style={{ borderRadius: design.buttons.radius }} className="px-5 py-3 text-sm font-bold border border-white/15 bg-white/5">View Demo</button>
-                    </div>
-                  </section>
-                </div>
+        <main className="flex-1 min-w-0 bg-[#17181b] overflow-auto" ref={canvasRef}>
+          <div className="min-h-full py-8 flex justify-center">
+            <div style={{ width: canvasWidth, maxWidth: 'calc(100vw - 410px)' }} className="bg-white shadow-2xl rounded-sm overflow-hidden">
+              <div className="relative" style={{ background: design.brand.backgroundColor, color: design.brand.textColor, fontFamily: design.typography.bodyFont }}>
+                <CanvasNav design={design} />
+                {currentPage.sections.map((section: any) => section.visible !== false && (
+                  <CanvasSection
+                    key={section.id}
+                    section={section}
+                    design={design}
+                    selected={target?.id === section.id}
+                    selectedElementId={target?.kind === 'element' ? target.id : ''}
+                    onSelect={(id) => setTarget({kind:'section',id})}
+                    onSelectElement={(id) => setTarget({kind:'element',id})}
+                    onDrag={dragElement}
+                    onDoubleText={(id, text) => {
+                      const sectionId = section.id;
+                      commit(next => {
+                        const e = getPage(next, pageId).sections.find((s:any)=>s.id===sectionId)?.elements.find((x:any)=>x.id===id);
+                        if (e) e.text = text;
+                      });
+                    }}
+                  />
+                ))}
               </div>
             </div>
           </div>
         </main>
+
+        <aside className="w-72 shrink-0 border-l border-white/10 bg-[#101114] p-4 overflow-y-auto">
+          <div className="flex items-center justify-between mb-4"><div className="font-bold text-sm">Properties</div>{target && <button type="button" onClick={removeSelected} className="p-1.5 rounded border border-red-500/20 text-red-300"><Trash2 className="w-3.5 h-3.5" /></button>}</div>
+          {!target && <div className="text-xs text-slate-500 leading-5">Select anything on the canvas. You can move it, resize it, edit its text and change its visual properties here.</div>}
+          {target?.kind === 'section' && selectedSection && <SectionInspector section={selectedSection} onChange={updateSelected} />}
+          {target?.kind === 'element' && selectedElement && <ElementInspector element={selectedElement} onChange={updateSelected} onUpload={uploadImage} />}
+        </aside>
       </div>
     </div>
   );
 };
 
-const DeviceButton = ({ active, onClick, icon }: { active: boolean; onClick: () => void; icon: React.ReactNode }) => (
-  <button type="button" onClick={onClick} className={'p-2 rounded-lg ' + (active ? 'bg-white/10 text-white' : 'text-slate-500')}>
-    {icon}
-  </button>
+const CanvasNav = ({design}:{design:Design}) => <div style={{background:'rgba(10,10,10,.82)',backdropFilter:'blur(18px)',borderBottom:'1px solid rgba(255,255,255,.08)'}} className="h-14 px-5 flex items-center justify-between sticky top-0 z-10"><div className="font-black text-sm">{design.site.name}</div><div className="flex gap-2"><span className="text-[10px] text-white/50 px-2 py-1">Products</span><span className="text-[10px] text-white/50 px-2 py-1">Pricing</span><span className="text-[10px] text-white/50 px-2 py-1">Contact</span><button style={{background:design.brand.primaryColor,borderRadius:design.buttons.radius}} className="px-3 py-1.5 text-[10px] font-bold">Get Started</button></div></div>;
+
+const CanvasSection = ({section,design,selected,selectedElementId,onSelect,onSelectElement,onDrag,onDoubleText}:{section:any,design:Design,selected:boolean,selectedElementId:string,onSelect:(id:string)=>void,onSelectElement:(id:string)=>void,onDrag:(e:React.PointerEvent,el:any)=>void,onDoubleText:(id:string,text:string)=>void}) => (
+  <section onPointerDown={() => onSelect(section.id)} style={{minHeight:section.height||280,padding:section.padding||40,background:section.background||'transparent',textAlign:section.align||'center'}} className={'relative overflow-hidden border-2 ' + (selected ? 'border-blue-500/70' : 'border-transparent hover:border-blue-500/30')}>
+    {selected && <div className="absolute left-2 top-2 z-20 px-2 py-1 bg-blue-600 text-[9px] uppercase font-bold rounded">{section.label || section.name}</div>}
+    {section.elements.map((e:any)=><CanvasElement key={e.id} element={e} design={design} selected={selectedElementId===e.id} onSelect={(ev)=>{ev.stopPropagation();onSelectElement(e.id)}} onDrag={onDrag} onDoubleText={onDoubleText}/>)}
+  </section>
 );
 
-const InputControl = ({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) => (
-  <label className="block text-xs text-slate-400 mb-3">
-    {label}
-    <input value={value || ''} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none" />
-  </label>
-);
+const CanvasElement = ({element,design,selected,onSelect,onDrag,onDoubleText}:{element:any,design:Design,selected:boolean,onSelect:(e:React.PointerEvent)=>void,onDrag:(e:React.PointerEvent,el:any)=>void,onDoubleText:(id:string,text:string)=>void}) => {
+  const common:any={position:'absolute',left:(element.x||50)+'%',top:(element.y||50)+'%',width:(element.width||50)+'%',transform:'translate(-50%,-50%)',fontSize:element.fontSize||16,fontWeight:element.weight||400,color:element.color||design.brand.textColor,cursor:'move',outline:selected?'2px solid #3b82f6':'none',outlineOffset:4};
+  const textStyle:any={fontFamily:element.type==='heading'?design.typography.headingFont:design.typography.bodyFont};
+  const begin=(e:React.PointerEvent)=>{onSelect(e);onDrag(e,element)};
+  if(element.type==='image') return <div style={common} onPointerDown={begin}>{element.imageUrl?<img src={element.imageUrl} alt="" className="w-full h-40 object-cover rounded-lg"/>:<div className="h-32 rounded-lg bg-white/10 flex items-center justify-center"><ImageIcon className="w-8 h-8 opacity-30"/></div>}</div>;
+  if(element.type==='button') return <button type="button" style={{...common,background:design.brand.primaryColor,borderRadius:design.buttons.radius}} onPointerDown={begin} onDoubleClick={()=>onDoubleText(element.id,prompt('Button label',element.text||'Button')||element.text)}>{element.text||'Button'}</button>;
+  if(element.type==='shape') return <div style={{...common,height:100,background:element.color||design.brand.primaryColor,borderRadius:design.appearance.radius}} onPointerDown={begin}/>;
+  return <div style={{...common,...textStyle}} onPointerDown={begin} onDoubleClick={()=>onDoubleText(element.id,prompt('Edit text',element.text||'')||element.text)}>{element.text}</div>;
+};
 
-const ColorControl = ({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) => (
-  <label className="flex items-center justify-between text-xs text-slate-400 mb-3">
-    {label}
-    <input type="color" value={value || '#000000'} onChange={(event) => onChange(event.target.value)} className="w-10 h-8 bg-transparent" />
-  </label>
-);
+const SectionInspector=({section,onChange}:{section:any,onChange:(p:any)=>void})=><div className="space-y-3"><Input label="Section name" value={section.label||''} onChange={v=>onChange({label:v})}/><Range label="Height" value={section.height||300} min={120} max={1000} onChange={v=>onChange({height:v})}/><Range label="Padding" value={section.padding||40} min={0} max={160} onChange={v=>onChange({padding:v})}/><Select label="Alignment" value={section.align||'center'} options={['left','center','right']} onChange={v=>onChange({align:v})}/><Color label="Background" value={section.background||'#000000'} onChange={v=>onChange({background:v})}/><Toggle label="Visible" value={section.visible!==false} onChange={v=>onChange({visible:v})}/></div>;
 
-const SelectControl = ({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) => (
-  <label className="block text-xs text-slate-400 mb-3">
-    {label}
-    <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white">
-      {options.map((option) => <option key={option} value={option}>{option}</option>)}
-    </select>
-  </label>
-);
+const ElementInspector=({element,onChange,onUpload}:{element:any,onChange:(p:any)=>void,onUpload:(f:File)=>void})=><div className="space-y-3"><div className="text-[10px] uppercase tracking-widest text-slate-500">{element.type}</div><Input label="Text" value={element.text||''} onChange={v=>onChange({text:v})}/><Range label="Width" value={element.width||50} min={5} max={95} onChange={v=>onChange({width:v})}/><Range label="Font size" value={element.fontSize||16} min={8} max={100} onChange={v=>onChange({fontSize:v})}/><Range label="Weight" value={element.weight||400} min={100} max={900} step={100} onChange={v=>onChange({weight:v})}/><Color label="Color" value={element.color||'#ffffff'} onChange={v=>onChange({color:v})}/>{element.type==='image'&&<label className="block text-xs text-slate-400">Image<input type="file" accept="image/*" className="block w-full mt-2 text-xs" onChange={e=>{const f=e.target.files?.[0];if(f)onUpload(f)}}/></label>}</div>;
 
-const RangeControl = ({ label, value, min, max, step = 1, onChange }: { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void }) => (
-  <label className="block text-xs text-slate-400 mb-3">
-    {label}
-    <div className="flex gap-2 items-center">
-      <input type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full" />
-      <span className="w-12 text-right text-white">{Number(value).toFixed(step < 1 ? 2 : 0)}</span>
-    </div>
-  </label>
-);
-
-const ToggleControl = ({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) => (
-  <label className="flex items-center justify-between py-2 text-xs text-slate-300">
-    {label}
-    <button type="button" onClick={() => onChange(!value)} className={'w-10 h-6 rounded-full p-1 transition ' + (value ? 'bg-blue-600' : 'bg-white/10')}>
-      <span className={'block w-4 h-4 rounded-full bg-white transition ' + (value ? 'translate-x-4' : '')} />
-    </button>
-  </label>
-);
+const Panel=({title,children}:{title:string,children:React.ReactNode})=><><div className="text-[10px] uppercase tracking-widest text-slate-500 font-black mb-3">{title}</div>{children}</>;
+const AddButton=({children,onClick}:{children:React.ReactNode,onClick:()=>void})=><button type="button" onClick={onClick} className="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-white/5 hover:bg-white/10 text-sm mb-2"><span className="w-5 h-5 flex items-center justify-center">{children && React.Children.toArray(children)[0]}</span>{React.Children.toArray(children)[1]}</button>;
+const Tool=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-3 rounded-xl '+(active?'bg-blue-600/20 text-blue-300':'text-slate-500 hover:text-white')} title="Tool">{children}</button>;
+const IconButton=({onClick,disabled,children,label}:{onClick:()=>void,disabled?:boolean,children:React.ReactNode,label:string})=><button type="button" title={label} disabled={disabled} onClick={onClick} className="p-1.5 rounded text-slate-400 hover:text-white disabled:opacity-30">{children}</button>;
+const Device=({active,onClick,children}:{active:boolean,onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className={'p-1.5 rounded '+(active?'bg-white/10 text-white':'text-slate-500')}>{children}</button>;
+const SmallButton=({onClick,children}:{onClick:()=>void,children:React.ReactNode})=><button type="button" onClick={onClick} className="p-1 rounded bg-white/5 text-slate-500"><span className="w-3 h-3 block">{children}</span></button>;
+const Input=({label,value,onChange}:{label:string,value:string,onChange:(v:string)=>void})=><label className="block text-xs text-slate-400">{label}<input value={value||''} onChange={e=>onChange(e.target.value)} className="mt-1 w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none"/></label>;
+const Color=({label,value,onChange}:{label:string,value:string,onChange:(v:string)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<input type="color" value={value||'#000000'} onChange={e=>onChange(e.target.value)} className="w-9 h-7 bg-transparent"/></label>;
+const Select=({label,value,options,onChange}:{label:string,value:string,options:string[],onChange:(v:string)=>void})=><label className="block text-xs text-slate-400">{label}<select value={value} onChange={e=>onChange(e.target.value)} className="mt-1 w-full bg-[#181a1f] border border-white/10 rounded-lg px-3 py-2 text-sm text-white">{options.map(o=><option key={o} value={o}>{o}</option>)}</select></label>;
+const Range=({label,value,min,max,step=1,onChange}:{label:string,value:number,min:number,max:number,step?:number,onChange:(v:number)=>void})=><label className="block text-xs text-slate-400">{label}<div className="flex gap-2 items-center mt-1"><input className="w-full" type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(Number(e.target.value))}/><span className="w-10 text-right text-white text-[11px]">{Number(value).toFixed(step<1?1:0)}</span></div></label>;
+const Toggle=({label,value,onChange}:{label:string,value:boolean,onChange:(v:boolean)=>void})=><label className="flex items-center justify-between text-xs text-slate-400">{label}<button type="button" onClick={()=>onChange(!value)} className={'w-9 h-5 rounded-full p-0.5 '+(value?'bg-blue-600':'bg-white/10')}><span className={'block w-4 h-4 rounded-full bg-white '+(value?'translate-x-4':'')}/></button></label>;
