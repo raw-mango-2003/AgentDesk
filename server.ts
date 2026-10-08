@@ -291,7 +291,7 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   // If request is authenticated with an Authorization Bearer header, browser cross-site ambient cookies
   // are not relied upon; custom headers prevent standard CSRF.
   const authHeader = typeof req.headers.authorization === 'string' ? req.headers.authorization.trim() : '';
-  if (authHeader && /^Bearer\s+[a-f0-9_.-]+/i.test(authHeader)) {
+  if (authHeader && /^Bearer\s+/i.test(authHeader)) {
     return next();
   }
 
