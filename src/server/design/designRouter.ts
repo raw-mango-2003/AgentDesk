@@ -45,7 +45,7 @@ function sanitizeDesign(input: any): SiteDesignConfig {
   d.appearance.enableMotion = bool(input.appearance?.enableMotion, d.appearance.enableMotion);
 
   d.background.mode = oneOf(input.background?.mode, ['solid','gradient','image','video','aurora','particles','shapes','glass'] as const, d.background.mode);
-  d.background.imageUrl = str(input.background?.imageUrl, 1000, d.background.imageUrl);
+  d.background.imageUrl = typeof input.background?.imageUrl === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(input.background.imageUrl) ? input.background.imageUrl.slice(0, 1200000) : str(input.background?.imageUrl, 1000, d.background.imageUrl);
   d.background.videoUrl = str(input.background?.videoUrl, 1000, d.background.videoUrl);
   d.background.overlayColor = color(input.background?.overlayColor, d.background.overlayColor);
   d.background.overlayOpacity = clamp(input.background?.overlayOpacity, 0, 1, d.background.overlayOpacity);
