@@ -104,14 +104,50 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
 
   useEffect(() => {
     let active = true;
+
+    const preloadBackground = async (nextDesign: any) => {
+      const imageUrl = normalizeAssetUrl(nextDesign?.background?.imageUrl || '');
+      const videoUrl = normalizeAssetUrl(nextDesign?.background?.videoUrl || '');
+
+      if (imageUrl) {
+        await new Promise<void>((resolve) => {
+          const image = new Image();
+          image.onload = () => resolve();
+          image.onerror = () => resolve();
+          image.src = imageUrl;
+        });
+      }
+
+      if (videoUrl) {
+        await new Promise<void>((resolve) => {
+          const video = document.createElement('video');
+          let settled = false;
+          const finish = () => {
+            if (settled) return;
+            settled = true;
+            resolve();
+          };
+          video.preload = 'metadata';
+          video.onloadeddata = finish;
+          video.onerror = finish;
+          video.src = videoUrl;
+          window.setTimeout(finish, 1800);
+        });
+      }
+    };
+
     safeFetchJson<any>('/api/site-design', { cache: 'no-store' })
-      .then((data) => {
-        if (active && data?.success && data.design) setDesign(data.design);
-        if (active) setDesignReady(true);
+      .then(async (data) => {
+        const nextDesign = data?.success && data.design ? data.design : FALLBACK_DESIGN;
+        await preloadBackground(nextDesign);
+        if (!active) return;
+        setDesign(nextDesign);
+        setDesignReady(true);
       })
       .catch(() => {
         if (active) setDesignReady(true);
       });
+
     return () => { active = false; };
   }, []);
 
