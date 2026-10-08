@@ -54,6 +54,12 @@ function safePaymentError(error: any, fallback: string): string {
   if (/payment intent persistence|billing persistence|persistence is unavailable/.test(lower)) {
     return 'Billing service is temporarily unavailable. Please retry in a moment.';
   }
+  if (/not available for this currency|currency .*not.*supported|unsupported currency/.test(lower)) {
+    return 'This payment currency is not enabled for checkout. Please select INR or contact AgentDesk support.';
+  }
+  if (/pricing configuration|plan.*pricing|pricing.*plan/.test(lower)) {
+    return 'This plan is not fully configured for checkout. Please contact AgentDesk support.';
+  }
 
   return fallback;
 }
@@ -477,8 +483,12 @@ billingRouter.post('/create-checkout-session', paymentRateLimiter, async (req: R
     let code = 'PAYMENT_CHECKOUT_UNAVAILABLE';
     if (/razorpay order creation failed/.test(rawMessage)) {
       code = 'RAZORPAY_ORDER_CREATION_FAILED';
-    } else if (/payment intent persistence|billing persistence/.test(rawMessage)) {
+    } else if (/payment intent persistence|billing persistence|persistence is unavailable/.test(rawMessage)) {
       code = 'BILLING_PERSISTENCE_UNAVAILABLE';
+    } else if (/not available for this currency|currency .*not.*supported|unsupported currency/.test(rawMessage)) {
+      code = 'RAZORPAY_CURRENCY_NOT_SUPPORTED';
+    } else if (/pricing configuration|plan.*pricing|pricing.*plan/.test(rawMessage)) {
+      code = 'PRICING_CONFIGURATION_ERROR';
     } else if (/not_configured|credentials|authentication failed|invalid api key|api key/.test(rawMessage)) {
       code = 'PAYMENT_GATEWAY_CONFIGURATION_ERROR';
     }
