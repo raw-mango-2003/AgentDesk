@@ -140,7 +140,7 @@ export function EstimatesDashboard({ business }: EstimatesDashboardProps) {
     .reduce((sum, e) => sum + e.amount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-estimates-dashboard space-y-6 w-full min-w-0">
       {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
