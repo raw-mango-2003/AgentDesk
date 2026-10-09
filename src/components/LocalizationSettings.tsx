@@ -110,7 +110,7 @@ export const LocalizationSettings: React.FC<LocalizationSettingsProps> = ({
     : '5128904411';
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-localization-settings space-y-6 w-full min-w-0 max-w-full">
       {/* Top Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-7 text-slate-100 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
