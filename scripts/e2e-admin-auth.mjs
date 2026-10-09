@@ -50,8 +50,8 @@ if (!cookies.includes('agentdesk_session=')) {
 }
 
 // Authenticated state-changing requests must echo the double-submit CSRF cookie.
-const csrfMatch = cookies.match(/(?:^|;\\s*)agentdesk_csrf=([^;]+)/);
-const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : '';
+const csrfCookie = cookies.split(/;\s*/).find(cookie => cookie.startsWith('agentdesk_csrf='));
+const csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.slice('agentdesk_csrf='.length)) : '';
 if (!csrfToken) {
   throw new Error(`Platform admin login did not return a CSRF cookie: ${JSON.stringify(cookies)}`);
 }
