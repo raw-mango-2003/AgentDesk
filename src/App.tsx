@@ -673,6 +673,7 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1">
         <Suspense fallback={<RouteLoading />}>
+          <div key={currentView === 'dashboard' ? `dashboard-${activeTab}-${adminSubTab}` : currentView} className="agentdesk-route-transition">
         {currentView === 'setup_account' ? (
           <AccountSetupPage
             onSuccess={(businessId) => {
@@ -1626,6 +1627,7 @@ export default function App() {
             )}
           </div>
         )}
+          </div>
         </Suspense>
       </main>
 
