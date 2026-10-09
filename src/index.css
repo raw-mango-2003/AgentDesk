@@ -1479,3 +1479,52 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 14: User Management Dashboard responsive layout. Scoped styles only. */
+.agentdesk-user-management-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-user-management-dashboard [class*="grid"],
+.agentdesk-user-management-dashboard [class*="flex"] { min-width: 0; }
+.agentdesk-user-management-dashboard [class*="grid"] > *,
+.agentdesk-user-management-dashboard [class*="flex"] > * { min-width: 0; max-width: 100%; }
+.agentdesk-user-management-dashboard input,
+.agentdesk-user-management-dashboard select,
+.agentdesk-user-management-dashboard textarea { min-width: 0; max-width: 100%; }
+.agentdesk-user-management-dashboard button,
+.agentdesk-user-management-dashboard a { overflow-wrap: anywhere; }
+.agentdesk-user-management-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-user-management-dashboard table {
+  width: 100%;
+  min-width: 42rem;
+}
+.agentdesk-user-management-dashboard :is(.overflow-x-auto, [class*="overflow-x-auto"]) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 640px) {
+  .agentdesk-user-management-dashboard h2 { font-size: clamp(1.2rem, 5vw, 1.5rem); line-height: 1.25; }
+  .agentdesk-user-management-dashboard button,
+  .agentdesk-user-management-dashboard input,
+  .agentdesk-user-management-dashboard select,
+  .agentdesk-user-management-dashboard textarea { min-height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-user-management-dashboard *,
+  .agentdesk-user-management-dashboard *::before,
+  .agentdesk-user-management-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
