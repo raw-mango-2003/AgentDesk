@@ -11,6 +11,21 @@ async function request(path, options = {}) {
   return { response, body };
 }
 
+// Protected identity must reject requests without a session.
+const anonymousMe = await request('/api/auth/me');
+if (anonymousMe.response.status !== 401 || anonymousMe.body?.success !== false) {
+  throw new Error(`Unauthenticated identity request should return HTTP 401, received HTTP ${anonymousMe.response.status}: ${JSON.stringify(anonymousMe.body)}`);
+}
+
+// Invalid credentials must not create an authenticated session.
+const invalidLogin = await request('/api/auth/platform/login', {
+  method: 'POST',
+  body: JSON.stringify({ email, password: `${password}-invalid` })
+});
+if (invalidLogin.response.ok || invalidLogin.body?.success === true) {
+  throw new Error('Platform admin login accepted invalid credentials.');
+}
+
 const login = await request('/api/auth/platform/login', {
   method: 'POST',
   body: JSON.stringify({ email, password })
@@ -39,9 +54,24 @@ if (!me.response.ok || !me.body?.success || me.body?.user?.role !== 'PLATFORM_AD
   throw new Error(`Platform admin session verification failed: HTTP ${me.response.status} ${JSON.stringify(me.body)}`);
 }
 
+// Logout must revoke the session and clear the browser session cookie.
+const logout = await request('/api/auth/logout', {
+  method: 'POST',
+  headers: { Cookie: cookies }
+});
+if (!logout.response.ok || logout.body?.success !== true) {
+  throw new Error(`Platform admin logout failed: HTTP ${logout.response.status} ${JSON.stringify(logout.body)}`);
+}
+const afterLogout = await request('/api/auth/me', { headers: { Cookie: cookies } });
+if (afterLogout.response.status !== 401 || afterLogout.body?.success !== false) {
+  throw new Error(`Logged-out session remained authorized: HTTP ${afterLogout.response.status} ${JSON.stringify(afterLogout.body)}`);
+}
+
 console.log(JSON.stringify({
   success: true,
   login: 'platform-admin',
   session: 'http-only-cookie',
-  role: me.body.user.role
+  role: me.body.user.role,
+  negativeCases: ['anonymous-identity-rejected', 'invalid-credentials-rejected'],
+  logout: 'session-revoked'
 }, null, 2));
