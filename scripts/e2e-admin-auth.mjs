@@ -49,6 +49,13 @@ if (!cookies.includes('agentdesk_session=')) {
   throw new Error(`Platform admin login did not return an HttpOnly session cookie: ${JSON.stringify(cookies)}`);
 }
 
+// Authenticated state-changing requests must echo the double-submit CSRF cookie.
+const csrfMatch = cookies.match(/(?:^|;\\s*)agentdesk_csrf=([^;]+)/);
+const csrfToken = csrfMatch ? decodeURIComponent(csrfMatch[1]) : '';
+if (!csrfToken) {
+  throw new Error(`Platform admin login did not return a CSRF cookie: ${JSON.stringify(cookies)}`);
+}
+
 const me = await request('/api/auth/me', { headers: { Cookie: cookies } });
 if (!me.response.ok || !me.body?.success || me.body?.user?.role !== 'PLATFORM_ADMIN') {
   throw new Error(`Platform admin session verification failed: HTTP ${me.response.status} ${JSON.stringify(me.body)}`);
@@ -86,7 +93,7 @@ if (missingTenantIntegrations.response.status !== 400 || !/tenantId is required/
 
 const unsupportedIntegrationProvider = await request('/api/platform/tenant-integrations/e2e-missing-tenant/not-a-provider', {
   method: 'PUT',
-  headers: { Cookie: cookies },
+  headers: { Cookie: cookies, 'X-CSRF-Token': csrfToken },
   body: JSON.stringify({ api_key: 'must-not-be-saved' })
 });
 if (unsupportedIntegrationProvider.response.status !== 400 || !/unsupported tenant integration provider/i.test(unsupportedIntegrationProvider.body?.error || '')) {
