@@ -32,14 +32,14 @@ interface CinematicLandingPageProps {
 const FALLBACK_DESIGN = {
   site: { name: 'AgentDesk', pageTitle: 'AgentDesk | AI Employee' },
   brand: {
-    primaryColor: '#b8a47e',
+    primaryColor: '#ff2f86',
     secondaryColor: '#0b0b0b',
-    accentColor: '#d8c49a',
+    accentColor: '#ff5aa5',
     backgroundColor: '#080808',
     surfaceColor: '#121212',
     textColor: '#f4f1e9',
-    mutedTextColor: '#aaa59a',
-    borderColor: '#2a2926'
+    mutedTextColor: '#a7a1ad',
+    borderColor: '#29252f'
   },
   typography: { headingFont: 'Inter', bodyFont: 'Inter', baseSize: 16, headingWeight: 600, letterSpacing: -0.02, lineHeight: 1.5 },
   appearance: { enableMotion: true, radius: 18 },
