@@ -82,7 +82,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       enforceRoleScopedRoutes(null);
     } catch (err) {
       console.warn('Failed to verify authentication session:', err);
+      // Fail closed: never retain a previously selected tenant after session verification fails.
       setCurrentUser(null);
+      setCurrentTenant(null);
+      setActiveBusinessIdState('');
       enforceRoleScopedRoutes(null);
     }
   };
@@ -131,12 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setCurrentUser(meRes.user);
-      if (meRes.tenant) {
-        setCurrentTenant(meRes.tenant);
-        setActiveBusinessIdState(meRes.tenant.id);
-      } else if (meRes.user?.tenantId) {
-        setActiveBusinessIdState(meRes.user.tenantId);
-      }
+      setCurrentTenant(meRes.tenant || null);
+      setActiveBusinessIdState(meRes.tenant?.id || (meRes.user?.tenantId && meRes.user.tenantId !== 'platform' ? meRes.user.tenantId : ''));
       enforceRoleScopedRoutes(meRes.user);
 
       return {
@@ -148,6 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     } catch (err: any) {
       setCurrentUser(null);
+      setCurrentTenant(null);
+      setActiveBusinessIdState('');
       return { success: false, error: err.message || 'Network error during login' };
     } finally {
       setLoading(false);
@@ -198,6 +199,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
     } catch (err: any) {
       setCurrentUser(null);
+      setCurrentTenant(null);
+      setActiveBusinessIdState('');
       return { success: false, error: err.message || 'Network error during platform admin sign in' };
     } finally {
       setLoading(false);
