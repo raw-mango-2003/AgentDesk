@@ -1145,3 +1145,70 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 9: Estimates Dashboard responsive layout. Scoped CSS only; keep existing palette and quote logic. */
+.agentdesk-estimates-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-estimates-dashboard [class*="grid"],
+.agentdesk-estimates-dashboard [class*="flex"] {
+  min-width: 0;
+}
+.agentdesk-estimates-dashboard [class*="grid"] > *,
+.agentdesk-estimates-dashboard [class*="flex"] > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-estimates-dashboard input,
+.agentdesk-estimates-dashboard select,
+.agentdesk-estimates-dashboard textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-estimates-dashboard button,
+.agentdesk-estimates-dashboard a {
+  overflow-wrap: anywhere;
+}
+.agentdesk-estimates-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-estimates-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 640px) {
+  .agentdesk-estimates-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-estimates-dashboard h2 {
+    font-size: clamp(1.25rem, 5.5vw, 1.5rem);
+    line-height: 1.25;
+  }
+  .agentdesk-estimates-dashboard button,
+  .agentdesk-estimates-dashboard input,
+  .agentdesk-estimates-dashboard select {
+    min-height: 40px;
+  }
+  .agentdesk-estimates-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-estimates-dashboard [class*="overflow-x-auto"] {
+    overscroll-behavior-x: contain;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-estimates-dashboard *,
+  .agentdesk-estimates-dashboard *::before,
+  .agentdesk-estimates-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
