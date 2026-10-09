@@ -1437,3 +1437,45 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 13: Settings Dashboard responsive layout. Scoped styles only. */
+.agentdesk-settings-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-settings-dashboard [class*="grid"],
+.agentdesk-settings-dashboard [class*="flex"] { min-width: 0; }
+.agentdesk-settings-dashboard [class*="grid"] > *,
+.agentdesk-settings-dashboard [class*="flex"] > * { min-width: 0; max-width: 100%; }
+.agentdesk-settings-dashboard input,
+.agentdesk-settings-dashboard select,
+.agentdesk-settings-dashboard textarea { min-width: 0; max-width: 100%; }
+.agentdesk-settings-dashboard button,
+.agentdesk-settings-dashboard a { overflow-wrap: anywhere; }
+.agentdesk-settings-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-settings-dashboard pre,
+.agentdesk-settings-dashboard code { white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .agentdesk-settings-dashboard h2 { font-size: clamp(1.2rem, 5vw, 1.5rem); line-height: 1.25; }
+  .agentdesk-settings-dashboard button,
+  .agentdesk-settings-dashboard input,
+  .agentdesk-settings-dashboard select,
+  .agentdesk-settings-dashboard textarea { min-height: 40px; }
+  .agentdesk-settings-dashboard [class*="grid-cols-"] { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-settings-dashboard *,
+  .agentdesk-settings-dashboard *::before,
+  .agentdesk-settings-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
