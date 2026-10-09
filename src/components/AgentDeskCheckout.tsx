@@ -824,7 +824,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   if (successData) {
     return (
       <div className={`text-slate-100 ${isModal ? 'p-6 sm:p-8' : 'max-w-2xl mx-auto py-12 px-4 sm:px-6'}`}>
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-6 animate-fadeIn">
+        <div className="bg-[#111111] border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-6 animate-fadeIn">
           <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
             <CheckCircle2 className="w-9 h-9" />
           </div>
@@ -844,8 +844,8 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           </div>
 
           {/* Receipt Breakdown Card */}
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 text-left space-y-3 text-xs">
-            <div className="flex justify-between items-center pb-2 border-b border-slate-800 text-slate-300 font-semibold">
+          <div className="bg-slate-950/80 border border-white/10 rounded-2xl p-5 text-left space-y-3 text-xs">
+            <div className="flex justify-between items-center pb-2 border-b border-white/10 text-slate-300 font-semibold">
               <span>Receipt Summary</span>
               <span className="text-emerald-400 font-mono text-[11px]">{successData.paymentId}</span>
             </div>
@@ -867,7 +867,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Payment Currency:</span>
-              <span className="text-blue-400 font-medium font-mono">INR (₹)</span>
+              <span className="text-fuchsia-400 font-medium font-mono">INR (₹)</span>
             </div>
             <div className="flex justify-between text-slate-400">
               <span>Setup Fee (INR):</span>
@@ -883,11 +883,11 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 <span className="text-white font-medium">{formatCurrencyAmount(successData.gstAmount, 'INR')}</span>
               </div>
             )}
-            <div className="flex justify-between pt-2 border-t border-slate-800 text-slate-200 font-bold">
+            <div className="flex justify-between pt-2 border-t border-white/10 text-slate-200 font-bold">
               <span>{successData.amount === 0 ? 'Amount Paid Today:' : 'Amount Charged via Razorpay:'}</span>
               <span className="text-emerald-400 font-black text-sm">{formatCurrencyAmount(successData.amount, 'INR')}</span>
             </div>
-            <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-slate-800/60">
+            <div className="flex justify-between text-slate-400 text-[11px] pt-1 border-t border-white/10/60">
               <span>{successData.amount === 0 ? 'Activation Reference:' : 'Payment ID:'}</span>
               <span className="text-slate-300 font-mono">{successData.paymentId}</span>
             </div>
@@ -937,14 +937,14 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         
         {/* Navigation bar if standalone page */}
         {!isModal && (
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800">
+          <div className="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-fuchsia-700 to-pink-600 flex items-center justify-center text-white shadow-md">
                 <Bot className="w-5 h-5" />
               </div>
               <div>
                 <span className="font-extrabold text-white text-base tracking-tight">AgentDesk</span>
-                <span className="text-xs text-blue-400 font-semibold ml-2">Checkout</span>
+                <span className="text-xs text-fuchsia-400 font-semibold ml-2">Checkout</span>
               </div>
             </div>
 
@@ -961,7 +961,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               {onNavigateLogin && (
                 <button
                   onClick={onNavigateLogin}
-                  className="text-blue-400 hover:text-blue-300 font-bold transition-colors cursor-pointer"
+                  className="text-fuchsia-400 hover:text-pink-300 font-bold transition-colors cursor-pointer"
                 >
                   Sign In
                 </button>
@@ -971,12 +971,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         )}
 
         {/* Checkout Card Container */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-[#111111] border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
           
           {/* Header */}
-          <div className="px-6 py-5 bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 border-b border-slate-800 flex items-center justify-between">
+          <div className="px-6 py-5 bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 border-b border-white/10 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-fuchsia-400 shrink-0">
                 <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
@@ -1015,7 +1015,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                   </div>
                 </div>
                 {error && (
-                  <div className="text-xs text-slate-300 bg-slate-900/80 p-3 rounded-xl border border-slate-800 font-mono">
+                  <div className="text-xs text-slate-300 bg-[#111111]/80 p-3 rounded-xl border border-white/10 font-mono">
                     {error}
                   </div>
                 )}
@@ -1056,7 +1056,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
             ) : null}
 
             {/* Plan Selector Header & Breakdown */}
-            <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
+            <div className="p-5 rounded-2xl bg-slate-950/80 border border-white/10 space-y-4">
               
               {/* Plan Switcher Pills */}
               <div className="space-y-2">
@@ -1064,7 +1064,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Plan</span>
                   
                   {/* Currency Switcher */}
-                  <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-0.5 rounded-lg">
+                  <div className="flex items-center gap-1 bg-[#111111] border border-white/10 p-0.5 rounded-lg">
                     {(['INR', 'USD', 'GBP'] as CurrencyCode[]).map((cur) => (
                       <button
                         key={cur}
@@ -1097,7 +1097,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
                             ? 'bg-blue-600/20 border-blue-500 text-white shadow-xs'
-                            : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                            : 'bg-[#111111] border-white/10 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -1131,7 +1131,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     </div>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900/90 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="p-3 rounded-lg bg-[#111111]/90 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="text-[11px] text-slate-300 space-y-0.5">
                       <div>
                         Your selected plan:{' '}
@@ -1140,7 +1140,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         </strong>
                       </div>
                       <div>
-                        Razorpay payment currency: <strong className="text-blue-400">INR (₹)</strong>
+                        Razorpay payment currency: <strong className="text-fuchsia-400">INR (₹)</strong>
                       </div>
                       <div className="text-[10px] text-slate-400">
                         The final INR amount will be shown before payment.
@@ -1161,7 +1161,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               {currency !== 'INR' && payInINROptIn && (
                 <div className="p-3 rounded-xl bg-blue-950/40 border border-blue-700/50 text-xs flex items-center justify-between gap-2.5 animate-fadeIn">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0" />
+                    <ShieldCheck className="w-4 h-4 text-fuchsia-400 shrink-0" />
                     <span className="text-[11px] text-slate-300">
                       <strong>Pay in INR</strong> selected. Payment will be processed via Razorpay in <strong>INR (₹)</strong>.
                     </span>
@@ -1177,7 +1177,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               )}
 
               {/* Exact Line Item Breakdown */}
-              <div className="pt-3 border-t border-slate-800/80 space-y-3 text-xs">
+              <div className="pt-3 border-t border-white/10/80 space-y-3 text-xs">
                 
                 {/* One-Time Setup Fee */}
                 <div className="flex items-start justify-between">
@@ -1218,7 +1218,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 )}
 
                 {/* Divider */}
-                <div className="border-t border-slate-800 my-2" />
+                <div className="border-t border-white/10 my-2" />
 
                 {/* Total Due Today */}
                 <div className="flex items-baseline justify-between pt-1">
@@ -1266,7 +1266,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="e.g. Rahul Sharma"
                       value={fullName}
                       onChange={e => setFullName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -1283,7 +1283,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="e.g. Apex Health Clinic"
                       value={businessName}
                       onChange={e => setBusinessName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -1300,7 +1300,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="rahul@company.com"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -1317,7 +1317,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="+91 98765 43210"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -1340,7 +1340,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     placeholder="Street address, suite or unit"
                     value={address}
                     onChange={e => setAddress(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
 
@@ -1354,7 +1354,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="e.g. Mumbai"
                       value={city}
                       onChange={e => setCity(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
 
@@ -1367,7 +1367,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="e.g. Maharashtra"
                       value={state}
                       onChange={e => setState(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                   </div>
 
@@ -1379,7 +1379,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       type="text"
                       disabled
                       value={country}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 cursor-not-allowed"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-white/10 text-xs text-slate-400 cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -1395,7 +1395,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       placeholder="27AAAAA0000A1Z5"
                       value={gstin}
                       onChange={e => setGstin(e.target.value.toUpperCase())}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white uppercase placeholder:text-slate-600 focus:outline-none focus:border-blue-500 transition-colors font-mono"
                     />
                   </div>
                 )}
@@ -1432,7 +1432,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     placeholder="Enter code"
                     value={couponInput}
                     onChange={e => setCouponInput(e.target.value.toUpperCase())}
-                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 uppercase font-mono transition-colors"
+                    className="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-blue-500 uppercase font-mono transition-colors"
                   />
                   <button
                     type="button"
@@ -1458,14 +1458,14 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                   Payment
                 </h3>
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
                   Payment provider: Razorpay
                 </span>
               </div>
 
               {/* International Payment Unavailable Notice (when user hasn't opted in to Pay in INR) */}
               {currency !== 'INR' && !payInINROptIn && (
-                <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 text-center space-y-2.5 animate-fadeIn">
+                <div className="p-4 rounded-2xl bg-[#111111]/90 border border-white/10 text-center space-y-2.5 animate-fadeIn">
                   <div className="text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
                     <AlertCircle className="w-4 h-4 text-amber-400" />
                     <span>International payment in {currency} is not currently available</span>
@@ -1487,7 +1487,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               {/* Transparent Payment Summary (when paying in INR for international plans) */}
               {currency !== 'INR' && payInINROptIn && (
                 <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/90 border border-blue-500/40 space-y-3.5 animate-fadeIn">
-                  <div className="flex items-center justify-between pb-2.5 border-b border-slate-800">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
                       <span className="text-xs font-bold text-blue-300 uppercase tracking-wider">
@@ -1504,19 +1504,19 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-0.5">
+                    <div className="p-2.5 rounded-xl bg-[#111111]/80 border border-white/10 space-y-0.5">
                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Plan:</span>
                       <span className="text-white font-bold text-sm block">{calculation.planName}</span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-0.5">
+                    <div className="p-2.5 rounded-xl bg-[#111111]/80 border border-white/10 space-y-0.5">
                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Plan Price:</span>
                       <span className="text-white font-mono font-bold text-sm block">
                         {formatCurrencyAmount(calculation.total_due_today, currency)} {currency}
                       </span>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 space-y-0.5">
+                    <div className="p-2.5 rounded-xl bg-[#111111]/80 border border-white/10 space-y-0.5">
                       <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold block">Payment Currency:</span>
-                      <span className="text-blue-400 font-mono font-bold text-sm block">INR (₹)</span>
+                      <span className="text-fuchsia-400 font-mono font-bold text-sm block">INR (₹)</span>
                     </div>
                     <div className="p-2.5 rounded-xl bg-blue-950/40 border border-blue-700/50 space-y-0.5">
                       <span className="text-[10px] text-blue-300 uppercase tracking-wider font-semibold block">Amount charged through Razorpay:</span>
@@ -1529,22 +1529,22 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                   <div className="flex items-center justify-between text-[11px] pt-1 text-slate-400">
                     <span>Payment provider:</span>
                     <span className="text-white font-semibold flex items-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
                       Razorpay
                     </span>
                   </div>
 
-                  <p className="text-[10px] text-slate-400 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/60">
+                  <p className="text-[10px] text-slate-400 leading-relaxed bg-[#111111]/60 p-2.5 rounded-lg border border-white/10/60">
                     The payment order is processed through Razorpay in Indian Rupees (INR ₹). If paying with an international card, your bank or card issuer will convert this on your card statement according to their applicable exchange rates. Bank conversion rates are not guaranteed by AgentDesk.
                   </p>
                 </div>
               )}
 
               {/* Functional Payment Methods Selection */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/10 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-slate-200">
-                    <CreditCard className="w-3.5 h-3.5 text-blue-400" />
+                    <CreditCard className="w-3.5 h-3.5 text-fuchsia-400" />
                     <span>Select Payment Method (via Razorpay):</span>
                   </div>
                   <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -1576,11 +1576,11 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
                             ? 'bg-blue-600/15 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/40'
-                            : 'bg-slate-900/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                            : 'bg-[#111111]/60 border-white/10/80 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800 text-slate-400'}`}>
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-blue-500/20 text-fuchsia-400' : 'bg-slate-800 text-slate-400'}`}>
                             <MethodIcon className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
@@ -1608,8 +1608,8 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </div>
 
                 {/* Method Guidance Note */}
-                <div className="text-[11px] text-slate-400 bg-slate-900/50 p-2.5 rounded-lg border border-slate-800/60 flex items-start gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                <div className="text-[11px] text-slate-400 bg-[#111111]/50 p-2.5 rounded-lg border border-white/10/60 flex items-start gap-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400 shrink-0 mt-0.5" />
                   <span>
                     {selectedMethod === 'upi' && 'Enter your UPI ID or open Google Pay, PhonePe, or Paytm inside the Razorpay modal for 1-click mobile verification.'}
                     {selectedMethod === 'cards' && 'Enter card number, expiry, and CVV in the Razorpay gateway with 3D Secure bank OTP verification.'}
@@ -1621,7 +1621,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               </div>
 
               {/* Required legal acceptance */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800">
+              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/10">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1635,7 +1635,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     <button
                       type="button"
                       onClick={() => onNavigateLegal?.('terms')}
-                      className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold"
+                      className="text-fuchsia-400 hover:text-pink-300 underline underline-offset-2 font-semibold"
                     >
                       Terms of Use
                     </button>
@@ -1643,7 +1643,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     <button
                       type="button"
                       onClick={() => onNavigateLegal?.('privacy')}
-                      className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold"
+                      className="text-fuchsia-400 hover:text-pink-300 underline underline-offset-2 font-semibold"
                     >
                       Privacy Policy
                     </button>
@@ -1651,7 +1651,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     <button
                       type="button"
                       onClick={() => onNavigateLegal?.('refunds')}
-                      className="text-blue-400 hover:text-blue-300 underline underline-offset-2 font-semibold"
+                      className="text-fuchsia-400 hover:text-pink-300 underline underline-offset-2 font-semibold"
                     >
                       Refund &amp; Cancellation Policy
                     </button>
@@ -1674,7 +1674,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 <button
                   type="submit"
                   disabled={loading || (currency !== 'INR' && !inrCalculation)}
-                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-fuchsia-700 to-pink-600 hover:from-fuchsia-600 hover:to-pink-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {loading ? (
                     <>
