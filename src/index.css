@@ -654,3 +654,89 @@ html, body, #root {
 @media(prefers-reduced-motion:reduce){
   [data-visual-page="home"] button{transition:none !important;}
 }
+
+
+/* Phase 1 UI refresh: shared shell consistency and responsive ergonomics.
+   Intentional neutral foundation; final brand colours will be applied after review. */
+:root {
+  color-scheme: dark;
+  --ad-ui-radius-sm: 0.625rem;
+  --ad-ui-radius-md: 0.875rem;
+  --ad-ui-radius-lg: 1.125rem;
+  --ad-ui-border: rgba(148, 163, 184, 0.16);
+  --ad-ui-surface: rgba(15, 23, 42, 0.72);
+  --ad-ui-surface-raised: rgba(30, 41, 59, 0.62);
+  --ad-ui-focus: rgba(148, 163, 184, 0.8);
+}
+
+.agentdesk-console-shell,
+.agentdesk-platform-admin-shell {
+  min-width: 0;
+  isolation: isolate;
+}
+
+.agentdesk-console-shell :is(input, select, textarea),
+.agentdesk-platform-admin-shell :is(input, select, textarea) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.agentdesk-console-shell :is(button, a, input, select, textarea),
+.agentdesk-platform-admin-shell :is(button, a, input, select, textarea) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+.agentdesk-console-shell :is(button, a):focus-visible,
+.agentdesk-platform-admin-shell :is(button, a):focus-visible,
+.agentdesk-console-shell :is(input, select, textarea):focus-visible,
+.agentdesk-platform-admin-shell :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--ad-ui-focus);
+  outline-offset: 2px;
+}
+
+.agentdesk-console-shell :is(table),
+.agentdesk-platform-admin-shell :is(table) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.agentdesk-console-shell :is(th, td),
+.agentdesk-platform-admin-shell :is(th, td) {
+  overflow-wrap: anywhere;
+}
+
+.agentdesk-console-shell :is(.rounded-2xl, .rounded-3xl),
+.agentdesk-platform-admin-shell :is(.rounded-2xl, .rounded-3xl) {
+  background-clip: padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-console-shell *,
+  .agentdesk-platform-admin-shell * {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .agentdesk-console-shell,
+  .agentdesk-platform-admin-shell {
+    overflow-wrap: anywhere;
+  }
+
+  .agentdesk-console-shell :is(.overflow-x-auto),
+  .agentdesk-platform-admin-shell :is(.overflow-x-auto) {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .agentdesk-console-shell :is(input, select, textarea),
+  .agentdesk-platform-admin-shell :is(input, select, textarea) {
+    font-size: 16px;
+  }
+}
