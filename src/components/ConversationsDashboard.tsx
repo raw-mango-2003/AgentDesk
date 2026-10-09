@@ -61,12 +61,12 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-pink-300" />
             Conversations
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            View live interactions between customer visitors and your AI receptionist for <span className="font-semibold text-slate-700">{business.name}</span>.
+            View live interactions between customer visitors and your AI receptionist for <span className="font-semibold text-slate-300">{business.name}</span>.
           </p>
         </div>
       </div>
@@ -89,7 +89,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            className="text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-medium text-slate-700"
+            className="text-xs px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-medium text-slate-300"
           >
             <option value="ALL">All Statuses</option>
             <option value="AI_ACTIVE">AI Active</option>
@@ -120,7 +120,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <div className="font-bold text-slate-900 text-xs truncate max-w-[140px]">
+                  <div className="font-bold text-white text-xs truncate max-w-[140px]">
                     {conv.customerName || 'Anonymous Visitor'}
                   </div>
                   <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
@@ -160,7 +160,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-slate-900 text-sm">
+                    <h3 className="font-bold text-white text-sm">
                       {selectedConv.customerName || 'Anonymous Customer'}
                     </h3>
                     <span className="text-xs text-slate-400">• ID: {selectedConv.id}</span>
@@ -187,7 +187,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
                   <select
                     value={selectedConv.status}
                     onChange={e => handleStatusChange(selectedConv.id, e.target.value as ConversationStatus)}
-                    className="text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-semibold text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="AI_ACTIVE">AI ACTIVE</option>
                     <option value="HUMAN_REQUIRED">HUMAN REQUIRED</option>
@@ -218,7 +218,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
                       <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
                         msg.sender === 'user'
                           ? 'bg-pink-500 text-white rounded-tr-none'
-                          : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-none shadow-2xs'
+                          : 'bg-white text-slate-200 border border-slate-200/80 rounded-tl-none shadow-2xs'
                       }`}>
                         {msg.text}
                       </div>
@@ -230,7 +230,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
 
               {/* Footer info */}
               <div className="p-3 bg-white border-t border-slate-200 text-center text-xs text-slate-500">
-                Customer Conversation Scoped to Business ID: <span className="font-mono text-slate-700 font-bold">{selectedConv.businessId}</span>
+                Customer Conversation Scoped to Business ID: <span className="font-mono text-slate-300 font-bold">{selectedConv.businessId}</span>
               </div>
             </>
           ) : (
