@@ -200,7 +200,7 @@ export function VoiceReceptionistDashboard({ business }: VoiceReceptionistDashbo
   };
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-voice-receptionist-dashboard space-y-6 w-full min-w-0 max-w-full">
       {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
