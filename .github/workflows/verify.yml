@@ -18,12 +18,11 @@ jobs:
       - name: Start PostgreSQL service
         run: |
           set -e
-          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin <<< "${{ secrets.DOCKERHUB_TOKEN }}"
           docker run --name agentdesk-postgres \
             -e POSTGRES_USER=agentdesk \
             -e POSTGRES_PASSWORD=agentdesk-ci \
             -e POSTGRES_DB=agentdesk_ci \
-            -p 5432:5432 -d postgres:16
+            -p 5432:5432 -d public.ecr.aws/docker/library/postgres:16
           for i in $(seq 1 30); do
             if docker exec agentdesk-postgres pg_isready -U agentdesk -d agentdesk_ci; then
               exit 0
