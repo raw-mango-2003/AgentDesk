@@ -1013,3 +1013,68 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 7: Appointments dashboard responsive layout safeguards */
+.agentdesk-appointments-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-appointments-dashboard > * {
+  min-width: 0;
+}
+.agentdesk-appointments-dashboard h1,
+.agentdesk-appointments-dashboard h2,
+.agentdesk-appointments-dashboard h3 {
+  text-wrap: balance;
+}
+.agentdesk-appointments-dashboard input,
+.agentdesk-appointments-dashboard select,
+.agentdesk-appointments-dashboard textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-appointments-dashboard [class*="grid"] > *,
+.agentdesk-appointments-dashboard [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-appointments-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.agentdesk-appointments-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .agentdesk-appointments-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-appointments-dashboard h1 {
+    font-size: clamp(1.35rem, 6vw, 1.875rem);
+    line-height: 1.2;
+  }
+  .agentdesk-appointments-dashboard button,
+  .agentdesk-appointments-dashboard input,
+  .agentdesk-appointments-dashboard select {
+    min-height: 40px;
+  }
+  .agentdesk-appointments-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-appointments-dashboard [class*="overflow-x-auto"] {
+    overscroll-behavior-x: contain;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-appointments-dashboard *,
+  .agentdesk-appointments-dashboard *::before,
+  .agentdesk-appointments-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
