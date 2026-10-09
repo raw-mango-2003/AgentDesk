@@ -81,7 +81,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({ business }) => {
   });
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="agentdesk-leads-dashboard space-y-6 animate-fadeIn w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
