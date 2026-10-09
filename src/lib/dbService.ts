@@ -379,39 +379,38 @@ export async function getBusinessById(businessId: string): Promise<Business | nu
   const targetId = normalizeTenantId(businessId);
   let found: Business | undefined;
 
-  // A tenant-specific lookup must still be attempted if the registry endpoint
-  // is temporarily unavailable. Otherwise one failing list request prevents
-  // the selected workspace from loading even when its own endpoint is healthy.
-  try {
-    const list = await getAllBusinesses();
-    found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
-  } catch (err) {
-    if (typeof window === 'undefined' || !isProductionRuntime()) {
-      throw err;
-    }
-  }
-
-  if (!found && typeof window !== 'undefined') {
+  // Resolve the requested tenant directly first. The registry can be slow or
+  // temporarily unavailable, and should not block a known tenant's workspace.
+  if (typeof window !== 'undefined') {
     try {
       const data = await safeFetchJson(`/api/tenants/${encodeURIComponent(businessId)}`, {
-        headers: {
-          'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
       });
       if (data?.success && data.tenant) {
         found = data.tenant;
-        const currentList = getItem<Business[]>('businesses', SEED_BUSINESSES);
-        const existingIdx = currentList.findIndex(b => normalizeTenantId(b.id) === targetId);
-        if (existingIdx >= 0) {
-          currentList[existingIdx] = found!;
-        } else {
-          currentList.push(found);
-        }
-        setItem('businesses', currentList);
       }
-    } catch (err) {
-      if (isProductionRuntime()) throw err;
+    } catch {
+      // Fall through to the registry lookup below. This allows cached/list
+      // data to help when the direct endpoint is unavailable.
     }
+  }
+
+  if (!found) {
+    try {
+      const list = await getAllBusinesses();
+      found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
+    } catch (err) {
+      // In production, don't replace a failed tenant lookup with demo data.
+      if (!isProductionRuntime()) throw err;
+    }
+  }
+
+  if (found && typeof window !== 'undefined') {
+    const currentList = getItem<Business[]>('businesses', SEED_BUSINESSES);
+    const existingIdx = currentList.findIndex(b => normalizeTenantId(b.id) === targetId);
+    if (existingIdx >= 0) currentList[existingIdx] = found;
+    else currentList.push(found);
+    setItem('businesses', currentList);
   }
 
   return found || null;
