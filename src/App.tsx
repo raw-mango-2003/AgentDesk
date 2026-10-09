@@ -659,16 +659,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       <VisualEditorRuntime />
-      {/* Top Navbar */}
-      <Navbar
-        currentView={currentView}
-        onNavigate={handleNavigate}
-        onOpenAuth={() => setShowAuthModal(true)}
-        onOpenDemoWidget={() => setShowDemoWidget(true)}
-        onOpenCopilot={() => setShowCopilot(true)}
-        onOpenNotifications={() => setShowNotifications(true)}
-        unreadNotificationsCount={unreadCount}
-      />
+      {/* Keep the global navbar off the cinematic public homepage only */}
+{currentView !== 'landing' && (
+  <Navbar
+    currentView={currentView}
+    onNavigate={handleNavigate}
+    onOpenAuth={() => setShowAuthModal(true)}
+    onOpenDemoWidget={() => setShowDemoWidget(true)}
+    onOpenCopilot={() => setShowCopilot(true)}
+    onOpenNotifications={() => setShowNotifications(true)}
+    unreadNotificationsCount={unreadCount}
+  />
+)}
 
       {/* Main Content Area */}
       <main className="flex-1">
