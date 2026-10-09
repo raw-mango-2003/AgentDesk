@@ -234,7 +234,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn pb-12">
+    <div className="agentdesk-billing-dashboard space-y-8 animate-fadeIn pb-12 w-full min-w-0">
       {/* Toast Notification */}
       {notification && (
         <div className={`p-4 rounded-2xl border text-xs font-semibold flex items-center justify-between shadow-xl animate-bounce-short ${
