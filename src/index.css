@@ -2245,3 +2245,118 @@ ui/phase-19-missed-call-textback
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 33: public site finish + actual route transition system. Keep AgentDesk's existing graphite/magenta brand. */
+.agentdesk-route-transition {
+  animation: agentdeskRouteEnter 260ms cubic-bezier(.2,.75,.25,1) both;
+  transform-origin: 50% 0;
+}
+@keyframes agentdeskRouteEnter {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(.997); filter: blur(2px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-route-transition { animation: none !important; }
+}
+
+/* Pricing now has its own explicit page scope; remove the leftover blue-template feel. */
+[data-visual-page="pricing"] {
+  --pricing-accent: var(--ad-primary, #ff2f86);
+  --pricing-accent-soft: var(--ad-accent, #ff5aa5);
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--pricing-accent) 10%, transparent), transparent 36rem),
+    #08080b !important;
+  color: #f7f3f7;
+}
+[data-visual-page="pricing"] > section:first-child {
+  padding-top: clamp(6rem, 10vw, 9rem) !important;
+  padding-bottom: clamp(2.5rem, 5vw, 4.5rem) !important;
+}
+[data-visual-page="pricing"] [data-visual-section="header"] > div > div:first-child {
+  border-color: color-mix(in srgb, var(--pricing-accent) 28%, transparent) !important;
+  background: color-mix(in srgb, var(--pricing-accent) 8%, #101014) !important;
+  color: var(--pricing-accent-soft) !important;
+}
+[data-visual-page="pricing"] h1,
+[data-visual-page="pricing"] h2,
+[data-visual-page="pricing"] h3 {
+  text-wrap: balance;
+  letter-spacing: -.045em;
+}
+[data-visual-page="pricing"] h1 span,
+[data-visual-page="pricing"] .text-blue-400,
+[data-visual-page="pricing"] .text-indigo-400,
+[data-visual-page="pricing"] .text-purple-400 {
+  color: var(--pricing-accent-soft) !important;
+}
+[data-visual-page="pricing"] .grid > div[class*="rounded-2xl"][class*="border"] {
+  position: relative;
+  overflow: visible;
+  border-color: rgba(255,255,255,.105) !important;
+  background: linear-gradient(155deg, rgba(255,255,255,.045), rgba(255,255,255,.012)) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,.16);
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+[data-visual-page="pricing"] .grid > div[class*="rounded-2xl"][class*="border"]:hover {
+  transform: translateY(-5px);
+  border-color: color-mix(in srgb, var(--pricing-accent) 48%, transparent) !important;
+  box-shadow: 0 28px 70px rgba(0,0,0,.28), 0 0 0 1px color-mix(in srgb, var(--pricing-accent) 8%, transparent);
+}
+[data-visual-page="pricing"] [class*="bg-blue-"],
+[data-visual-page="pricing"] [class*="bg-indigo-"],
+[data-visual-page="pricing"] [class*="bg-purple-"] {
+  background-color: var(--pricing-accent) !important;
+  color: #08080b !important;
+}
+[data-visual-page="pricing"] [class*="border-blue-"],
+[data-visual-page="pricing"] [class*="border-indigo-"],
+[data-visual-page="pricing"] [class*="border-purple-"] {
+  border-color: color-mix(in srgb, var(--pricing-accent) 44%, transparent) !important;
+}
+[data-visual-page="pricing"] [class*="text-blue-"],
+[data-visual-page="pricing"] [class*="text-indigo-"],
+[data-visual-page="pricing"] [class*="text-purple-"] {
+  color: var(--pricing-accent-soft) !important;
+}
+[data-visual-page="pricing"] [class*="shadow-blue-"],
+[data-visual-page="pricing"] [class*="shadow-indigo-"],
+[data-visual-page="pricing"] [class*="shadow-purple-"] {
+  box-shadow: 0 12px 34px color-mix(in srgb, var(--pricing-accent) 15%, transparent) !important;
+}
+[data-visual-page="pricing"] [class*="bg-gradient-to-r"] {
+  background-image: linear-gradient(115deg, var(--pricing-accent), color-mix(in srgb, var(--pricing-accent) 72%, #08080b)) !important;
+}
+[data-visual-page="pricing"] table thead { background: rgba(255,255,255,.035) !important; }
+[data-visual-page="pricing"] :is(button, a):focus-visible {
+  outline: 2px solid var(--pricing-accent-soft);
+  outline-offset: 3px;
+}
+[data-visual-page="pricing"] section:last-of-type > div {
+  background: linear-gradient(125deg, color-mix(in srgb, var(--pricing-accent) 18%, #111114), #111114 60%) !important;
+  border-color: color-mix(in srgb, var(--pricing-accent) 35%, transparent) !important;
+}
+@media (max-width: 640px) {
+  [data-visual-page="pricing"] .grid > div[class*="rounded-2xl"][class*="border"]:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-visual-page="pricing"] .grid > div[class*="rounded-2xl"][class*="border"] { transition: none !important; }
+}
+
+/* Product preview gives the landing page a tangible product moment, not only lifestyle photography. */
+[data-visual-section="workspace-preview"] .agentdesk-public-product-preview {
+  animation: agentdeskPreviewEnter .8s cubic-bezier(.2,.75,.25,1) both;
+}
+[data-visual-section="workspace-preview"] .agentdesk-public-product-preview [class*="rounded-2xl"] {
+  transition: border-color 180ms ease, transform 180ms ease, background-color 180ms ease;
+}
+[data-visual-section="workspace-preview"] .agentdesk-public-product-preview [class*="rounded-2xl"]:hover {
+  border-color: color-mix(in srgb, var(--lux-primary, var(--ad-primary)) 32%, transparent) !important;
+}
+@keyframes agentdeskPreviewEnter {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-visual-section="workspace-preview"] .agentdesk-public-product-preview { animation: none !important; }
+}
