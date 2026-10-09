@@ -1576,3 +1576,69 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phase 16: Platform Integrations Manager responsive layout safeguards.
+   Scoped layout-only changes; retain the existing palette and integration workflows. */
+.agentdesk-platform-integrations-manager {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-platform-integrations-manager > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-platform-integrations-manager :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-platform-integrations-manager :is(button, a, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-platform-integrations-manager :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-platform-integrations-manager pre,
+.agentdesk-platform-integrations-manager code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.agentdesk-platform-integrations-manager :is(.overflow-x-auto, [class*="overflow-x-auto"]) {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.agentdesk-platform-integrations-manager table {
+  width: 100%;
+}
+@media (max-width: 640px) {
+  .agentdesk-platform-integrations-manager {
+    gap: 1rem;
+    padding-bottom: 1rem;
+  }
+  .agentdesk-platform-integrations-manager h1 {
+    font-size: clamp(1.3rem, 5.5vw, 1.8rem);
+    line-height: 1.2;
+  }
+  .agentdesk-platform-integrations-manager :is(button, input, select) {
+    min-height: 40px;
+  }
+  .agentdesk-platform-integrations-manager [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-platform-integrations-manager :is(.overflow-x-auto, [class*="overflow-x-auto"]) {
+    overflow-x: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-platform-integrations-manager *,
+  .agentdesk-platform-integrations-manager *::before,
+  .agentdesk-platform-integrations-manager *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
