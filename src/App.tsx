@@ -792,10 +792,6 @@ export default function App() {
               navigateTab('overview');
             }}
           />
-        ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'design_studio' ? (
-          <Suspense fallback={<RouteLoading />}>
-            <DesignStudio />
-          </Suspense>
         ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'admin' ? (
           <div className="agentdesk-console-shell agentdesk-platform-admin-shell max-w-none min-h-screen px-0 py-0">
             <PlatformAdminDashboard
