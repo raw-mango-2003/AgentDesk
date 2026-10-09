@@ -211,7 +211,7 @@ export const KnowledgeBaseDashboard: React.FC<KnowledgeBaseDashboardProps> = ({ 
   });
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="agentdesk-knowledge-base-dashboard space-y-6 animate-fadeIn w-full min-w-0">
       {/* Action Success Toast */}
       {actionSuccess && (
         <div className="bg-emerald-900/30 border border-emerald-700/60 text-emerald-200 px-4 py-3 rounded-2xl flex items-center justify-between text-xs font-semibold shadow-lg">

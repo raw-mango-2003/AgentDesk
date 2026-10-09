@@ -1360,3 +1360,80 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 12: Knowledge Base Dashboard responsive layout. Scoped CSS only. */
+.agentdesk-knowledge-base-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-knowledge-base-dashboard [class*="grid"],
+.agentdesk-knowledge-base-dashboard [class*="flex"] {
+  min-width: 0;
+}
+.agentdesk-knowledge-base-dashboard [class*="grid"] > *,
+.agentdesk-knowledge-base-dashboard [class*="flex"] > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-knowledge-base-dashboard input,
+.agentdesk-knowledge-base-dashboard select,
+.agentdesk-knowledge-base-dashboard textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-knowledge-base-dashboard button,
+.agentdesk-knowledge-base-dashboard a {
+  overflow-wrap: anywhere;
+}
+.agentdesk-knowledge-base-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-knowledge-base-dashboard pre,
+.agentdesk-knowledge-base-dashboard code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.agentdesk-knowledge-base-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.agentdesk-knowledge-base-dashboard table {
+  min-width: 34rem;
+}
+@media (max-width: 640px) {
+  .agentdesk-knowledge-base-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-knowledge-base-dashboard h2 {
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+    line-height: 1.25;
+  }
+  .agentdesk-knowledge-base-dashboard button,
+  .agentdesk-knowledge-base-dashboard input,
+  .agentdesk-knowledge-base-dashboard select,
+  .agentdesk-knowledge-base-dashboard textarea {
+    min-height: 40px;
+  }
+  .agentdesk-knowledge-base-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-knowledge-base-dashboard [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-knowledge-base-dashboard *,
+  .agentdesk-knowledge-base-dashboard *::before,
+  .agentdesk-knowledge-base-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
