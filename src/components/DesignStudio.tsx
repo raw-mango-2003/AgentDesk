@@ -492,9 +492,36 @@ export const DesignStudio: React.FC = () => {
             <a href="https://www.figma.com/templates/web-design-inspiration/" target="_blank" rel="noreferrer" className="block text-center text-xs text-[#d8c49a] hover:text-[#d8c49a] mt-3">Browse free Figma website templates ↗</a>
           </Panel>}
           {tool === 'style' && <Panel title="Global style">
-            <Color label="Primary" value={design.brand.primaryColor} onChange={v => updatePath(['brand','primaryColor'],v)} />
-            <Color label="Background" value={design.brand.backgroundColor} onChange={v => updatePath(['brand','backgroundColor'],v)} />
-            <Color label="Text" value={design.brand.textColor} onChange={v => updatePath(['brand','textColor'],v)} />
+            <div className="mb-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+              <div className="text-xs font-semibold text-white mb-1">Brand colour system</div>
+              <div className="text-[11px] leading-4 text-slate-400">Choose colours for individual UI roles. Changes are saved with your design, without editing code. Use Element settings to colour individual text and shapes.</div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {[
+                  ['Primary', design.brand.primaryColor], ['Accent', design.brand.accentColor],
+                  ['Background', design.brand.backgroundColor], ['Surface', design.brand.surfaceColor],
+                  ['Text', design.brand.textColor], ['Muted text', design.brand.mutedTextColor]
+                ].map(([label, value]: any) => <div key={label} title={label} className="flex items-center gap-1.5 rounded-md border border-white/10 bg-black/20 px-2 py-1">
+                  <span className="h-3 w-3 rounded-full border border-white/20" style={{background:value}} />
+                  <span className="text-[10px] text-slate-300">{label}</span>
+                </div>)}
+              </div>
+            </div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mb-2">Brand & actions</div>
+            <Color label="Primary / buttons" value={design.brand.primaryColor} onChange={v => updatePath(['brand','primaryColor'],v)} />
+            <Color label="Accent / highlights" value={design.brand.accentColor} onChange={v => updatePath(['brand','accentColor'],v)} />
+            <Color label="Secondary" value={design.brand.secondaryColor} onChange={v => updatePath(['brand','secondaryColor'],v)} />
+            <Color label="Success" value={design.brand.successColor} onChange={v => updatePath(['brand','successColor'],v)} />
+            <Color label="Danger / errors" value={design.brand.dangerColor} onChange={v => updatePath(['brand','dangerColor'],v)} />
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mt-3 mb-2">Surfaces & text</div>
+            <Color label="Page background" value={design.brand.backgroundColor} onChange={v => updatePath(['brand','backgroundColor'],v)} />
+            <Color label="Card / panel surface" value={design.brand.surfaceColor} onChange={v => updatePath(['brand','surfaceColor'],v)} />
+            <Color label="Main text" value={design.brand.textColor} onChange={v => updatePath(['brand','textColor'],v)} />
+            <Color label="Muted text" value={design.brand.mutedTextColor} onChange={v => updatePath(['brand','mutedTextColor'],v)} />
+            <Color label="Borders" value={design.brand.borderColor} onChange={v => updatePath(['brand','borderColor'],v)} />
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 mt-3 mb-2">Per-page colours</div>
+            <Color label="Dashboard background" value={design.pages?.dashboard?.backgroundColor || design.brand.backgroundColor} onChange={v => updatePath(['pages','dashboard','backgroundColor'],v)} />
+            <Color label="Dashboard cards" value={design.pages?.dashboard?.surfaceColor || design.brand.surfaceColor} onChange={v => updatePath(['pages','dashboard','surfaceColor'],v)} />
+            <Color label="Pricing highlight" value={design.pages?.pricing?.highlightColor || design.brand.primaryColor} onChange={v => updatePath(['pages','pricing','highlightColor'],v)} />
             <Range label="Radius" value={design.appearance.radius} min={0} max={40} onChange={v => updatePath(['appearance','radius'],v)} />
             <Select label="Heading font" value={design.typography.headingFont} options={['Inter','system-ui','Arial','Helvetica','Georgia','Trebuchet MS','Verdana']} onChange={v => updatePath(['typography','headingFont'],v)} />
             <Select label="Body font" value={design.typography.bodyFont} options={['Inter','system-ui','Arial','Helvetica','Georgia','Trebuchet MS','Verdana']} onChange={v => updatePath(['typography','bodyFont'],v)} />
