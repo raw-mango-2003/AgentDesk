@@ -372,23 +372,23 @@ html, body, #root {
 .agentdesk-sidebar-item svg{width:15px;height:15px;color:#6f6b75;}
 .agentdesk-sidebar-footer{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);}
 .agentdesk-console-shell .agentdesk-legacy-module-tabs{display:none !important;}
-.agentdesk-console-shell .bg-slate-950{background-color:#070709 !important;}
-.agentdesk-console-shell .bg-slate-900{background-color:#101014 !important;}
-.agentdesk-console-shell .bg-slate-800{background-color:#15151a !important;}
-.agentdesk-console-shell .bg-slate-700{background-color:#1d1c22 !important;}
-.agentdesk-console-shell [class*="border-slate-"]{border-color:#26232b !important;}
-.agentdesk-console-shell [class*="text-slate-100"],.agentdesk-console-shell [class*="text-slate-200"]{color:#e9e5eb !important;}
-.agentdesk-console-shell [class*="text-slate-300"]{color:#c1bdc6 !important;}
-.agentdesk-console-shell [class*="text-slate-400"]{color:#9a97a1 !important;}
-.agentdesk-console-shell [class*="text-slate-500"]{color:#77737e !important;}
-.agentdesk-console-shell [class*="bg-blue-600"]{background-color:#ff2f86 !important;color:#08080a !important;}
-.agentdesk-console-shell [class*="hover:bg-blue-500"]:hover,.agentdesk-console-shell [class*="hover:bg-blue-600"]:hover{background-color:#ff5aa5 !important;}
-.agentdesk-console-shell [class*="text-blue-"]{color:#ff5aa5 !important;}
-.agentdesk-console-shell [class*="border-blue-"]{border-color:rgba(255,47,134,.35) !important;}
-.agentdesk-console-shell [class*="shadow-blue-"]{box-shadow:0 12px 32px rgba(255,47,134,.16) !important;}
-.agentdesk-console-shell [class*="bg-indigo-600"],.agentdesk-console-shell [class*="bg-purple-600"]{background-color:#b91c63 !important;color:#fff !important;}
-.agentdesk-console-shell [class*="text-indigo-"],.agentdesk-console-shell [class*="text-purple-"]{color:#ff8bbb !important;}
-.agentdesk-console-shell [class*="border-indigo-"],.agentdesk-console-shell [class*="border-purple-"]{border-color:rgba(255,47,134,.28) !important;}
+.agentdesk-console-shell .bg-slate-950{background-color:var(--ad-dashboard-bg,var(--ad-background,#070709)) !important;}
+.agentdesk-console-shell .bg-slate-900{background-color:var(--ad-dashboard-surface,var(--ad-surface,#101014)) !important;}
+.agentdesk-console-shell .bg-slate-800{background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#101014)) 84%,white) !important;}
+.agentdesk-console-shell .bg-slate-700{background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#101014)) 70%,white) !important;}
+.agentdesk-console-shell [class*="border-slate-"]{border-color:var(--ad-border,#26232b) !important;}
+.agentdesk-console-shell [class*="text-slate-100"],.agentdesk-console-shell [class*="text-slate-200"]{color:var(--ad-text,#e9e5eb) !important;}
+.agentdesk-console-shell [class*="text-slate-300"]{color:color-mix(in srgb,var(--ad-text,#e9e5eb) 82%,var(--ad-muted,#9a97a1)) !important;}
+.agentdesk-console-shell [class*="text-slate-400"]{color:var(--ad-muted,#9a97a1) !important;}
+.agentdesk-console-shell [class*="text-slate-500"]{color:color-mix(in srgb,var(--ad-muted,#9a97a1) 76%,transparent) !important;}
+.agentdesk-console-shell [class*="bg-blue-600"]{background-color:var(--ad-primary,#ff2f86) !important;color:var(--ad-secondary,#08080a) !important;}
+.agentdesk-console-shell [class*="hover:bg-blue-500"]:hover,.agentdesk-console-shell [class*="hover:bg-blue-600"]:hover{background-color:var(--ad-accent,#ff5aa5) !important;}
+.agentdesk-console-shell [class*="text-blue-"]{color:var(--ad-accent,#ff5aa5) !important;}
+.agentdesk-console-shell [class*="border-blue-"]{border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 35%,transparent) !important;}
+.agentdesk-console-shell [class*="shadow-blue-"]{box-shadow:0 12px 32px color-mix(in srgb,var(--ad-primary,#ff2f86) 16%,transparent) !important;}
+.agentdesk-console-shell [class*="bg-indigo-600"],.agentdesk-console-shell [class*="bg-purple-600"]{background-color:var(--ad-primary,#b91c63) !important;color:var(--ad-text,#fff) !important;}
+.agentdesk-console-shell [class*="text-indigo-"],.agentdesk-console-shell [class*="text-purple-"]{color:var(--ad-accent,#ff8bbb) !important;}
+.agentdesk-console-shell [class*="border-indigo-"],.agentdesk-console-shell [class*="border-purple-"]{border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 28%,transparent) !important;}
 .agentdesk-console-shell .rounded-3xl{border-radius:18px !important;}
 .agentdesk-console-shell .rounded-2xl{border-radius:14px !important;}
 .agentdesk-console-shell .rounded-xl{border-radius:10px !important;}
