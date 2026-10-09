@@ -334,7 +334,7 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
   );
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-user-management-dashboard space-y-6 w-full min-w-0">
       {/* Toast Notification */}
       {notification && (
         <div className={`p-4 rounded-2xl border flex items-center justify-between text-xs font-semibold shadow-md ${
