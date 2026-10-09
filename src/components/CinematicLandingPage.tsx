@@ -548,8 +548,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
                 ['Growth', '₹29,999', '7,500 AI conversations', '1,000 voice minutes', '2,500 SMS / WhatsApp'],
                 ['Scale', '₹59,999', '20,000 AI conversations', '3,000 voice minutes', '5,000 SMS / WhatsApp']
               ].map(([name, price, a, b, c], index) => (
-               ```tsx
-<div
+                <div
   key={name}
   className={`group relative isolate overflow-hidden rounded-[28px] border p-7 sm:p-9 transition-colors duration-200 ${index === 1 ? 'lg:-translate-y-3' : ''}`}
   onMouseMove={(event) => {
@@ -568,9 +567,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
       : 'rgba(255,255,255,.02)',
     backgroundImage: `radial-gradient(260px circle at var(--glow-x, 50%) var(--glow-y, 50%), ${primary}35, transparent 70%)`,
   }}
->
-```
-                  <p className="text-[10px] uppercase tracking-[.24em] text-white/45">{name}</p>
+>                  <p className="text-[10px] uppercase tracking-[.24em] text-white/45">{name}</p>
                   <p className="lux-display mt-6 text-4xl font-medium">{price}<span className="text-sm text-white/35"> / mo</span></p>
                   <div className="mt-7 space-y-3 text-sm text-white/65">
                     {[a, b, c, 'Managed platform operations'].map(item => <div key={item} className="flex gap-3"><Check className="h-4 w-4 shrink-0" style={{ color: primary }} />{item}</div>)}
