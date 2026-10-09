@@ -121,7 +121,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
   const totalReactivatedCustomers = (audiences || []).reduce((sum, a) => sum + (a.metrics?.reactivatedCount || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-re-engagement-dashboard space-y-6 w-full min-w-0 max-w-full">
       {/* Header Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-none flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
