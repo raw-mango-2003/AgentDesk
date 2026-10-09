@@ -187,6 +187,23 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
     ['Can I start with a demo?', 'Yes. Use the AI Receptionist demo from this page, or contact the team for a guided walkthrough of the full workspace.']
   ];
 
+  const scrollToSection = (sectionId: string) => {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${window.location.pathname}${window.location.search}#${sectionId}`
+  );
+
+  section.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'auto'
+      : 'smooth',
+    block: 'start',
+  });
+};
   const handleGetStarted = () => {
     if (onNavigateGetStarted) onNavigateGetStarted();
     else onOpenAuth();
@@ -234,10 +251,39 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
               <span className="text-sm font-semibold tracking-[.18em] uppercase">{design.site?.name || 'AgentDesk'}</span>
             </button>
             <div className="hidden md:flex items-center gap-7 text-[11px] uppercase tracking-[.18em] text-white/60">
-              <a href="#experience" className="hover:text-white transition-colors">Experience</a>
-              <a href="#capabilities" className="hover:text-white transition-colors">Capabilities</a>
-              <a href="#plans" className="hover:text-white transition-colors">Plans</a>
-              <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+
+<button
+  type="button"
+  onClick={() => scrollToSection('experience')}
+  className="hover:text-white transition-colors"
+>
+  Experience
+</button>
+
+<button
+  type="button"
+  onClick={() => scrollToSection('capabilities')}
+  className="hover:text-white transition-colors"
+>
+  Capabilities
+</button>
+
+<button
+  type="button"
+  onClick={() => scrollToSection('plans')}
+  className="hover:text-white transition-colors"
+>
+  Plans
+</button>
+
+<button
+  type="button"
+  onClick={() => scrollToSection('faq')}
+  className="hover:text-white transition-colors"
+>
+  FAQ
+</button>
+
             </div>
             <div className="flex items-center gap-2">
               {design.navigation?.showLogin !== false && (
@@ -378,7 +424,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </section>
 
-        <section id="experience" className="border-y py-20 sm:py-28" style={{ borderColor: border, backgroundColor: background }}>
+      <section id="experience" className="border-y py-20 sm:py-28 scroll-mt-24" style={{ borderColor: border, backgroundColor: background }}>
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-12 lg:gap-24 items-end">
               <div>
@@ -418,7 +464,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </section>
 
-        <section id="capabilities" className="py-20 sm:py-28" style={{ backgroundColor: '#0b0b0b' }}>
+<section id="capabilities" className="py-20 sm:py-28 scroll-mt-24" style={{ backgroundColor: '#0b0b0b' }}>
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div>
@@ -489,7 +535,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </section>
 
-        <section id="plans" className="py-20 sm:py-28" style={{ backgroundColor: '#0b0b0b' }}>
+<section id="plans" className="py-20 sm:py-28 scroll-mt-24" style={{ backgroundColor: '#0b0b0b' }}>
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="max-w-3xl">
               <p className="text-[10px] uppercase tracking-[.32em]" style={{ color: primary }}>Plans</p>
@@ -527,7 +573,7 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </section>
 
-        <section id="faq" className="border-t py-20 sm:py-28" style={{ borderColor: border }}>
+<section id="faq" className="border-t py-20 sm:py-28 scroll-mt-24" style={{ borderColor: border }}>
           <div className="mx-auto max-w-4xl px-5 sm:px-8">
             <div className="text-center">
               <p className="text-[10px] uppercase tracking-[.32em]" style={{ color: primary }}>FAQ</p>
