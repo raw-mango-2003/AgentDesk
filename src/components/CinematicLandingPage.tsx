@@ -286,6 +286,98 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
           </div>
         </section>
 
+        {/* Product preview: a clear, tangible view of the workspace before visitors choose a plan. */}
+        <section data-visual-section="workspace-preview" className="relative z-10 px-4 sm:px-8 py-12 sm:py-20" style={{ backgroundColor: background }}>
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8 sm:mb-10">
+              <div className="max-w-2xl">
+                <p className="text-[10px] uppercase tracking-[.32em]" style={{ color: primary }}>Inside AgentDesk</p>
+                <h2 className="lux-display mt-4 text-3xl sm:text-5xl font-medium leading-tight">From first message to next action.</h2>
+                <p className="mt-4 max-w-xl text-sm leading-6" style={{ color: muted }}>One workspace for customer conversations, lead context, follow-up and team handoffs.</p>
+              </div>
+              <div className="inline-flex items-center gap-2 self-start rounded-full border px-3 py-2 text-[10px] uppercase tracking-[.16em]" style={{ borderColor: border, color: muted }}>
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: primary }} />
+                Workspace preview · illustrative
+              </div>
+            </div>
+            <div className="agentdesk-public-product-preview overflow-hidden rounded-[24px] sm:rounded-[30px] border" style={{ borderColor: border, backgroundColor: '#0d0d10', boxShadow: '0 35px 100px rgba(0,0,0,.35)' }}>
+              <div className="flex items-center justify-between gap-3 border-b px-4 sm:px-6 py-4" style={{ borderColor: border, backgroundColor: 'rgba(255,255,255,.025)' }}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: primary, color: '#080808' }}><Bot className="h-4 w-4" /></span>
+                  <div className="min-w-0"><p className="text-xs font-semibold truncate">AgentDesk Workspace</p><p className="text-[10px]" style={{ color: muted }}>Customer operations</p></div>
+                </div>
+                <span className="rounded-full border px-3 py-1.5 text-[9px] sm:text-[10px] uppercase tracking-wider" style={{ borderColor: 'rgba(255,255,255,.12)', color: muted }}>Preview mode</span>
+              </div>
+              <div className="grid md:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="hidden md:block border-r p-4 space-y-2" style={{ borderColor: border, backgroundColor: 'rgba(255,255,255,.015)' }}>
+                  {['Overview', 'Conversations', 'Leads & CRM', 'Appointments', 'Follow-up', 'Integrations'].map((item, i) => (
+                    <div key={item} className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-[10px]" style={{ backgroundColor: i === 0 ? `${primary}1c` : 'transparent', color: i === 0 ? text : muted, border: i === 0 ? `1px solid ${primary}55` : '1px solid transparent' }}>
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: i === 0 ? primary : '#55545a' }} />{item}
+                    </div>
+                  ))}
+                  <div className="mt-8 rounded-xl border p-3" style={{ borderColor: border }}>
+                    <p className="text-[9px] uppercase tracking-wider" style={{ color: muted }}>AI employee</p>
+                    <p className="mt-2 text-xs font-semibold">Reception active</p>
+                    <p className="mt-1 text-[10px]" style={{ color: muted }}>Ready for enquiries</p>
+                  </div>
+                </div>
+                <div className="min-w-0 p-4 sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
+                    <div><p className="text-sm sm:text-base font-semibold">Operations overview</p><p className="text-[10px] mt-1" style={{ color: muted }}>A unified view of your customer pipeline</p></div>
+                    <span className="text-[9px] uppercase tracking-wider" style={{ color: primary }}>Live workflow concept</span>
+                  </div>
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                    {[
+                      ['Conversations', '128', '+18% this week'],
+                      ['Qualified leads', '34', 'Ready for follow-up'],
+                      ['Appointments', '16', 'Across your calendar'],
+                      ['Follow-ups due', '09', 'Next actions queued']
+                    ].map(([label, value, note], i) => (
+                      <div key={label} className="min-w-0 rounded-2xl border p-3 sm:p-4" style={{ borderColor: border, backgroundColor: 'rgba(255,255,255,.025)' }}>
+                        <p className="text-[9px] sm:text-[10px]" style={{ color: muted }}>{label}</p>
+                        <p className="lux-display mt-3 text-2xl sm:text-3xl font-medium">{value}</p>
+                        <p className="mt-2 text-[9px] leading-4" style={{ color: i === 3 ? primary : muted }}>{note}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid lg:grid-cols-[1.25fr_.75fr] gap-3">
+                    <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: border }}>
+                      <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold">Recent customer activity</p><span className="text-[9px]" style={{ color: muted }}>Sample data</span></div>
+                      {[
+                        ['Website enquiry', 'Lead qualified · Follow-up queued', '2m'],
+                        ['Missed call recovery', 'Message prepared · Awaiting response', '8m'],
+                        ['Appointment request', 'Details captured · Team notified', '14m']
+                      ].map(([title, detail, time]) => (
+                        <div key={title} className="flex items-start gap-3 border-t py-3 mt-3" style={{ borderColor: border }}>
+                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: primary }} />
+                          <div className="min-w-0 flex-1"><p className="text-[11px] font-medium">{title}</p><p className="mt-1 text-[10px] leading-4" style={{ color: muted }}>{detail}</p></div>
+                          <span className="text-[9px] shrink-0" style={{ color: muted }}>{time}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-2xl border p-4 sm:p-5" style={{ borderColor: border, background: `linear-gradient(145deg, ${primary}12, rgba(255,255,255,.015))` }}>
+                      <p className="text-xs font-semibold">The workflow</p>
+                      <div className="mt-4 space-y-2">
+                        {['Customer enquiry', 'AI response', 'Lead context', 'Follow-up or handoff'].map((step, i) => (
+                          <div key={step} className="flex items-center gap-3 rounded-xl border px-3 py-2.5" style={{ borderColor: border, backgroundColor: 'rgba(0,0,0,.16)' }}>
+                            <span className="grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold" style={{ backgroundColor: `${primary}20`, color: primary }}>{i + 1}</span>
+                            <span className="text-[10px]">{step}</span>
+                            {i < 3 && <ArrowRight className="ml-auto h-3 w-3" style={{ color: muted }} />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <p className="max-w-xl text-xs leading-5" style={{ color: muted }}>Illustrative interface and sample metrics. Actual results depend on your configuration and usage.</p>
+              <button onClick={handleGetStarted} className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-[10px] uppercase tracking-[.16em] font-semibold" style={{ backgroundColor: primary, color: '#080808' }}>Explore your workspace <ArrowRight className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
+        </section>
+
         <section id="experience" className="border-y py-20 sm:py-28" style={{ borderColor: border, backgroundColor: background }}>
           <div className="mx-auto max-w-7xl px-5 sm:px-8">
             <div className="grid lg:grid-cols-[.8fr_1.2fr] gap-12 lg:gap-24 items-end">
