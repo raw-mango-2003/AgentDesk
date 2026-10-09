@@ -2183,3 +2183,65 @@ ui/phase-19-missed-call-textback
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phase 25: Pricing page responsive safeguards.
+   Keep the page's existing dynamic design colors, pricing data, and checkout behavior intact. */
+.agentdesk-pricing-page {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-pricing-page > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-pricing-page :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-pricing-page :is(button, a, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-pricing-page :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-pricing-page [class*="grid"] > *,
+.agentdesk-pricing-page [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-pricing-page pre,
+.agentdesk-pricing-page code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .agentdesk-pricing-page [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-pricing-page :is(button, input, select, textarea) {
+    min-height: 40px;
+  }
+  .agentdesk-pricing-page [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 480px) {
+  .agentdesk-pricing-page .p-6 {
+    padding: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-pricing-page *,
+  .agentdesk-pricing-page *::before,
+  .agentdesk-pricing-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
