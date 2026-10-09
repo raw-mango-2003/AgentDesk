@@ -63,7 +63,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <MessageSquare className="w-6 h-6 text-blue-600" />
-            Conversations & Transcripts
+            Conversations
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             View live interactions between customer visitors and your AI receptionist for <span className="font-semibold text-slate-700">{business.name}</span>.
