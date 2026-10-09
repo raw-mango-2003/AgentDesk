@@ -22,7 +22,6 @@ const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer'
 import { ChatWidget } from './components/ChatWidget';
 import { VisualEditorRuntime } from './components/VisualEditorRuntime';
 import { AuthModal } from './components/AuthModal';
-const PricingPage = lazy(() => import('./components/PricingPage').then(module => ({ default: module.PricingPage })));
 const BillingDashboard = lazy(() => import('./components/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
 import { PlanUpgradeModal } from './components/PlanUpgradeModal';
 const LocalizationSettings = lazy(() => import('./components/LocalizationSettings').then(module => ({ default: module.LocalizationSettings })));
@@ -195,6 +194,17 @@ export default function App() {
   };
 
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
+
+  useEffect(() => {
+    if (currentView !== 'pricing') return;
+    const scrollToPlans = window.setTimeout(() => {
+      document.getElementById('plans')?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start'
+      });
+    }, 80);
+    return () => window.clearTimeout(scrollToPlans);
+  }, [currentView]);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
   const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab === 'account_credentials' ? 'account-credentials' : activeTab === 'admin' ? 'platform-admin' : activeTab;
