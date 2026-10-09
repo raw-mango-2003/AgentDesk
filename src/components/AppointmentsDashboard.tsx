@@ -105,7 +105,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
   });
 
   return (
-    <div className="space-y-5 animate-fadeIn text-slate-200">
+    <div className="agentdesk-appointments-dashboard space-y-5 animate-fadeIn text-slate-200 w-full min-w-0">
       {/* Header Banner */}
       <div className="border-b border-white/[0.08] pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
