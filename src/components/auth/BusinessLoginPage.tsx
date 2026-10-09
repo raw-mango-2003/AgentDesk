@@ -90,14 +90,14 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#0b0b0b] text-[#f5f0d0] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
       {/* Subtle background gradient glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-blue-600/15 via-indigo-600/10 to-transparent blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-fuchsia-600/15 via-pink-600/10 to-transparent blur-[120px] rounded-full pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
         {/* Brand header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-600/20 mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-fuchsia-700 to-pink-600 text-white shadow-xl shadow-fuchsia-600/20 mb-4">
             <Bot className="w-8 h-8" />
           </div>
           <h2 className="text-3xl font-black text-white tracking-tight">
@@ -109,7 +109,7 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
         </div>
 
         {/* Card */}
-        <div className="bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div className="bg-[#111111]/95 backdrop-blur-md border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl">
           {error && (
             <div className="mb-5 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
@@ -130,7 +130,7 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com"
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className="w-full bg-[#090909] border border-white/10 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all"
                 />
               </div>
             </div>
@@ -147,7 +147,7 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
                     setForgotSubmitted(false);
                     setForgotEmail(email);
                   }}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-medium cursor-pointer transition-colors"
+                  className="text-xs text-fuchsia-400 hover:text-pink-300 font-medium cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -160,7 +160,7 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950/60 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                  className="w-full bg-[#090909] border border-white/10 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all"
                 />
               </div>
             </div>
@@ -168,7 +168,7 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-fuchsia-700 to-pink-600 hover:from-fuchsia-600 hover:to-pink-500 text-white font-bold text-sm shadow-lg shadow-fuchsia-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -187,7 +187,7 @@ export const BusinessLoginPage: React.FC<BusinessLoginPageProps> = ({
               <button
                 type="button"
                 onClick={handleSignup}
-                className="text-blue-400 hover:text-blue-300 font-bold ml-1 cursor-pointer transition-colors"
+                className="text-fuchsia-400 hover:text-pink-300 font-bold ml-1 cursor-pointer transition-colors"
               >
                 Get Started
               </button>

@@ -76,14 +76,14 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans selection:bg-purple-600 selection:text-white">
+    <div className="min-h-screen bg-[#0b0b0b] text-[#f5f0d0] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans selection:bg-fuchsia-600 selection:text-white">
       {/* Background purple control-plane ambient glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-gradient-to-tr from-purple-900/20 via-indigo-900/15 to-transparent blur-[140px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[380px] bg-gradient-to-tr from-fuchsia-900/20 via-pink-900/15 to-transparent blur-[140px] rounded-full pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
         {/* Protected Control Plane Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-700 text-white shadow-xl shadow-purple-900/40 mb-4 border border-purple-500/30">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-fuchsia-700 to-pink-600 text-white shadow-xl shadow-purple-900/40 mb-4 border border-purple-500/30">
             <ShieldAlert className="w-8 h-8 text-purple-200" />
           </div>
           <div className="inline-block px-3 py-1 rounded-full bg-purple-950/80 border border-purple-800/80 text-purple-300 text-[11px] font-bold uppercase tracking-wider mb-2">
@@ -98,7 +98,7 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
         </div>
 
         {/* Security Box */}
-        <div className="bg-slate-900/90 backdrop-blur-md border border-purple-900/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+        <div className="bg-[#111111]/95 backdrop-blur-md border border-fuchsia-900/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-purple-900/80 border border-purple-700 text-purple-200 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
             Protected Platform Route
           </div>
@@ -125,7 +125,7 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@company.com"
-                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                  className="w-full bg-[#090909] border border-white/10 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all"
                 />
               </div>
             </div>
@@ -142,7 +142,7 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
                     setForgotSubmitted(false);
                     setForgotEmail(email);
                   }}
-                  className="text-xs text-purple-400 hover:text-purple-300 font-medium cursor-pointer transition-colors"
+                  className="text-xs text-fuchsia-400 hover:text-pink-300 font-medium cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -155,7 +155,7 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                  className="w-full bg-[#090909] border border-white/10 rounded-xl pl-10 pr-3.5 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-fuchsia-500 focus:ring-1 focus:ring-fuchsia-500 transition-all"
                 />
               </div>
             </div>
@@ -163,7 +163,7 @@ export const PlatformAdminLoginPage: React.FC<PlatformAdminLoginPageProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-600 hover:to-indigo-600 text-white font-bold text-sm shadow-lg shadow-purple-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed border border-purple-500/20"
+              className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-fuchsia-700 to-pink-600 hover:from-purple-600 hover:to-indigo-600 text-white font-bold text-sm shadow-lg shadow-purple-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed border border-purple-500/20"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
