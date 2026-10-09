@@ -79,7 +79,7 @@ if (![401, 403].includes(anonymousMonitoring.response.status)) {
   throw new Error(`Integration monitoring must reject anonymous access, received HTTP ${anonymousMonitoring.response.status}: ${JSON.stringify(anonymousMonitoring.body)}`);
 }
 
-const missingTenantIntegrations = await request('/api/platform/tenant-integrations');
+const missingTenantIntegrations = await request('/api/platform/tenant-integrations', { headers: { Cookie: cookies } });
 if (missingTenantIntegrations.response.status !== 400 || !/tenantId is required/i.test(missingTenantIntegrations.body?.error || '')) {
   throw new Error(`Platform integration listing should validate tenantId, received HTTP ${missingTenantIntegrations.response.status}: ${JSON.stringify(missingTenantIntegrations.body)}`);
 }
