@@ -489,3 +489,101 @@ html, body, #root {
   .agentdesk-platform-admin-shell{overflow-x:hidden;}
   .agentdesk-platform-admin-shell .p-4.sm\:p-6.lg\:p-8{padding:1rem;}
 }
+
+
+/* AgentDesk premium admin refresh: consistent graphite surfaces, restrained accent glow,
+   clear hierarchy, and responsive spacing. Behaviour and existing admin routes are unchanged. */
+.agentdesk-platform-admin-shell{
+  isolation:isolate;
+  background:
+    radial-gradient(ellipse at 70% -10%,color-mix(in srgb,var(--ad-primary,#ff2f86) 11%,transparent),transparent 36rem),
+    var(--ad-dashboard-bg,var(--ad-background,#08080b)) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full{
+  min-height:calc(100vh - 4rem) !important;
+  background:transparent !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside{
+  width:248px;
+  background:rgba(12,12,16,.96) !important;
+  border-right:1px solid rgba(255,255,255,.075) !important;
+  box-shadow:12px 0 40px rgba(0,0,0,.16);
+}
+.agentdesk-platform-admin-shell > div.w-full > aside > div:first-child{
+  min-height:78px;
+  padding:18px 16px !important;
+  border-bottom:1px solid rgba(255,255,255,.07) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside nav{
+  padding:12px !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside nav button{
+  min-height:40px;
+  border:1px solid transparent;
+  border-radius:11px !important;
+  margin:2px 0;
+  color:#aaa7b2;
+  background:transparent;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside nav button:hover{
+  color:#f7f4f8 !important;
+  background:rgba(255,255,255,.045) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside nav button.bg-purple-600,
+.agentdesk-platform-admin-shell > div.w-full > aside nav button[class*="bg-purple-600"]{
+  color:#fff !important;
+  background:linear-gradient(100deg,color-mix(in srgb,var(--ad-primary,#ff2f86) 22%,transparent),color-mix(in srgb,var(--ad-primary,#ff2f86) 8%,transparent)) !important;
+  border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 30%,transparent) !important;
+  box-shadow:inset 3px 0 0 var(--ad-primary,#ff2f86),0 8px 24px rgba(0,0,0,.12) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > div.flex-1{
+  background:transparent !important;
+  min-height:calc(100vh - 4rem);
+}
+.agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .sticky{
+  min-height:78px;
+  padding:16px 26px !important;
+  background:rgba(12,12,16,.82) !important;
+  border-bottom:1px solid rgba(255,255,255,.07) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .p-4.sm\:p-6.lg\:p-8{
+  padding:clamp(18px,2.5vw,34px) !important;
+}
+.agentdesk-platform-admin-shell .rounded-xl,
+.agentdesk-platform-admin-shell .rounded-2xl,
+.agentdesk-platform-admin-shell .rounded-3xl{
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+.agentdesk-platform-admin-shell .border-slate-800,
+.agentdesk-platform-admin-shell [class*="border-slate-700"]{
+  border-color:rgba(255,255,255,.085) !important;
+}
+.agentdesk-platform-admin-shell .bg-slate-900\/90,
+.agentdesk-platform-admin-shell .bg-slate-900\/80{
+  background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#111116)) 94%,transparent) !important;
+}
+.agentdesk-platform-admin-shell .bg-slate-800\/70,
+.agentdesk-platform-admin-shell .bg-slate-800\/80{
+  background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#111116)) 88%,white 2%) !important;
+}
+.agentdesk-platform-admin-shell button:not(:disabled){
+  cursor:pointer;
+}
+.agentdesk-platform-admin-shell button:disabled{
+  cursor:not-allowed;
+  opacity:.55;
+}
+.agentdesk-platform-admin-shell .text-white{
+  text-wrap:pretty;
+}
+@media(max-width:767px){
+  .agentdesk-platform-admin-shell > div.w-full > aside{
+    width:260px;
+  }
+  .agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .sticky{
+    padding:12px 14px !important;
+  }
+  .agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .p-4.sm\:p-6.lg\:p-8{
+    padding:14px !important;
+  }
+}
