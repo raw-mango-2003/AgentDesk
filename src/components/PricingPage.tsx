@@ -131,7 +131,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({
   const POPULAR_CURRENCIES: CurrencyCode[] = ['INR', 'USD', 'GBP'];
 
   return (
-    <div data-visual-page="pricing" className="min-h-screen font-sans selection:bg-blue-600 selection:text-white pb-24 w-full overflow-x-clip" style={{ backgroundColor: pageBackground, color: pageText, fontFamily: siteDesign?.typography?.bodyFont || undefined, borderRadius: `${radius}px` }}>
+    <div data-visual-page="pricing" className="agentdesk-pricing-page min-h-screen font-sans selection:bg-blue-600 selection:text-white pb-24 w-full min-w-0 max-w-full overflow-x-clip" style={{ backgroundColor: pageBackground, color: pageText, fontFamily: siteDesign?.typography?.bodyFont || undefined, borderRadius: `${radius}px` }}>
       {/* 1. Hero Section */}
       <section data-visual-section="header" className="relative pt-12 sm:pt-16 pb-8 px-4 sm:px-6 lg:px-8 text-center w-full max-w-7xl mx-auto overflow-hidden">
         {/* Background Ambient Glow */}
