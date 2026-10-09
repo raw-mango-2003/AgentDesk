@@ -1987,3 +1987,71 @@ ui/phase-19-missed-call-textback
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phase 22: Cold Outreach dashboard responsive safeguards.
+   Layout-only changes preserve existing colors, campaign data, and outreach workflows. */
+.agentdesk-cold-outreach-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-cold-outreach-dashboard > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-cold-outreach-dashboard :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-cold-outreach-dashboard :is(button, a, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-cold-outreach-dashboard :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-cold-outreach-dashboard [class*="grid"] > *,
+.agentdesk-cold-outreach-dashboard [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-cold-outreach-dashboard pre,
+.agentdesk-cold-outreach-dashboard code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .agentdesk-cold-outreach-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-cold-outreach-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-cold-outreach-dashboard :is(button, input, select, textarea) {
+    min-height: 40px;
+  }
+  .agentdesk-cold-outreach-dashboard [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 480px) {
+  .agentdesk-cold-outreach-dashboard .p-6 {
+    padding: 1rem;
+  }
+  .agentdesk-cold-outreach-dashboard .rounded-3xl {
+    border-radius: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-cold-outreach-dashboard *,
+  .agentdesk-cold-outreach-dashboard *::before,
+  .agentdesk-cold-outreach-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
