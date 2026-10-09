@@ -61,10 +61,26 @@ jobs:
             sleep 1
           done
           test -s /tmp/agentdesk-health.json
+          grep -q '"success":true' /tmp/agentdesk-health.json
+          grep -q '"status":"healthy"' /tmp/agentdesk-health.json
           grep -q '"database":{"connected":true' /tmp/agentdesk-health.json
+
+          # Liveness must remain independent of the database readiness contract.
+          curl -fsS http://127.0.0.1:3000/healthz > /tmp/agentdesk-liveness.json
+          grep -q '"success":true' /tmp/agentdesk-liveness.json
+          grep -q '"service":"AgentDesk"' /tmp/agentdesk-liveness.json
+          grep -q '"status":"ok"' /tmp/agentdesk-liveness.json
+          # Keep the liveness response intentionally shallow: it must not claim DB readiness.
+          if grep -q '"database"' /tmp/agentdesk-liveness.json; then
+            echo "Liveness endpoint must not report dependency readiness."
+            exit 1
+          fi
+
+          curl -fsS http://127.0.0.1:3000/health > /tmp/agentdesk-health-alias.json
+          grep -q '"status":"healthy"' /tmp/agentdesk-health-alias.json
           curl -fsS http://127.0.0.1:3000/ > /tmp/agentdesk-home.html
           grep -q 'id="root"' /tmp/agentdesk-home.html
-          echo "Production startup smoke test passed."
+          echo "Production startup and health-contract smoke tests passed."\n          echo "Liveness response:"\n          cat /tmp/agentdesk-liveness.json
           cat /tmp/agentdesk-health.json
           # Stop the smoke-test server before starting the auth E2E server on the same port.
           kill "$SERVER_PID" 2>/dev/null || true
