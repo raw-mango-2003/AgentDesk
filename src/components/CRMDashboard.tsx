@@ -31,11 +31,11 @@ interface CRMDashboardProps {
 }
 
 const STAGES: Array<{ key: DealStage; label: string; color: string }> = [
-  { key: 'lead_in', label: 'Lead In', color: 'border-slate-700 bg-slate-800/40 text-slate-300' },
-  { key: 'contacted', label: 'Contacted', color: 'border-blue-500/30 bg-blue-500/10 text-blue-300' },
+  { key: 'lead_in', label: 'Lead In', color: 'border-white/[0.10] bg-white/[0.05]/40 text-slate-400' },
+  { key: 'contacted', label: 'Contacted', color: 'border-pink-400/20 bg-pink-400/[0.07] text-pink-300' },
   { key: 'appointment_scheduled', label: 'Appointment / Demo', color: 'border-amber-500/30 bg-amber-500/10 text-amber-300' },
-  { key: 'proposal_sent', label: 'Estimate / Proposal', color: 'border-purple-500/30 bg-purple-500/10 text-purple-300' },
-  { key: 'negotiation', label: 'Negotiation', color: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300' },
+  { key: 'proposal_sent', label: 'Estimate / Proposal', color: 'border-violet-400/20 bg-violet-400/[0.07] text-violet-300' },
+  { key: 'negotiation', label: 'Negotiation', color: 'border-fuchsia-400/20 bg-fuchsia-400/[0.05] text-fuchsia-300' },
   { key: 'won', label: 'Closed Won', color: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' },
   { key: 'lost', label: 'Closed Lost', color: 'border-rose-500/30 bg-rose-500/10 text-rose-300' }
 ];
@@ -121,51 +121,51 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
   return (
     <div className="space-y-6">
       {/* Top Banner & Tab Controls */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-[#101014] border border-white/[0.07] rounded-xl p-6 shadow-[0_24px_65px_rgba(0,0,0,.2)] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
-              360° Customer Intelligence
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-violet-400/[0.06] text-violet-300 border border-violet-400/15">
+              CUSTOMER INTELLIGENCE
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-pink-400/[0.06] text-pink-300 border border-pink-400/15">
               {business.name} Pipeline
             </span>
           </div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-400" />
-            <span>CRM & Deal Pipeline</span>
+            <Users className="w-5 h-5 text-pink-300" />
+            <span>CRM & Deals</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Unified customer profiles with complete omnichannel interaction history across AI chats, voice calls, SMS recoveries, appointments, and estimates.
+          <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+            Your pipeline, customer relationships and next steps, brought into one focused workspace.
           </p>
         </div>
 
         {/* View Switcher & Action */}
         <div className="flex items-center gap-3">
-          <div className="bg-slate-950 p-1 rounded-2xl border border-slate-800 flex items-center gap-1">
+          <div className="bg-[#0a0a0d] p-1 rounded-xl border border-white/[0.07] flex items-center gap-1">
             <button
               onClick={() => setActiveTab('deals')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'deals' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeTab === 'deals' ? 'bg-pink-500 text-white shadow-[0_12px_30px_rgba(0,0,0,.18)]' : 'text-slate-500 hover:text-white'
               }`}
             >
               <Kanban className="w-3.5 h-3.5" />
-              <span>Deals Pipeline</span>
+              <span>Pipeline</span>
             </button>
             <button
               onClick={() => setActiveTab('contacts')}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                activeTab === 'contacts' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+                activeTab === 'contacts' ? 'bg-pink-500 text-white shadow-[0_12px_30px_rgba(0,0,0,.18)]' : 'text-slate-500 hover:text-white'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>360° Contacts ({contacts.length})</span>
+              <span>Contacts ({contacts.length})</span>
             </button>
           </div>
 
           <button
             onClick={() => setShowAddDealModal(true)}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-pink-500 hover:bg-pink-400 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Deal</span>
@@ -175,18 +175,18 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
 
       {/* KPI Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div className="text-[11px] text-slate-400 font-semibold uppercase">Total Active Pipeline</div>
+        <div className="bg-[#101014] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-[11px] text-slate-500 font-semibold uppercase">OPEN PIPELINE VALUE</div>
           <div className="text-2xl font-black text-white mt-1">
             {formatCurrency(totalPipelineValue, business.currency, business.country)}
           </div>
-          <div className="text-[10px] text-blue-400 mt-1">
+          <div className="text-[10px] text-pink-300 mt-1">
             Across {deals.filter(d => d.stage !== 'lost').length} active deals in progress
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div className="text-[11px] text-slate-400 font-semibold uppercase">Closed Won Revenue</div>
+        <div className="bg-[#101014] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-[11px] text-slate-500 font-semibold uppercase">WON REVENUE</div>
           <div className="text-2xl font-black text-emerald-400 mt-1">
             {formatCurrency(totalWonValue, business.currency, business.country)}
           </div>
@@ -196,16 +196,16 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-          <div className="text-[11px] text-slate-400 font-semibold uppercase">CRM Customers & Leads</div>
+        <div className="bg-[#101014] border border-white/[0.07] rounded-xl p-4">
+          <div className="text-[11px] text-slate-500 font-semibold uppercase">CUSTOMER DIRECTORY</div>
           <div className="text-2xl font-black text-white mt-1">{contacts.length}</div>
-          <div className="text-[10px] text-slate-400 mt-1">
+          <div className="text-[10px] text-slate-500 mt-1">
             {contacts.filter(c => c.status === 'customer').length} active paying customers
           </div>
         </div>
       </div>
 
-      {/* VIEW 1: DEALS KANBAN BOARD */}
+      {/* SALES PIPELINE */}
       {activeTab === 'deals' && (
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-[1200px]">
@@ -216,10 +216,10 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
               return (
                 <div
                   key={stage.key}
-                  className="flex-1 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex flex-col min-h-[560px]"
+                  className="flex-1 bg-[#101014] border border-white/[0.07] rounded-xl p-4 flex flex-col min-h-[560px]"
                 >
                   {/* Column Header */}
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800 mb-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/[0.07] mb-3">
                     <div>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase border ${stage.color}`}>
                         {stage.label}
@@ -228,7 +228,7 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                         {formatCurrency(stageValue, business.currency, business.country)}
                       </div>
                     </div>
-                    <span className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300">
+                    <span className="w-6 h-6 rounded-full bg-white/[0.05] flex items-center justify-center text-xs font-bold text-slate-400">
                       {stageDeals.length}
                     </span>
                   </div>
@@ -238,7 +238,7 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                     {stageDeals.map(deal => (
                       <div
                         key={deal.id}
-                        className="bg-slate-950 p-4 rounded-2xl border border-slate-800/90 hover:border-slate-700 transition-all shadow-md space-y-2.5"
+                        className="bg-[#0a0a0d] p-4 rounded-xl border border-white/[0.07] hover:border-white/[0.10] transition-all shadow-[0_12px_30px_rgba(0,0,0,.18)] space-y-2.5"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="text-xs font-bold text-white leading-snug">{deal.title}</h4>
@@ -247,8 +247,8 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
-                          <Users className="w-3 h-3 text-blue-400" />
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                          <Users className="w-3 h-3 text-pink-300" />
                           <span>{deal.contactName}</span>
                         </div>
 
@@ -260,12 +260,12 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                         )}
 
                         {/* Move Stage Quick Switcher */}
-                        <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
+                        <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[10px]">
                           <span className="text-slate-500">Stage:</span>
                           <select
                             value={deal.stage}
                             onChange={e => handleStageChange(deal.id, e.target.value as DealStage)}
-                            className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[10px] text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer"
+                            className="bg-[#101014] border border-white/[0.10] rounded-lg px-2 py-1 text-[10px] text-slate-400 focus:outline-none focus:border-pink-400/40 cursor-pointer"
                           >
                             {STAGES.map(s => (
                               <option key={s.key} value={s.key}>{s.label}</option>
@@ -276,8 +276,8 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                     ))}
 
                     {stageDeals.length === 0 && (
-                      <div className="h-32 border-2 border-dashed border-slate-800/60 rounded-2xl flex items-center justify-center text-[11px] text-slate-600">
-                        Empty Stage
+                      <div className="h-32 border-2 border-dashed border-white/[0.07] rounded-xl flex items-center justify-center text-[11px] text-slate-600">
+                        Nothing in this stage
                       </div>
                     )}
                   </div>
@@ -288,27 +288,27 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
         </div>
       )}
 
-      {/* VIEW 2: 360-DEGREE CONTACTS DIRECTORY */}
+      {/* CONTACT INTELLIGENCE */}
       {activeTab === 'contacts' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Contacts List (5 cols) */}
-          <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+          <div className="lg:col-span-5 bg-[#101014] border border-white/[0.07] rounded-xl p-5 shadow-[0_24px_65px_rgba(0,0,0,.2)] space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-400" />
+                <Users className="w-4 h-4 text-pink-300" />
                 <span>Contact Records ({contacts.length})</span>
               </h3>
             </div>
 
             {/* Search */}
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search by name, email, or phone..."
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#0a0a0d] border border-white/[0.07] rounded-xl pl-9 pr-3 py-2 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:border-pink-400/40"
               />
             </div>
 
@@ -331,10 +331,10 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                     <div
                       key={contact.id}
                       onClick={() => setSelectedContact(contact)}
-                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-600/15 border-blue-500/50 shadow-md'
-                          : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/60'
+                          ? 'bg-pink-400/[0.08] border-pink-400/30 shadow-[0_12px_30px_rgba(0,0,0,.18)]'
+                          : 'bg-black/20 border-white/[0.06] hover:bg-white/[0.04]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -342,18 +342,18 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
                           contact.status === 'customer'
                             ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                            : 'bg-pink-400/[0.08] text-pink-300 border border-pink-400/20'
                         }`}>
                           {contact.status}
                         </span>
                       </div>
 
-                      <div className="text-[11px] text-slate-400 mb-2">
+                      <div className="text-[11px] text-slate-500 mb-2">
                         {contact.company || contact.email}
                       </div>
 
                       <div className="flex items-center justify-between text-[10px]">
-                        <span className="text-slate-400">{formatPhoneNumber(contact.phone, business.country)}</span>
+                        <span className="text-slate-500">{formatPhoneNumber(contact.phone, business.country)}</span>
                         <span className="font-mono text-emerald-400 font-bold">
                           {formatCurrency(contact.totalRevenue, business.currency, business.country)}
                         </span>
@@ -365,23 +365,23 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
           </div>
 
           {/* Contact 360° Profile & Timeline (7 cols) */}
-          <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+          <div className="lg:col-span-7 bg-[#101014] border border-white/[0.07] rounded-xl p-6 shadow-[0_24px_65px_rgba(0,0,0,.2)] space-y-6">
             {selectedContact ? (
               <>
                 {/* Profile Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.07]">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 font-black text-lg">
+                    <div className="w-12 h-12 rounded-xl bg-pink-400/[0.08] border border-pink-400/20 flex items-center justify-center text-pink-300 font-black text-lg">
                       {selectedContact.name.charAt(0)}
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-white">{selectedContact.name}</h3>
-                      <p className="text-xs text-slate-400">{selectedContact.company || 'Individual Client'}</p>
+                      <p className="text-xs text-slate-500">{selectedContact.company || 'Individual Client'}</p>
                     </div>
                   </div>
 
                   <div className="text-right">
-                    <div className="text-[10px] text-slate-400 uppercase font-semibold">Total Revenue</div>
+                    <div className="text-[10px] text-slate-500 uppercase font-semibold">Total Revenue</div>
                     <div className="text-base font-bold text-emerald-400 font-mono">
                       {formatCurrency(selectedContact.totalRevenue, business.currency, business.country)}
                     </div>
@@ -389,22 +389,22 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                 </div>
 
                 {/* Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-[#0a0a0d] p-4 rounded-xl border border-white/[0.07] text-xs">
                   <div className="space-y-1">
                     <div className="text-[10px] text-slate-500 uppercase font-semibold">Email</div>
-                    <div className="text-slate-200">{selectedContact.email}</div>
+                    <div className="text-slate-300">{selectedContact.email}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-[10px] text-slate-500 uppercase font-semibold">Phone</div>
-                    <div className="text-slate-200">{formatPhoneNumber(selectedContact.phone, business.country)}</div>
+                    <div className="text-slate-300">{formatPhoneNumber(selectedContact.phone, business.country)}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-[10px] text-slate-500 uppercase font-semibold">Preferred Channel</div>
-                    <div className="text-blue-400 font-semibold">{selectedContact.preferredChannel}</div>
+                    <div className="text-pink-300 font-semibold">{selectedContact.preferredChannel}</div>
                   </div>
                   <div className="space-y-1">
                     <div className="text-[10px] text-slate-500 uppercase font-semibold">Address</div>
-                    <div className="text-slate-300">{selectedContact.address || 'Austin / Bangalore Metro'}</div>
+                    <div className="text-slate-400">{selectedContact.address || 'Austin / Bangalore Metro'}</div>
                   </div>
                 </div>
 
@@ -414,9 +414,9 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                     {selectedContact.tags.map((t, idx) => (
                       <span
                         key={idx}
-                        className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1"
+                        className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/[0.05] text-slate-400 border border-white/[0.10] flex items-center gap-1"
                       >
-                        <Tag className="w-2.5 h-2.5 text-blue-400" />
+                        <Tag className="w-2.5 h-2.5 text-pink-300" />
                         <span>{t}</span>
                       </span>
                     ))}
@@ -425,12 +425,12 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
 
                 {/* 360-Degree Activity Timeline */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>360° Omnichannel Interaction Timeline ({selectedContact.timeline?.length || 0})</span>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-500" />
+                    <span>Customer activity timeline ({selectedContact.timeline?.length || 0})</span>
                   </h4>
 
-                  <div className="space-y-3 max-h-64 overflow-y-auto bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                  <div className="space-y-3 max-h-64 overflow-y-auto bg-[#0a0a0d] p-4 rounded-xl border border-white/[0.07]">
                     {selectedContact.timeline && selectedContact.timeline.length > 0 ? (
                       selectedContact.timeline.map((event, idx) => (
                         <div key={idx} className="flex items-start gap-3 relative pb-3 last:pb-0">
@@ -442,7 +442,7 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                                 {formatDateTime(event.timestamp, business.timezone, business.country)}
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-400">{event.description}</p>
+                            <p className="text-[11px] text-slate-500">{event.description}</p>
                           </div>
                         </div>
                       ))
@@ -465,16 +465,16 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
 
       {/* New Deal Modal */}
       {showAddDealModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101014] border border-white/[0.07] rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.07]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-blue-400" />
-                <span>Create New CRM Deal</span>
+                <Plus className="w-4 h-4 text-pink-300" />
+                <span>Create a deal</span>
               </h3>
               <button
                 onClick={() => setShowAddDealModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-500 hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -482,46 +482,46 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
 
             <form onSubmit={handleCreateDeal} className="space-y-3 text-xs">
               <div>
-                <label className="text-slate-300 font-semibold mb-1 block">Deal Title</label>
+                <label className="text-slate-400 font-semibold mb-1 block">Deal Title</label>
                 <input
                   type="text"
                   required
                   value={newDealTitle}
                   onChange={e => setNewDealTitle(e.target.value)}
                   placeholder="e.g. Dual Heat Pump Install / Full Aligner Package"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0a0a0d] border border-white/[0.07] rounded-xl p-2.5 text-slate-300 focus:outline-none focus:border-pink-400/40"
                 />
               </div>
 
               <div>
-                <label className="text-slate-300 font-semibold mb-1 block">Primary Contact Name</label>
+                <label className="text-slate-400 font-semibold mb-1 block">Primary Contact Name</label>
                 <input
                   type="text"
                   required
                   value={newDealContact}
                   onChange={e => setNewDealContact(e.target.value)}
                   placeholder="e.g. Marcus Vance or Pooja Hegde"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0a0a0d] border border-white/[0.07] rounded-xl p-2.5 text-slate-300 focus:outline-none focus:border-pink-400/40"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-semibold mb-1 block">Value ({business.currency})</label>
+                  <label className="text-slate-400 font-semibold mb-1 block">Value ({business.currency})</label>
                   <input
                     type="number"
                     required
                     value={newDealValue}
                     onChange={e => setNewDealValue(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0a0a0d] border border-white/[0.07] rounded-xl p-2.5 text-slate-300 focus:outline-none focus:border-pink-400/40"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 font-semibold mb-1 block">Pipeline Stage</label>
+                  <label className="text-slate-400 font-semibold mb-1 block">Pipeline Stage</label>
                   <select
                     value={newDealStage}
                     onChange={e => setNewDealStage(e.target.value as DealStage)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0a0a0d] border border-white/[0.07] rounded-xl p-2.5 text-slate-300 focus:outline-none focus:border-pink-400/40"
                   >
                     {STAGES.map(s => (
                       <option key={s.key} value={s.key}>{s.label}</option>
@@ -530,17 +530,17 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.07]">
                 <button
                   type="button"
                   onClick={() => setShowAddDealModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white"
+                  className="px-4 py-2 rounded-xl text-slate-500 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold"
                 >
                   Create Deal
                 </button>
