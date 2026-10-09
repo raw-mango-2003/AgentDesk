@@ -489,3 +489,102 @@ html, body, #root {
   .agentdesk-platform-admin-shell{overflow-x:hidden;}
   .agentdesk-platform-admin-shell .p-4.sm\:p-6.lg\:p-8{padding:1rem;}
 }
+
+
+/* AgentDesk premium admin refresh: consistent graphite surfaces, restrained accent glow,
+   clear hierarchy, and responsive spacing. Behaviour and existing admin routes are unchanged. */
+.agentdesk-platform-admin-shell{
+  isolation:isolate;
+  background:radial-gradient(ellipse at 70% -10%,color-mix(in srgb,var(--ad-primary,#ff2f86) 11%,transparent),transparent 36rem),var(--ad-dashboard-bg,var(--ad-background,#08080b)) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full{
+  min-height:calc(100vh - 4rem) !important;
+  background:transparent !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside{
+  width:248px;
+  background:rgba(12,12,16,.96) !important;
+  border-right:1px solid rgba(255,255,255,.075) !important;
+  box-shadow:12px 0 40px rgba(0,0,0,.16);
+}
+.agentdesk-platform-admin-shell > div.w-full > aside > div:first-child{
+  min-height:78px;padding:18px 16px !important;border-bottom:1px solid rgba(255,255,255,.07) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside nav{padding:12px !important;}
+.agentdesk-platform-admin-shell > div.w-full > aside nav button{
+  min-height:40px;border:1px solid transparent;border-radius:11px !important;margin:2px 0;color:#aaa7b2;background:transparent;
+}
+.agentdesk-platform-admin-shell > div.w-full > aside nav button:hover{color:#f7f4f8 !important;background:rgba(255,255,255,.045) !important;}
+.agentdesk-platform-admin-shell > div.w-full > aside nav button.bg-purple-600,
+.agentdesk-platform-admin-shell > div.w-full > aside nav button[class*="bg-purple-600"]{
+  color:#fff !important;background:linear-gradient(100deg,color-mix(in srgb,var(--ad-primary,#ff2f86) 22%,transparent),color-mix(in srgb,var(--ad-primary,#ff2f86) 8%,transparent)) !important;
+  border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 30%,transparent) !important;
+  box-shadow:inset 3px 0 0 var(--ad-primary,#ff2f86),0 8px 24px rgba(0,0,0,.12) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > div.flex-1{background:transparent !important;min-height:calc(100vh - 4rem);}
+.agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .sticky{
+  min-height:78px;padding:16px 26px !important;background:rgba(12,12,16,.82) !important;border-bottom:1px solid rgba(255,255,255,.07) !important;
+}
+.agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .p-4.sm\:p-6.lg\:p-8{padding:clamp(18px,2.5vw,34px) !important;}
+.agentdesk-platform-admin-shell .border-slate-800,
+.agentdesk-platform-admin-shell [class*="border-slate-700"]{border-color:rgba(255,255,255,.085) !important;}
+.agentdesk-platform-admin-shell .bg-slate-900\/90,
+.agentdesk-platform-admin-shell .bg-slate-900\/80{background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#111116)) 94%,transparent) !important;}
+.agentdesk-platform-admin-shell .bg-slate-800\/70,
+.agentdesk-platform-admin-shell .bg-slate-800\/80{background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#111116)) 88%,white 2%) !important;}
+.agentdesk-platform-admin-shell button:disabled{cursor:not-allowed;opacity:.55;}
+@media(max-width:767px){
+  .agentdesk-platform-admin-shell > div.w-full > aside{width:260px;}
+  .agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .sticky{padding:12px 14px !important;}
+  .agentdesk-platform-admin-shell > div.w-full > div.flex-1 > .p-4.sm\:p-6.lg\:p-8{padding:14px !important;}
+}
+
+/* Shared visual language for business workspaces and Platform Admin. */
+.agentdesk-console-shell{
+  background:radial-gradient(ellipse at 82% 0%,color-mix(in srgb,var(--ad-primary,#ff2f86) 7%,transparent),transparent 32rem),var(--ad-dashboard-bg,var(--ad-background,#08080b)) !important;
+  color:var(--ad-text,#e9e5eb);
+}
+.agentdesk-console-shell .agentdesk-workspace-header{
+  background:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#111116)) 95%,transparent) !important;
+  border-color:rgba(255,255,255,.08) !important;box-shadow:0 22px 60px rgba(0,0,0,.22) !important;backdrop-filter:blur(18px);
+}
+.agentdesk-console-shell .agentdesk-sidebar{
+  background:rgba(12,12,16,.96) !important;border-color:rgba(255,255,255,.075) !important;
+  box-shadow:12px 0 40px rgba(0,0,0,.16),inset -1px 0 0 color-mix(in srgb,var(--ad-primary,#ff2f86) 8%,transparent) !important;
+}
+.agentdesk-console-shell .agentdesk-sidebar-brand-mark{
+  background:linear-gradient(145deg,var(--ad-primary,#ff2f86),color-mix(in srgb,var(--ad-primary,#ff2f86) 65%,#6f123e)) !important;
+  box-shadow:0 0 28px color-mix(in srgb,var(--ad-primary,#ff2f86) 20%,transparent) !important;
+}
+.agentdesk-console-shell .agentdesk-sidebar-item[data-active="true"]{
+  background:linear-gradient(90deg,color-mix(in srgb,var(--ad-primary,#ff2f86) 18%,transparent),color-mix(in srgb,var(--ad-primary,#ff2f86) 5%,transparent)) !important;
+  border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 24%,transparent) !important;
+  box-shadow:inset 3px 0 0 var(--ad-primary,#ff2f86),0 8px 24px rgba(0,0,0,.08) !important;
+}
+.agentdesk-console-shell .agentdesk-sidebar-item[data-active="true"] svg{color:var(--ad-accent,var(--ad-primary,#ff2f86)) !important;}
+.agentdesk-console-shell .agentdesk-sidebar-item:hover{background:rgba(255,255,255,.045) !important;border-color:rgba(255,255,255,.07) !important;}
+.agentdesk-console-shell button:focus-visible,.agentdesk-console-shell a:focus-visible,
+.agentdesk-console-shell input:focus-visible,.agentdesk-console-shell select:focus-visible,
+.agentdesk-console-shell textarea:focus-visible{outline:2px solid var(--ad-accent,var(--ad-primary,#ff2f86));outline-offset:2px;}
+.agentdesk-console-shell .bg-pink-500,.agentdesk-console-shell .bg-pink-600{background-color:var(--ad-primary,#ff2f86) !important;}
+.agentdesk-console-shell .text-pink-400,.agentdesk-console-shell .text-pink-500{color:var(--ad-accent,#ff5aa5) !important;}
+.agentdesk-console-shell .border-pink-500\/30,.agentdesk-console-shell .border-pink-500\/20{border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 30%,transparent) !important;}
+.agentdesk-console-shell .rounded-3xl{border-radius:var(--ad-radius,18px) !important;}
+.agentdesk-console-shell .rounded-2xl{border-radius:calc(var(--ad-radius,18px) * .78) !important;}
+.agentdesk-console-shell .rounded-xl{border-radius:calc(var(--ad-radius,18px) * .56) !important;}
+.agentdesk-console-shell .shadow-2xl{box-shadow:0 22px 65px rgba(0,0,0,.34) !important;}
+@media(max-width:1279px){.agentdesk-console-shell{padding-left:16px !important;}.agentdesk-console-shell>.agentdesk-sidebar{display:none;}}
+@media(max-width:640px){.agentdesk-console-shell{padding-left:12px !important;padding-right:12px !important;}.agentdesk-console-shell .agentdesk-workspace-header{border-radius:16px !important;padding:14px !important;}}
+
+/* Keep the public marketing experience visually aligned with the product. */
+.min-h-screen.bg-slate-950.text-slate-100.font-sans{
+  background:radial-gradient(circle at 50% -10%,color-mix(in srgb,var(--ad-primary,#ff2f86) 15%,transparent),transparent 34rem),
+  radial-gradient(circle at 90% 28%,color-mix(in srgb,var(--ad-accent,#ff5aa5) 8%,transparent),transparent 28rem),var(--ad-background,#08080b) !important;
+}
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child{
+  background:linear-gradient(180deg,rgba(8,8,11,.12),rgba(8,8,11,.86)),
+  radial-gradient(circle at 50% 35%,color-mix(in srgb,var(--ad-primary,#ff2f86) 12%,transparent),transparent 30rem) !important;
+}
+.min-h-screen.bg-slate-950.text-slate-100.font-sans > section:first-child button:first-child{
+  box-shadow:0 14px 36px color-mix(in srgb,var(--ad-primary,#ff2f86) 22%,transparent) !important;
+}
