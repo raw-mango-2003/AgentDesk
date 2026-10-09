@@ -376,9 +376,20 @@ export async function getAllBusinesses(): Promise<Business[]> {
 
 export async function getBusinessById(businessId: string): Promise<Business | null> {
   if (!businessId) return null;
-  const list = await getAllBusinesses();
   const targetId = normalizeTenantId(businessId);
-  let found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
+  let found: Business | undefined;
+
+  // A tenant-specific lookup must still be attempted if the registry endpoint
+  // is temporarily unavailable. Otherwise one failing list request prevents
+  // the selected workspace from loading even when its own endpoint is healthy.
+  try {
+    const list = await getAllBusinesses();
+    found = list.find(b => normalizeTenantId(b.id) === targetId || normalizeTenantId(b.tenantId) === targetId);
+  } catch (err) {
+    if (typeof window === 'undefined' || !isProductionRuntime()) {
+      throw err;
+    }
+  }
 
   if (!found && typeof window !== 'undefined') {
     try {
