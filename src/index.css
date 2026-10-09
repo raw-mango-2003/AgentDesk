@@ -1851,3 +1851,71 @@ ui/phase-19-missed-call-textback
 }
 =======
  main
+
+/* Phase 20: Re-engagement dashboard responsive safeguards.
+   Layout-only changes preserve existing colors, campaign data, and send workflows. */
+.agentdesk-re-engagement-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-re-engagement-dashboard > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-re-engagement-dashboard :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-re-engagement-dashboard :is(button, a, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-re-engagement-dashboard :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-re-engagement-dashboard [class*="grid"] > *,
+.agentdesk-re-engagement-dashboard [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-re-engagement-dashboard pre,
+.agentdesk-re-engagement-dashboard code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .agentdesk-re-engagement-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-re-engagement-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-re-engagement-dashboard :is(button, input, select, textarea) {
+    min-height: 40px;
+  }
+  .agentdesk-re-engagement-dashboard [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 480px) {
+  .agentdesk-re-engagement-dashboard .p-6 {
+    padding: 1rem;
+  }
+  .agentdesk-re-engagement-dashboard .rounded-3xl {
+    border-radius: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-re-engagement-dashboard *,
+  .agentdesk-re-engagement-dashboard *::before,
+  .agentdesk-re-engagement-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
