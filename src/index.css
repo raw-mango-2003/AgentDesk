@@ -1708,6 +1708,79 @@ html, body, #root {
 }
 
 
+/* Phase 18: Voice Receptionist dashboard responsive layout safeguards.
+   Scoped layout refinements only. Preserve existing colors, call simulation, transcripts, and persistence. */
+.agentdesk-voice-receptionist-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-voice-receptionist-dashboard > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-voice-receptionist-dashboard :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-voice-receptionist-dashboard :is(button, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-voice-receptionist-dashboard :is(button, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-voice-receptionist-dashboard [class*="grid"] > *,
+.agentdesk-voice-receptionist-dashboard [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-voice-receptionist-dashboard pre,
+.agentdesk-voice-receptionist-dashboard code,
+.agentdesk-voice-receptionist-dashboard .font-mono {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .agentdesk-voice-receptionist-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-voice-receptionist-dashboard > div {
+    min-width: 0;
+  }
+  .agentdesk-voice-receptionist-dashboard button,
+  .agentdesk-voice-receptionist-dashboard input,
+  .agentdesk-voice-receptionist-dashboard select {
+    min-height: 40px;
+  }
+  .agentdesk-voice-receptionist-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-voice-receptionist-dashboard [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 480px) {
+  .agentdesk-voice-receptionist-dashboard .rounded-3xl {
+    border-radius: 1rem;
+  }
+  .agentdesk-voice-receptionist-dashboard .p-6 {
+    padding: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-voice-receptionist-dashboard *,
+  .agentdesk-voice-receptionist-dashboard *::before,
+  .agentdesk-voice-receptionist-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Phase 19: Missed Call Text-Back dashboard responsive safeguards.
    Layout-only changes preserve existing colors, templates, persistence, and message actions. */
 .agentdesk-missed-call-textback-dashboard {
