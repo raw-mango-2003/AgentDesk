@@ -804,35 +804,37 @@ export default function App() {
             <DesignStudio />
           </Suspense>
         ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'admin' ? (
-          <PlatformAdminDashboard
-            initialTab={adminSubTab as any}
-            allBusinesses={allBusinesses}
-            onSelectBusinessWorkspace={(bizId) => {
-              setActiveBusinessId(bizId);
-              navigateTab('overview');
-            }}
-            onNavigateAdminSection={navigateAdminSection}
-            onSwitchToBusinessConsole={() => {
-              if (allBusinesses.length > 0 && (!business || business.id === 'platform')) {
-                setActiveBusinessId(allBusinesses[0].id);
-              }
-              navigateTab('overview');
-            }}
-            onTenantUpdated={(updatedBiz) => {
-              if (activeBusinessId === updatedBiz.id) {
-                setBusiness(updatedBiz);
-              }
-              setAllBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
-            }}
-            onTenantDeleted={async (deletedBizId) => {
-              const list = await getAllBusinesses();
-              setAllBusinesses(list);
-              if (activeBusinessId === deletedBizId) {
-                const nextId = list.length > 0 ? list[0].id : PLATFORM_ADMIN_TENANT_ID;
-                setActiveBusinessId(nextId);
-              }
-            }}
-          />
+          <div className="agentdesk-console-shell agentdesk-platform-admin-shell max-w-none min-h-screen px-0 py-0">
+            <PlatformAdminDashboard
+              initialTab={adminSubTab as any}
+              allBusinesses={allBusinesses}
+              onSelectBusinessWorkspace={(bizId) => {
+                setActiveBusinessId(bizId);
+                navigateTab('overview');
+              }}
+              onNavigateAdminSection={navigateAdminSection}
+              onSwitchToBusinessConsole={() => {
+                if (allBusinesses.length > 0 && (!business || business.id === 'platform')) {
+                  setActiveBusinessId(allBusinesses[0].id);
+                }
+                navigateTab('overview');
+              }}
+              onTenantUpdated={(updatedBiz) => {
+                if (activeBusinessId === updatedBiz.id) {
+                  setBusiness(updatedBiz);
+                }
+                setAllBusinesses(prev => prev.map(b => b.id === updatedBiz.id ? updatedBiz : b));
+              }}
+              onTenantDeleted={async (deletedBizId) => {
+                const list = await getAllBusinesses();
+                setAllBusinesses(list);
+                if (activeBusinessId === deletedBizId) {
+                  const nextId = list.length > 0 ? list[0].id : PLATFORM_ADMIN_TENANT_ID;
+                  setActiveBusinessId(nextId);
+                }
+              }}
+            />
+          </div>
         ) : (
           <div className="agentdesk-console-shell max-w-7xl mx-auto px-4 sm:px-8 py-6 space-y-6">
             <aside className="agentdesk-sidebar" aria-label="AgentDesk primary navigation">
