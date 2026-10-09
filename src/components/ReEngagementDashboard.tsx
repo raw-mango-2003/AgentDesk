@@ -123,10 +123,10 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-none flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-pink-500/10 text-pink-300 border border-pink-500/20">
               Dormant Database Monetization
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -134,7 +134,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
             </span>
           </div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-purple-400" />
+            <Users className="w-5 h-5 text-pink-300" />
             <span>Customer Re-Engagement & Reactivation</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
@@ -144,7 +144,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
 
         <button
           onClick={() => setShowModal(true)}
-          className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer"
+          className="px-5 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-500/10 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>New Reactivation Campaign</span>
@@ -153,7 +153,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <div className="text-[11px] text-slate-400 font-semibold uppercase">Reactivated Revenue</div>
           <div className="text-2xl font-black text-emerald-400 mt-1">
             {formatCurrency(totalReactivatedRevenue, business.currency, business.country)}
@@ -164,16 +164,16 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <div className="text-[11px] text-slate-400 font-semibold uppercase">Reactivated Customers</div>
           <div className="text-2xl font-black text-white mt-1">{totalReactivatedCustomers}</div>
-          <div className="text-[10px] text-purple-400 flex items-center gap-1 mt-1">
+          <div className="text-[10px] text-pink-300 flex items-center gap-1 mt-1">
             <Sparkles className="w-3 h-3" />
             <span>Average 24% reactivation response rate</span>
           </div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <div className="text-[11px] text-slate-400 font-semibold uppercase">Customer Acquisition Cost (CAC)</div>
           <div className="text-2xl font-black text-white mt-1">
             {business.currency === 'INR' ? '₹0' : '$0.00'}
@@ -187,10 +187,10 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
       {/* Main Grid: Campaigns List + Selected Campaign Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Campaigns List (5 cols) */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-4">
+        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-none space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Zap className="w-4 h-4 text-purple-400" />
+              <Zap className="w-4 h-4 text-pink-300" />
               <span>Reactivation Segments ({audiences.length})</span>
             </h3>
           </div>
@@ -202,9 +202,9 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                 <div
                   key={aud.id}
                   onClick={() => setSelectedAudience(aud)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                  className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-purple-600/15 border-purple-500/50 shadow-md'
+                      ? 'bg-pink-500/10 border-pink-400/50 shadow-md'
                       : 'bg-slate-950/60 border-slate-800/80 hover:bg-slate-800/60'
                   }`}
                 >
@@ -221,7 +221,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
 
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
                     <span>Segment: {aud.segmentType.replace(/_/g, ' ')}</span>
-                    <span className="font-mono text-purple-400">{aud.contactCount} Dormant Contacts</span>
+                    <span className="font-mono text-pink-300">{aud.contactCount} Dormant Contacts</span>
                   </div>
 
                   <div className="flex items-center justify-between text-[11px]">
@@ -237,14 +237,14 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
         </div>
 
         {/* Right Column: Selected Campaign Detail & Real-time Metrics (7 cols) */}
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
+        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-none space-y-6">
           {selectedAudience ? (
             <>
               {/* Campaign Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-pink-500/10 text-pink-300 border border-pink-500/20">
                       {selectedAudience.channel} BROADCAST
                     </span>
                     <span className="text-xs text-slate-400">
@@ -272,18 +272,18 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
               </div>
 
               {/* Performance Metrics Funnel */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-2xl border border-slate-800 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase font-semibold">Sent</div>
                   <div className="text-base font-bold text-white mt-0.5">{selectedAudience.metrics?.messagesSent || 0}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase font-semibold">Replies</div>
-                  <div className="text-base font-bold text-blue-400 mt-0.5">{selectedAudience.metrics?.responses || 0}</div>
+                  <div className="text-base font-bold text-pink-300 mt-0.5">{selectedAudience.metrics?.responses || 0}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase font-semibold">Bookings</div>
-                  <div className="text-base font-bold text-purple-400 mt-0.5">{selectedAudience.metrics?.appointmentsBooked || 0}</div>
+                  <div className="text-base font-bold text-pink-300 mt-0.5">{selectedAudience.metrics?.appointmentsBooked || 0}</div>
                 </div>
                 <div>
                   <div className="text-[10px] text-slate-500 uppercase font-semibold">Revenue</div>
@@ -294,9 +294,9 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
               </div>
 
               {/* AI Generated Offer Card */}
-              <div className="bg-purple-600/10 border border-purple-500/20 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
+              <div className="bg-pink-500/8 border border-pink-500/20 rounded-xl p-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-pink-200">
+                  <Sparkles className="w-4 h-4 text-pink-300" />
                   <span>AI Recommended Incentive</span>
                 </div>
                 <p className="text-xs text-slate-200 leading-relaxed font-semibold">
@@ -309,7 +309,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                 <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Dispatched Copy Template ({selectedAudience.channel})
                 </div>
-                <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-xs text-slate-300 font-mono leading-relaxed">
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 font-mono leading-relaxed">
                   {selectedAudience.messageTemplate}
                 </div>
               </div>
@@ -325,10 +325,10 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-md w-full shadow-none space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-purple-400" />
+                <Plus className="w-4 h-4 text-pink-300" />
                 <span>Create Re-Engagement Campaign</span>
               </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
@@ -345,7 +345,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder="e.g. 6-Month Preventative Tune-Up Special"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400"
                 />
               </div>
 
@@ -355,7 +355,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                   <select
                     value={segmentType}
                     onChange={e => setSegmentType(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400"
                   >
                     <option value="30_days_inactive">30 Days Inactive</option>
                     <option value="60_days_inactive">60 Days Inactive</option>
@@ -369,7 +369,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                   <select
                     value={channel}
                     onChange={e => setChannel(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400"
                   >
                     <option value="SMS">SMS</option>
                     <option value="WhatsApp">WhatsApp</option>
@@ -385,7 +385,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                   value={aiOffer}
                   onChange={e => setAiOffer(e.target.value)}
                   placeholder="e.g. $99 Fall Heating Safety Checkup"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400"
                 />
               </div>
 
@@ -396,7 +396,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                   value={template}
                   onChange={e => setTemplate(e.target.value)}
                   placeholder="Hi {{first_name}}, reply YES to book your discounted checkup!"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400"
                 />
               </div>
 
@@ -410,7 +410,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold"
+                  className="px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold"
                 >
                   Create Campaign
                 </button>
