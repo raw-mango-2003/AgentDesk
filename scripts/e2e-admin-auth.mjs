@@ -49,6 +49,13 @@ if (!cookies.includes('agentdesk_session=')) {
   throw new Error(`Platform admin login did not return an HttpOnly session cookie: ${JSON.stringify(cookies)}`);
 }
 
+// Authenticated state-changing requests must echo the double-submit CSRF cookie.
+const csrfCookie = cookies.split(/;\s*/).find(cookie => cookie.startsWith('agentdesk_csrf='));
+const csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.slice('agentdesk_csrf='.length)) : '';
+if (!csrfToken) {
+  throw new Error(`Platform admin login did not return a CSRF cookie: ${JSON.stringify(cookies)}`);
+}
+
 const me = await request('/api/auth/me', { headers: { Cookie: cookies } });
 if (!me.response.ok || !me.body?.success || me.body?.user?.role !== 'PLATFORM_ADMIN') {
   throw new Error(`Platform admin session verification failed: HTTP ${me.response.status} ${JSON.stringify(me.body)}`);
@@ -71,6 +78,26 @@ if (!tenantFilterAudit.response.ok || tenantFilterAudit.body?.success !== true |
 if (!Array.isArray(tenantFilterAudit.body?.checks) || tenantFilterAudit.body.checks.length === 0 ||
     tenantFilterAudit.body.checks.some(check => check.passed !== true)) {
   throw new Error(`Tenant filter audit details are missing or contain failures: ${JSON.stringify(tenantFilterAudit.body?.checks)}`);
+}
+
+// Integration workflow guards: admin-only monitoring, validation, and tenant-provider boundaries.
+const anonymousMonitoring = await request('/api/platform/monitoring');
+if (![401, 403].includes(anonymousMonitoring.response.status)) {
+  throw new Error(`Integration monitoring must reject anonymous access, received HTTP ${anonymousMonitoring.response.status}: ${JSON.stringify(anonymousMonitoring.body)}`);
+}
+
+const missingTenantIntegrations = await request('/api/platform/tenant-integrations', { headers: { Cookie: cookies } });
+if (missingTenantIntegrations.response.status !== 400 || !/tenantId is required/i.test(missingTenantIntegrations.body?.error || '')) {
+  throw new Error(`Platform integration listing should validate tenantId, received HTTP ${missingTenantIntegrations.response.status}: ${JSON.stringify(missingTenantIntegrations.body)}`);
+}
+
+const unsupportedIntegrationProvider = await request('/api/platform/tenant-integrations/e2e-missing-tenant/not-a-provider', {
+  method: 'PUT',
+  headers: { Cookie: cookies, 'X-CSRF-Token': csrfToken },
+  body: JSON.stringify({ api_key: 'must-not-be-saved' })
+});
+if (unsupportedIntegrationProvider.response.status !== 400 || !/unsupported tenant integration provider/i.test(unsupportedIntegrationProvider.body?.error || '')) {
+  throw new Error(`Unsupported integration providers must be rejected before saving, received HTTP ${unsupportedIntegrationProvider.response.status}: ${JSON.stringify(unsupportedIntegrationProvider.body)}`);
 }
 
 // Logout must revoke the session and clear the browser session cookie.
