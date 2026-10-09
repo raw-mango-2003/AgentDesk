@@ -1626,15 +1626,17 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <div className="py-20 text-center text-slate-400 flex flex-col items-center justify-center space-y-4">
-                <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm font-medium">Loading workspace data...</span>
+              <div className="min-h-[280px] py-20 px-6 text-center text-white/60 flex flex-col items-center justify-center space-y-4 rounded-3xl border border-white/10 bg-[#0b0b0b]/80">
+                <div className="w-9 h-9 border-2 border-fuchsia-600 border-t-transparent rounded-full animate-spin" role="status" aria-label="Loading workspace" />
+                <span className="text-sm font-medium tracking-wide">Loading your workspace...</span>
                 <button
                   onClick={() => {
                     setActiveBusinessId(PUBLIC_DEMO_TENANT_ID);
                     setBusiness(PUBLIC_AGENTDESK_DEMO_BUSINESS);
+                    setWorkspaceLoadError(null);
+                    setWorkspaceLoading(false);
                   }}
-                  className="text-xs text-blue-400 hover:text-blue-300 underline underline-offset-4 transition-colors"
+                  className="text-xs text-fuchsia-400 hover:text-pink-300 underline underline-offset-4 transition-colors"
                 >
                   Taking too long? Open demo workspace
                 </button>
