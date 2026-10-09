@@ -13,7 +13,7 @@ async function request(path, options = {}) {
 
 // Protected identity must reject requests without a session.
 const anonymousMe = await request('/api/auth/me');
-if (anonymousMe.response.status !== 401 || anonymousMe.body?.success !== false) {
+if (anonymousMe.response.status !== 401 || anonymousMe.body?.authenticated === true) {
   throw new Error(`Unauthenticated identity request should return HTTP 401, received HTTP ${anonymousMe.response.status}: ${JSON.stringify(anonymousMe.body)}`);
 }
 
@@ -63,7 +63,7 @@ if (!logout.response.ok || logout.body?.success !== true) {
   throw new Error(`Platform admin logout failed: HTTP ${logout.response.status} ${JSON.stringify(logout.body)}`);
 }
 const afterLogout = await request('/api/auth/me', { headers: { Cookie: cookies } });
-if (afterLogout.response.status !== 401 || afterLogout.body?.success !== false) {
+if (afterLogout.response.status !== 401 || afterLogout.body?.authenticated === true) {
   throw new Error(`Logged-out session remained authorized: HTTP ${afterLogout.response.status} ${JSON.stringify(afterLogout.body)}`);
 }
 
