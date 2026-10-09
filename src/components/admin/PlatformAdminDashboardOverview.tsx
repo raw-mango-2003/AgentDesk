@@ -208,7 +208,7 @@ export const PlatformAdminDashboardOverview: React.FC<PlatformAdminDashboardOver
   };
 
   return (
-    <div className="space-y-6 w-full max-w-full">
+    <div className="agentdesk-admin-overview space-y-6 w-full max-w-full">
       {/* Platform Header & Quick Action Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
         <div>
