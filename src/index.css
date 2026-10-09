@@ -1919,3 +1919,71 @@ ui/phase-19-missed-call-textback
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phase 21: Reviews dashboard responsive safeguards.
+   Layout-only changes preserve existing colors, review data, and response workflows. */
+.agentdesk-reviews-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-reviews-dashboard > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-reviews-dashboard :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-reviews-dashboard :is(button, a, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-reviews-dashboard :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-reviews-dashboard [class*="grid"] > *,
+.agentdesk-reviews-dashboard [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-reviews-dashboard pre,
+.agentdesk-reviews-dashboard code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .agentdesk-reviews-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-reviews-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-reviews-dashboard :is(button, input, select, textarea) {
+    min-height: 40px;
+  }
+  .agentdesk-reviews-dashboard [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 480px) {
+  .agentdesk-reviews-dashboard .p-6 {
+    padding: 1rem;
+  }
+  .agentdesk-reviews-dashboard .rounded-3xl {
+    border-radius: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-reviews-dashboard *,
+  .agentdesk-reviews-dashboard *::before,
+  .agentdesk-reviews-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
