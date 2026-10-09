@@ -548,7 +548,28 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
                 ['Growth', '₹29,999', '7,500 AI conversations', '1,000 voice minutes', '2,500 SMS / WhatsApp'],
                 ['Scale', '₹59,999', '20,000 AI conversations', '3,000 voice minutes', '5,000 SMS / WhatsApp']
               ].map(([name, price, a, b, c], index) => (
-                <div key={name} className={`rounded-[28px] border p-7 sm:p-9 ${index === 1 ? 'lg:-translate-y-3' : ''}`} style={{ borderColor: index === 1 ? primary : border, background: index === 1 ? `linear-gradient(160deg, ${primary}15, rgba(255,255,255,.025))` : 'rgba(255,255,255,.02)' }}>
+               ```tsx
+<div
+  key={name}
+  className={`group relative isolate overflow-hidden rounded-[28px] border p-7 sm:p-9 transition-colors duration-200 ${index === 1 ? 'lg:-translate-y-3' : ''}`}
+  onMouseMove={(event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.style.setProperty('--glow-x', `${event.clientX - rect.left}px`);
+    event.currentTarget.style.setProperty('--glow-y', `${event.clientY - rect.top}px`);
+  }}
+  onMouseLeave={(event) => {
+    event.currentTarget.style.setProperty('--glow-x', '50%');
+    event.currentTarget.style.setProperty('--glow-y', '50%');
+  }}
+  style={{
+    borderColor: index === 1 ? primary : border,
+    background: index === 1
+      ? `linear-gradient(160deg, ${primary}15, rgba(255,255,255,.025))`
+      : 'rgba(255,255,255,.02)',
+    backgroundImage: `radial-gradient(260px circle at var(--glow-x, 50%) var(--glow-y, 50%), ${primary}35, transparent 70%)`,
+  }}
+>
+```
                   <p className="text-[10px] uppercase tracking-[.24em] text-white/45">{name}</p>
                   <p className="lux-display mt-6 text-4xl font-medium">{price}<span className="text-sm text-white/35"> / mo</span></p>
                   <div className="mt-7 space-y-3 text-sm text-white/65">
