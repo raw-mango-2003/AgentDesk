@@ -80,7 +80,9 @@ jobs:
           grep -q '"status":"healthy"' /tmp/agentdesk-health-alias.json
           curl -fsS http://127.0.0.1:3000/ > /tmp/agentdesk-home.html
           grep -q 'id="root"' /tmp/agentdesk-home.html
-          echo "Production startup and health-contract smoke tests passed."\n          echo "Liveness response:"\n          cat /tmp/agentdesk-liveness.json
+          echo "Production startup and health-contract smoke tests passed."
+          echo "Liveness response:"
+          cat /tmp/agentdesk-liveness.json
           cat /tmp/agentdesk-health.json
           # Stop the smoke-test server before starting the auth E2E server on the same port.
           kill "$SERVER_PID" 2>/dev/null || true
