@@ -54,6 +54,25 @@ if (!me.response.ok || !me.body?.success || me.body?.user?.role !== 'PLATFORM_AD
   throw new Error(`Platform admin session verification failed: HTTP ${me.response.status} ${JSON.stringify(me.body)}`);
 }
 
+// Platform-admin-only tenant-isolation audits must report every check as passing.
+const tenantAudit = await request('/api/test/tenant-isolation', { headers: { Cookie: cookies } });
+if (!tenantAudit.response.ok || tenantAudit.body?.success !== true || tenantAudit.body?.allPassed !== true) {
+  throw new Error(`Tenant-isolation audit failed: HTTP ${tenantAudit.response.status} ${JSON.stringify(tenantAudit.body)}`);
+}
+if (!Array.isArray(tenantAudit.body?.suites) || tenantAudit.body.suites.length === 0 ||
+    tenantAudit.body.suites.some(suite => suite.passed !== true)) {
+  throw new Error(`Tenant-isolation suite details are missing or contain failures: ${JSON.stringify(tenantAudit.body?.suites)}`);
+}
+
+const tenantFilterAudit = await request('/api/test/firestore-tenant-filter', { headers: { Cookie: cookies } });
+if (!tenantFilterAudit.response.ok || tenantFilterAudit.body?.success !== true || tenantFilterAudit.body?.allTestsPassed !== true) {
+  throw new Error(`Tenant filter audit failed: HTTP ${tenantFilterAudit.response.status} ${JSON.stringify(tenantFilterAudit.body)}`);
+}
+if (!Array.isArray(tenantFilterAudit.body?.checks) || tenantFilterAudit.body.checks.length === 0 ||
+    tenantFilterAudit.body.checks.some(check => check.passed !== true)) {
+  throw new Error(`Tenant filter audit details are missing or contain failures: ${JSON.stringify(tenantFilterAudit.body?.checks)}`);
+}
+
 // Logout must revoke the session and clear the browser session cookie.
 const logout = await request('/api/auth/logout', {
   method: 'POST',
@@ -73,5 +92,7 @@ console.log(JSON.stringify({
   session: 'http-only-cookie',
   role: me.body.user.role,
   negativeCases: ['anonymous-identity-rejected', 'invalid-credentials-rejected'],
+  tenantIsolation: 'all-suite-checks-passed',
+  tenantFilterAudit: 'all-checks-passed',
   logout: 'session-revoked'
 }, null, 2));
