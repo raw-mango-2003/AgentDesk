@@ -107,7 +107,7 @@ export const PlatformConfigurationManager: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-platform-configuration-manager space-y-6 w-full min-w-0 max-w-full">
       <div className="rounded-2xl border border-blue-900/50 bg-slate-900 p-5">
         <div className="flex items-start gap-3">
           <div className="rounded-xl bg-blue-600/15 p-2.5"><ShieldCheck className="h-5 w-5 text-blue-400" /></div>
