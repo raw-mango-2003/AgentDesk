@@ -16,7 +16,6 @@ const ColdOutreachDashboard = lazy(() => import('./components/ColdOutreachDashbo
 const IntegrationsDashboard = lazy(() => import('./components/IntegrationsDashboard').then(module => ({ default: module.IntegrationsDashboard })));
 const KnowledgeBaseDashboard = lazy(() => import('./components/KnowledgeBaseDashboard').then(module => ({ default: module.KnowledgeBaseDashboard })));
 const ConversationsDashboard = lazy(() => import('./components/ConversationsDashboard').then(module => ({ default: module.ConversationsDashboard })));
-const DesignStudio = lazy(() => import('./components/DesignStudio').then(module => ({ default: module.DesignStudio })));
 const PlatformAdminDashboard = lazy(() => import('./components/PlatformAdminDashboard').then(module => ({ default: module.PlatformAdminDashboard })));
 const AICopilotDrawer = lazy(() => import('./components/AICopilotDrawer').then(module => ({ default: module.AICopilotDrawer })));
 const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer').then(module => ({ default: module.NotificationsDrawer })));
@@ -118,8 +117,7 @@ export type SaaSNavTab =
   | 'localization'
   | 'embed'
   | 'admin'
-  | 'account_credentials'
-  | 'design_studio';
+  | 'account_credentials';
 
 export type AppView = 'landing' | 'pricing' | 'login' | 'platform_login' | 'onboarding' | 'checkout' | 'dashboard' | 'setup_account' | 'reset_password' | 'verify_email' | 'terms' | 'privacy' | 'refunds' | 'acceptable_use' | 'cookies';
 
@@ -156,7 +154,6 @@ export default function App() {
       if (path === '/billing' || hash === '#billing') return 'billing';
       if (path === '/embed' || hash === '#embed') return 'embed';
       if (path === '/admin/account-credentials') return 'account_credentials';
-      if (path === '/admin/design-studio') return 'design_studio';
       if (path.startsWith('/admin') || hash.startsWith('#admin')) return 'admin';
       const match = path.match(/^\/dashboard\/([^/]+)$/);
       const slugToTab: Record<string, SaaSNavTab> = {
@@ -180,7 +177,7 @@ export default function App() {
     return 'overview';
   };
 
-  const getInitialAdminSubTab = (): 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' | 'design_studio' => {
+  const getInitialAdminSubTab = (): 'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname.toLowerCase();
       const hash = window.location.hash.toLowerCase();
@@ -190,8 +187,6 @@ export default function App() {
       if (section === 'system_health') return 'system_health';
       if (section === 'monitoring') return 'monitoring';
       if (section === 'settings') return 'settings';
-      if (section === 'design_studio') return 'design_studio';
-      if (path === '/admin/design-studio') return 'design_studio';
       if (path === '/admin/agent' || path === '/admin/my-agent' || path === '/admin/my_agent' || hash === '#admin-agent' || hash === '#admin/agent') {
         return 'my_agent';
       }
@@ -271,7 +266,6 @@ export default function App() {
     embed: '/embed',
     admin: '/admin',
     account_credentials: '/admin/account-credentials',
-    design_studio: '/admin/design-studio'
   };
 
   const getTabFromLocation = (): SaaSNavTab => {
@@ -279,7 +273,6 @@ export default function App() {
     if (path === '/billing') return 'billing';
     if (path === '/embed') return 'embed';
     if (path === '/admin/account-credentials') return 'account_credentials';
-    if (path === '/admin/design-studio') return 'design_studio';
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
     const match = path.match(/^\/dashboard\/([^/]+)$/);
     const slugToTab: Record<string, SaaSNavTab> = {
@@ -379,7 +372,7 @@ export default function App() {
     };
   }, []);
 
-  const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings' | 'design_studio'>(getInitialAdminSubTab);
+  const [adminSubTab, setAdminSubTab] = useState<'workspaces' | 'my_agent' | 'agents' | 'isolation_tests' | 'webhooks' | 'pricing_plans' | 'audit_logs' | 'automations' | 'integrations' | 'system_health' | 'monitoring' | 'settings'>(getInitialAdminSubTab);
   
   // Active business workspace state
   const [business, setBusiness] = useState<Business | null>(null);
@@ -799,10 +792,6 @@ export default function App() {
               navigateTab('overview');
             }}
           />
-        ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'design_studio' ? (
-          <Suspense fallback={<RouteLoading />}>
-            <DesignStudio />
-          </Suspense>
         ) : currentUser?.role === 'PLATFORM_ADMIN' && activeTab === 'admin' ? (
           <div className="agentdesk-console-shell agentdesk-platform-admin-shell max-w-none min-h-screen px-0 py-0">
             <PlatformAdminDashboard

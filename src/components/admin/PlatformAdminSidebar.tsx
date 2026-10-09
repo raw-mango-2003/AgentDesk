@@ -19,7 +19,6 @@ import {
   LogOut,
   ExternalLink,
   Sparkles,
-  Palette,
   X
 } from 'lucide-react';
 
@@ -41,8 +40,7 @@ export type AdminSectionKey =
   | 'integrations'
   | 'system_health'
   | 'monitoring'
-  | 'settings'
-  | 'design_studio';
+  | 'settings';
 
 export type PlatformAdminSection = AdminSectionKey;
 
@@ -116,7 +114,6 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
     { key: 'system_health', label: 'Health & Diagnostics', icon: ShieldCheck },
     { key: 'monitoring', label: 'Delivery & Queue Logs', icon: Mail },
     { key: 'settings', label: 'Settings', icon: Sliders },
-    { key: 'design_studio', label: 'Design Studio', icon: Palette },
   ];
 
   return (
