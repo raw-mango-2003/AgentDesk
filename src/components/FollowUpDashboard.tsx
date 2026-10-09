@@ -104,20 +104,20 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-fadeIn text-slate-200">
       {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="border-b border-white/[0.08] pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Autonomous Lead Nurture
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-pink-500/10 text-pink-300 border border-pink-400/20">
               Multi-Channel Sequence (Day 0 → Day 7)
             </span>
           </div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Repeat className="w-5 h-5 text-blue-400" />
+            <Repeat className="w-5 h-5 text-pink-300" />
             <span>AI Lead Follow-Up Engine</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
@@ -127,7 +127,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
 
         <button
           onClick={() => setShowModal(true)}
-          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+          className="px-5 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-500/10 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Queue Follow-Up Task</span>
@@ -135,16 +135,16 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
       </div>
 
       {/* Visual Day 0 -> Day 1 -> Day 3 -> Day 7 Sequence Roadmap */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+      <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-6 shadow-none space-y-4">
         <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-blue-400" />
+          <Sliders className="w-4 h-4 text-pink-300" />
           <span>Automated Cadence Roadmap</span>
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+          <div className="bg-[#0c0c0f] p-4 rounded-xl border border-white/[0.08] space-y-2">
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-pink-500/10 text-pink-200 border border-pink-400/25">
                 Day 0 (Instant)
               </span>
               <span className="text-[10px] text-slate-500">&lt; 2 Minutes</span>
@@ -155,9 +155,9 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
             </p>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+          <div className="bg-[#0c0c0f] p-4 rounded-xl border border-white/[0.08] space-y-2">
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-pink-500/10 text-pink-200 border border-pink-400/20">
                 Day 1 (24h)
               </span>
               <span className="text-[10px] text-slate-500">+24 Hours</span>
@@ -168,9 +168,9 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
             </p>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+          <div className="bg-[#0c0c0f] p-4 rounded-xl border border-white/[0.08] space-y-2">
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-pink-500/10 text-pink-200 border border-pink-400/20">
                 Day 3 (72h)
               </span>
               <span className="text-[10px] text-slate-500">+72 Hours</span>
@@ -181,7 +181,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
             </p>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2">
+          <div className="bg-[#0c0c0f] p-4 rounded-xl border border-white/[0.08] space-y-2">
             <div className="flex items-center justify-between">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/30">
                 Day 7 (168h)
@@ -197,29 +197,29 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
       </div>
 
       {/* Task Queue Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
+      <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-6 shadow-none space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Clock className="w-4 h-4 text-blue-400" />
+            <Clock className="w-4 h-4 text-pink-300" />
             <span>Active Follow-Up Task Queue ({tasks.length})</span>
           </h3>
 
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl text-xs border border-slate-800">
+          <div className="flex items-center gap-1 bg-[#0c0c0f] p-1 rounded-xl text-xs border border-white/[0.08]">
             <button
               onClick={() => setFilter('all')}
-              className={`px-3 py-1 rounded-lg transition-all ${filter === 'all' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${filter === 'all' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               All
             </button>
             <button
               onClick={() => setFilter('pending')}
-              className={`px-3 py-1 rounded-lg transition-all ${filter === 'pending' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${filter === 'pending' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               Pending
             </button>
             <button
               onClick={() => setFilter('delivered')}
-              className={`px-3 py-1 rounded-lg transition-all ${filter === 'delivered' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${filter === 'delivered' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               Delivered
             </button>
@@ -230,24 +230,24 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
           {filteredTasks.map(task => (
             <div
               key={task.id}
-              className="bg-slate-950 p-4 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="bg-[#0c0c0f] p-4 rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-pink-500/10 text-pink-200 border border-pink-400/25">
                     {task.sequenceDay}
                   </span>
                   <span className="text-xs font-bold text-white">{task.contactName}</span>
                   <span className="text-[10px] text-slate-400">({formatPhoneNumber(task.contactPhone, business.country)})</span>
                 </div>
 
-                <p className="text-xs text-slate-300 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80 font-mono">
+                <p className="text-xs text-slate-300 bg-[#101014]/80 p-2.5 rounded-xl border border-white/[0.06] font-mono">
                   "{task.messageText}"
                 </p>
 
                 <div className="flex items-center gap-3 text-[10px] text-slate-500">
                   <span className="flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3 text-blue-400" />
+                    <MessageSquare className="w-3 h-3 text-pink-300" />
                     Channel: {task.channel}
                   </span>
                   <span>•</span>
@@ -270,7 +270,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                   <button
                     disabled={executingId === task.id}
                     onClick={() => handleExecuteTask(task)}
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                    className="px-4 py-2 rounded-xl bg-pink-500 hover:bg-pink-400 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{executingId === task.id ? 'Sending...' : 'Send Now'}</span>
@@ -290,11 +290,11 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
 
       {/* Queue Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 bg-[#08080b]/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-blue-400" />
+                <Plus className="w-4 h-4 text-pink-300" />
                 <span>Queue Automated Follow-Up</span>
               </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
@@ -311,7 +311,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                   value={contactName}
                   onChange={e => setContactName(e.target.value)}
                   placeholder="e.g. David Miller"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                 />
               </div>
 
@@ -321,7 +321,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                   <select
                     value={channel}
                     onChange={e => setChannel(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   >
                     <option value="SMS">SMS (US)</option>
                     <option value="WhatsApp">WhatsApp (India/Global)</option>
@@ -333,7 +333,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                   <select
                     value={sequenceDay}
                     onChange={e => setSequenceDay(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   >
                     <option value="Day 0">Day 0 (Instant)</option>
                     <option value="Day 1">Day 1 (+24h)</option>
@@ -351,11 +351,11 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                   value={messageText}
                   onChange={e => setMessageText(e.target.value)}
                   placeholder="Enter context-aware follow-up copy..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -365,7 +365,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold"
                 >
                   Schedule Task
                 </button>
