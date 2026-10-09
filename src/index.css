@@ -740,3 +740,51 @@ html, body, #root {
     font-size: 16px;
   }
 }
+
+
+/* Phase 2: dashboard overview layout foundation. Keep the current palette provisional. */
+.agentdesk-admin-overview {
+  min-width: 0;
+}
+
+.agentdesk-admin-overview > :first-child {
+  min-width: 0;
+}
+
+.agentdesk-admin-overview h1,
+.agentdesk-admin-overview h2,
+.agentdesk-admin-overview h3 {
+  text-wrap: balance;
+}
+
+.agentdesk-admin-overview .grid {
+  min-width: 0;
+  align-items: stretch;
+}
+
+.agentdesk-admin-overview .grid > * {
+  min-width: 0;
+}
+
+.agentdesk-admin-overview :is(button, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.agentdesk-admin-overview :is(button, a):focus-visible {
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .agentdesk-admin-overview {
+    gap: 1rem;
+  }
+
+  .agentdesk-admin-overview h1 {
+    font-size: clamp(1.25rem, 5vw, 1.75rem);
+    line-height: 1.25;
+  }
+
+  .agentdesk-admin-overview :is(.grid) {
+    gap: 0.75rem;
+  }
+}
