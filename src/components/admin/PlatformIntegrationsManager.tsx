@@ -659,7 +659,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-platform-integrations-manager space-y-6 w-full min-w-0 max-w-full">
       {/* Breadcrumb Hierarchy */}
       <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
         <span>Platform Admin</span>
