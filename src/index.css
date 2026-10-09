@@ -396,3 +396,26 @@ html, body, #root {
 .agentdesk-console-shell button{letter-spacing:-.01em;}
 @media(max-width:1279px){.agentdesk-console-shell{padding-left:16px !important;}.agentdesk-console-shell>.agentdesk-sidebar{display:none;}}
 @media(max-width:640px){.agentdesk-console-shell{padding-left:12px !important;padding-right:12px !important;}}
+
+
+/* Platform Admin: use the same live design tokens as the business console without replacing admin workflows. */
+.agentdesk-platform-admin-shell{
+  min-height:100vh !important;
+  padding:0 !important;
+  max-width:none !important;
+  color:var(--ad-text,#e9e5eb);
+  background:var(--ad-dashboard-bg,var(--ad-background,#070709));
+}
+.agentdesk-platform-admin-shell [class*="bg-slate-950"]{background-color:var(--ad-dashboard-bg,var(--ad-background,#070709)) !important;}
+.agentdesk-platform-admin-shell [class*="bg-slate-900"]{background-color:var(--ad-dashboard-surface,var(--ad-surface,#101014)) !important;}
+.agentdesk-platform-admin-shell [class*="bg-slate-800"]{background-color:color-mix(in srgb,var(--ad-dashboard-surface,var(--ad-surface,#101014)) 84%,white) !important;}
+.agentdesk-platform-admin-shell [class*="border-slate-"]{border-color:var(--ad-border,#26232b) !important;}
+.agentdesk-platform-admin-shell [class*="text-slate-100"],.agentdesk-platform-admin-shell [class*="text-slate-200"]{color:var(--ad-text,#e9e5eb) !important;}
+.agentdesk-platform-admin-shell [class*="text-slate-400"]{color:var(--ad-muted,#9a97a1) !important;}
+.agentdesk-platform-admin-shell [class*="bg-blue-600"]{background-color:var(--ad-primary,#ff2f86) !important;}
+.agentdesk-platform-admin-shell [class*="text-blue-"]{color:var(--ad-accent,#ff5aa5) !important;}
+.agentdesk-platform-admin-shell [class*="border-blue-"]{border-color:var(--ad-primary,#ff2f86) !important;}
+.agentdesk-platform-admin-shell [class*="bg-purple-600"]{background-color:var(--ad-primary,#ff2f86) !important;}
+.agentdesk-platform-admin-shell [class*="text-purple-"]{color:var(--ad-accent,#ff5aa5) !important;}
+.agentdesk-platform-admin-shell [class*="bg-rose-"]{background-color:color-mix(in srgb,var(--ad-danger,#FB7185) 16%,transparent) !important;}
+.agentdesk-platform-admin-shell [class*="text-rose-"]{color:var(--ad-danger,#FB7185) !important;}
