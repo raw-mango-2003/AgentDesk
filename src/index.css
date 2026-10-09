@@ -1528,3 +1528,51 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 15: Platform Admin Overview responsive analytics polish. */
+.agentdesk-admin-overview {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-admin-overview > * { min-width: 0; }
+.agentdesk-admin-overview [class*="grid"],
+.agentdesk-admin-overview [class*="flex"] { min-width: 0; }
+.agentdesk-admin-overview [class*="grid"] > *,
+.agentdesk-admin-overview [class*="flex"] > * { min-width: 0; max-width: 100%; }
+.agentdesk-admin-overview h1,
+.agentdesk-admin-overview h2,
+.agentdesk-admin-overview h3,
+.agentdesk-admin-overview p,
+.agentdesk-admin-overview span { overflow-wrap: anywhere; }
+.agentdesk-admin-overview button,
+.agentdesk-admin-overview a,
+.agentdesk-admin-overview [role="button"] { touch-action: manipulation; }
+.agentdesk-admin-overview :is(button, a, [role="button"]):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-admin-overview table { width: 100%; }
+.agentdesk-admin-overview :is(.overflow-x-auto, [class*="overflow-x-auto"]) {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 1280px) {
+  .agentdesk-admin-overview [class*="grid-cols-4"] > * { min-height: 8.5rem; }
+}
+@media (max-width: 640px) {
+  .agentdesk-admin-overview h1 { font-size: clamp(1.35rem, 5.5vw, 1.75rem); line-height: 1.2; }
+  .agentdesk-admin-overview button { min-height: 40px; }
+  .agentdesk-admin-overview [class*="grid-cols-"] { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-admin-overview *,
+  .agentdesk-admin-overview *::before,
+  .agentdesk-admin-overview *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
