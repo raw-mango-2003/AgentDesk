@@ -62,7 +62,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <MessageSquare className="w-6 h-6 text-blue-600" />
+            <MessageSquare className="w-6 h-6 text-pink-300" />
             Conversations
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
@@ -210,14 +210,14 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
                           ? 'bg-slate-700 text-white'
                           : msg.sender === 'human_support'
                           ? 'bg-emerald-600 text-white'
-                          : 'bg-blue-600 text-white'
+                          : 'bg-pink-500 text-white'
                       }`}>
                         {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                       </div>
 
                       <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
                         msg.sender === 'user'
-                          ? 'bg-blue-600 text-white rounded-tr-none'
+                          ? 'bg-pink-500 text-white rounded-tr-none'
                           : 'bg-white text-slate-800 border border-slate-200/80 rounded-tl-none shadow-2xs'
                       }`}>
                         {msg.text}
