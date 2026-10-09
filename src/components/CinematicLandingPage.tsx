@@ -549,25 +549,42 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
                 ['Scale', '₹59,999', '20,000 AI conversations', '3,000 voice minutes', '5,000 SMS / WhatsApp']
               ].map(([name, price, a, b, c], index) => (
                 <div
-  key={name}
-  className={`group relative isolate overflow-hidden rounded-[28px] border p-7 sm:p-9 transition-colors duration-200 ${index === 1 ? 'lg:-translate-y-3' : ''}`}
-  onMouseMove={(event) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty('--glow-x', `${event.clientX - rect.left}px`);
-    event.currentTarget.style.setProperty('--glow-y', `${event.clientY - rect.top}px`);
-  }}
-  onMouseLeave={(event) => {
-    event.currentTarget.style.setProperty('--glow-x', '50%');
-    event.currentTarget.style.setProperty('--glow-y', '50%');
-  }}
-  style={{
-    borderColor: index === 1 ? primary : border,
-    background: index === 1
-      ? `linear-gradient(160deg, ${primary}15, rgba(255,255,255,.025))`
-      : 'rgba(255,255,255,.02)',
-    backgroundImage: `radial-gradient(260px circle at var(--glow-x, 50%) var(--glow-y, 50%), ${primary}35, transparent 70%)`,
-  }}
->                  <p className="text-[10px] uppercase tracking-[.24em] text-white/45">{name}</p>
+                  key={name}
+                  className={`group relative isolate overflow-hidden rounded-[28px] border p-7 sm:p-9 transition-colors duration-200 ${index === 1 ? 'lg:-translate-y-3' : ''}`}
+                  onMouseMove={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    const angle =
+                      Math.atan2(
+                        event.clientY - rect.top - centerY,
+                        event.clientX - rect.left - centerX
+                      ) * (180 / Math.PI) + 90;
+
+                    event.currentTarget.style.setProperty(
+                      '--glow-angle',
+                      `${angle}deg`
+                    );
+                  }}
+                  style={{
+                    border: '1px solid transparent',
+                    background: `
+                      linear-gradient(
+                        160deg,
+                        ${index === 1 ? `${primary}15` : 'rgba(255,255,255,.02)'},
+                        rgba(255,255,255,.025)
+                      ) padding-box,
+                      conic-gradient(
+                        from var(--glow-angle, 0deg),
+                        ${border} 0deg,
+                        ${primary} 35deg,
+                        ${border} 85deg,
+                        ${border} 360deg
+                      ) border-box
+                    `,
+                  }}
+                >
+              <p className="text-[10px] uppercase tracking-[.24em] text-white/45">{name}</p>
                   <p className="lux-display mt-6 text-4xl font-medium">{price}<span className="text-sm text-white/35"> / mo</span></p>
                   <div className="mt-7 space-y-3 text-sm text-white/65">
                     {[a, b, c, 'Managed platform operations'].map(item => <div key={item} className="flex gap-3"><Check className="h-4 w-4 shrink-0" style={{ color: primary }} />{item}</div>)}
