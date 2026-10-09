@@ -11,23 +11,27 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: agentdesk
-          POSTGRES_PASSWORD: agentdesk-ci
-          POSTGRES_DB: agentdesk_ci
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U agentdesk -d agentdesk_ci"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Start PostgreSQL service
+        run: |
+          set -e
+          docker run --name agentdesk-postgres \
+            -e POSTGRES_USER=agentdesk \
+            -e POSTGRES_PASSWORD=agentdesk-ci \
+            -e POSTGRES_DB=agentdesk_ci \
+            -p 5432:5432 -d public.ecr.aws/docker/library/postgres:16
+          for i in $(seq 1 30); do
+            if docker exec agentdesk-postgres pg_isready -U agentdesk -d agentdesk_ci; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time."
+          docker logs agentdesk-postgres
+          exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

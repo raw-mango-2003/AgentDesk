@@ -22,7 +22,6 @@ const NotificationsDrawer = lazy(() => import('./components/NotificationsDrawer'
 import { ChatWidget } from './components/ChatWidget';
 import { VisualEditorRuntime } from './components/VisualEditorRuntime';
 import { AuthModal } from './components/AuthModal';
-const PricingPage = lazy(() => import('./components/PricingPage').then(module => ({ default: module.PricingPage })));
 const BillingDashboard = lazy(() => import('./components/BillingDashboard').then(module => ({ default: module.BillingDashboard })));
 import { PlanUpgradeModal } from './components/PlanUpgradeModal';
 const LocalizationSettings = lazy(() => import('./components/LocalizationSettings').then(module => ({ default: module.LocalizationSettings })));
@@ -90,10 +89,10 @@ import {
 
 
 const RouteLoading: React.FC = () => (
-  <div className="min-h-[50vh] flex items-center justify-center bg-slate-950">
-    <div className="flex flex-col items-center gap-3 text-slate-400">
-      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      <span className="text-sm">Loading AgentDesk...</span>
+  <div className="min-h-[50vh] flex items-center justify-center bg-[#0b0b0b] text-[#f5f0d0]">
+    <div className="flex flex-col items-center gap-3 text-white/60">
+      <div className="w-9 h-9 border-2 border-fuchsia-600 border-t-transparent rounded-full animate-spin" />
+      <span className="text-sm tracking-wide">Loading AgentDesk...</span>
     </div>
   </div>
 );
@@ -195,6 +194,17 @@ export default function App() {
   };
 
   const [currentView, setCurrentView] = useState<AppView>(getInitialView);
+
+  useEffect(() => {
+    if (currentView !== 'pricing') return;
+    const scrollToPlans = window.setTimeout(() => {
+      document.getElementById('plans')?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start'
+      });
+    }, 80);
+    return () => window.clearTimeout(scrollToPlans);
+  }, [currentView]);
   const [activeTab, setActiveTab] = useState<SaaSNavTab>(getInitialTab);
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
   const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab === 'account_credentials' ? 'account-credentials' : activeTab === 'admin' ? 'platform-admin' : activeTab;
@@ -657,10 +667,10 @@ export default function App() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#0b0b0b] text-[#f5f0d0] flex flex-col font-sans selection:bg-fuchsia-600 selection:text-white">
       <VisualEditorRuntime />
-      {/* Keep the global navbar off the cinematic public homepage only */}
-{currentView !== 'landing' && (
+      {/* Keep the dashboard navbar off public auth, checkout, and cinematic pages. */}
+{!['landing', 'pricing', 'login', 'platform_login', 'onboarding', 'checkout'].includes(currentView) && (
   <Navbar
     currentView={currentView}
     onNavigate={handleNavigate}
@@ -762,15 +772,19 @@ export default function App() {
             }}
           />
         ) : currentView === 'pricing' ? (
-          <div className="agentdesk-public-pricing-shell">
-          <PricingPage
+          <CinematicLandingPage
+            onOpenDemo={() => setShowDemoWidget(true)}
+            onOpenAuth={() => handleNavigate('login')}
+            onNavigateGetStarted={() => handleNavigate('onboarding')}
+            onNavigateLogin={() => handleNavigate('login')}
+            onNavigatePlatformLogin={() => handleNavigate('platform_login')}
             onOpenDashboard={(tenantId) => {
-              if (tenantId) {
-                setActiveBusinessId(tenantId);
-              }
+              if (tenantId) setActiveBusinessId(tenantId);
               handleNavigate('dashboard');
             }}
-            onOpenDemo={() => setShowDemoWidget(true)}
+            onOpenPricing={() => {
+              document.getElementById('plans')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
             onWorkspaceCreated={async (tenantId) => {
               const list = await getAllBusinesses();
               setAllBusinesses(list);
@@ -779,7 +793,6 @@ export default function App() {
               navigateTab('overview');
             }}
           />
-          </div>
         ) : !currentUser ? (
           <BusinessLoginPage
             onLoginSuccess={() => handleNavigate('dashboard')}
