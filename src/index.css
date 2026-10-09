@@ -2123,3 +2123,63 @@ ui/phase-19-missed-call-textback
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Phase 24: Localization settings responsive safeguards.
+   Layout-only changes preserve existing colors, preferences, and persistence. */
+.agentdesk-localization-settings {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-localization-settings > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-localization-settings :is(input, select, textarea) {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-localization-settings :is(button, a, [role="button"]) {
+  touch-action: manipulation;
+  overflow-wrap: anywhere;
+}
+.agentdesk-localization-settings :is(button, a, input, select, textarea, [role="button"]):focus-visible {
+  outline-offset: 3px;
+}
+.agentdesk-localization-settings [class*="grid"] > *,
+.agentdesk-localization-settings [class*="flex"] > * {
+  min-width: 0;
+}
+@media (max-width: 768px) {
+  .agentdesk-localization-settings [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-localization-settings :is(button, input, select, textarea) {
+    min-height: 40px;
+  }
+  .agentdesk-localization-settings [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 480px) {
+  .agentdesk-localization-settings .p-6 {
+    padding: 1rem;
+  }
+  .agentdesk-localization-settings .rounded-3xl {
+    border-radius: 1rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-localization-settings *,
+  .agentdesk-localization-settings *::before,
+  .agentdesk-localization-settings *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
