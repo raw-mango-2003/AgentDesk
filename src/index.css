@@ -948,3 +948,68 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 6: Conversations dashboard responsive layout safeguards */
+.agentdesk-conversations-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-conversations-dashboard > * {
+  min-width: 0;
+}
+.agentdesk-conversations-dashboard h1,
+.agentdesk-conversations-dashboard h2,
+.agentdesk-conversations-dashboard h3 {
+  text-wrap: balance;
+}
+.agentdesk-conversations-dashboard input,
+.agentdesk-conversations-dashboard select,
+.agentdesk-conversations-dashboard textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-conversations-dashboard [class*="grid"] > *,
+.agentdesk-conversations-dashboard [class*="flex"] > * {
+  min-width: 0;
+}
+.agentdesk-conversations-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.agentdesk-conversations-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline-offset: 3px;
+}
+@media (max-width: 640px) {
+  .agentdesk-conversations-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-conversations-dashboard h1 {
+    font-size: clamp(1.35rem, 6vw, 1.875rem);
+    line-height: 1.2;
+  }
+  .agentdesk-conversations-dashboard button,
+  .agentdesk-conversations-dashboard input,
+  .agentdesk-conversations-dashboard select {
+    min-height: 40px;
+  }
+  .agentdesk-conversations-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-conversations-dashboard [class*="overflow-x-auto"] {
+    overscroll-behavior-x: contain;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-conversations-dashboard *,
+  .agentdesk-conversations-dashboard *::before,
+  .agentdesk-conversations-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
