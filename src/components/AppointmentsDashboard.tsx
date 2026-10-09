@@ -105,20 +105,20 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-fadeIn text-slate-200">
       {/* Header Banner */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="border-b border-white/[0.08] pb-5 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               Two-Way Calendar Sync
             </span>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-pink-300 border border-blue-500/20">
               Automated 3-Step Reminders
             </span>
           </div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-400" />
+            <Calendar className="w-5 h-5 text-pink-300" />
             <span>Appointment Scheduling & Reminders</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
@@ -128,7 +128,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
 
         <button
           onClick={() => setShowModal(true)}
-          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+          className="px-5 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-pink-500/10 transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Book Appointment</span>
@@ -137,13 +137,13 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div className="bg-[#101014] border border-white/[0.08] rounded-lg p-4">
           <div className="text-[11px] text-slate-400 font-semibold uppercase">Total Scheduled Bookings</div>
           <div className="text-2xl font-black text-white mt-1">{appointments.length}</div>
-          <div className="text-[10px] text-blue-400 mt-1">Google Calendar 2-way sync enabled</div>
+          <div className="text-[10px] text-pink-300 mt-1">Google Calendar 2-way sync enabled</div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-4">
           <div className="text-[11px] text-slate-400 font-semibold uppercase">Confirmed & Completed</div>
           <div className="text-2xl font-black text-emerald-400 mt-1">
             {appointments.filter(a => a.status === 'confirmed' || a.status === 'completed').length}
@@ -151,9 +151,9 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
           <div className="text-[10px] text-emerald-400 mt-1">94% show-up rate with 3-step reminder sequence</div>
         </div>
 
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-4">
           <div className="text-[11px] text-slate-400 font-semibold uppercase">No-Shows Prevented</div>
-          <div className="text-2xl font-black text-purple-400 mt-1">
+          <div className="text-2xl font-black text-pink-300 mt-1">
             {appointments.length * 3} SMS/WhatsApp Reminders Sent
           </div>
           <div className="text-[10px] text-slate-400 mt-1">Instant confirmation + 24h + 2h</div>
@@ -161,35 +161,35 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
       </div>
 
       {/* Appointments List & Status Filters */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-4 sm:p-5 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/[0.08]">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <CalendarCheck className="w-4 h-4 text-blue-400" />
+            <CalendarCheck className="w-4 h-4 text-pink-300" />
             <span>Upcoming Schedule & Bookings ({appointments.length})</span>
           </h3>
 
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl text-xs border border-slate-800">
+          <div className="flex items-center gap-1 bg-[#0c0c0f] p-1 rounded-xl text-xs border border-white/[0.08]">
             <button
               onClick={() => setSelectedStatus('all')}
-              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'all' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'all' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               All
             </button>
             <button
               onClick={() => setSelectedStatus('scheduled')}
-              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'scheduled' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'scheduled' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               Scheduled
             </button>
             <button
               onClick={() => setSelectedStatus('confirmed')}
-              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'confirmed' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'confirmed' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               Confirmed
             </button>
             <button
               onClick={() => setSelectedStatus('completed')}
-              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'completed' ? 'bg-blue-600 text-white font-bold' : 'text-slate-400'}`}
+              className={`px-3 py-1 rounded-lg transition-all ${selectedStatus === 'completed' ? 'bg-pink-500 text-white font-bold' : 'text-slate-400'}`}
             >
               Completed
             </button>
@@ -200,7 +200,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
           {filteredAppointments.map(apt => (
             <div
               key={apt.id}
-              className="bg-slate-950 p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="bg-[#0c0c0f] p-5 rounded-xl border border-white/[0.08] hover:border-white/[0.12] transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="space-y-2 flex-1">
                 <div className="flex items-center gap-3">
@@ -209,7 +209,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                       : apt.status === 'cancelled'
                       ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                      : 'bg-blue-500/20 text-pink-200 border border-pink-400/25'
                   }`}>
                     {apt.status}
                   </span>
@@ -218,7 +218,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-slate-400">
                   <div className="flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-blue-400" />
+                    <User className="w-3.5 h-3.5 text-pink-300" />
                     <span>{apt.contactName} ({formatPhoneNumber(apt.contactPhone, business.country)})</span>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -226,7 +226,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                     <span>{formatDateTime(apt.startTime, business.timezone, business.country)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-purple-400" />
+                    <MapPin className="w-3.5 h-3.5 text-pink-300" />
                     <span className="truncate">{apt.location || business.address}</span>
                   </div>
                 </div>
@@ -238,7 +238,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                     Instant SMS/WhatsApp Sent
                   </span>
                   <span>•</span>
-                  <span className="flex items-center gap-1 text-blue-400">
+                  <span className="flex items-center gap-1 text-pink-300">
                     <Bell className="w-3 h-3" />
                     24h Reminder Queued
                   </span>
@@ -262,7 +262,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                 {apt.status !== 'completed' && apt.status !== 'cancelled' && (
                   <button
                     onClick={() => handleStatusChange(apt, 'completed')}
-                    className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-xs font-bold border border-blue-500/30 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-pink-500/10 hover:bg-pink-500/15 text-pink-200 text-xs font-bold border border-pink-400/25 cursor-pointer"
                   >
                     Complete
                   </button>
@@ -289,11 +289,11 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
 
       {/* Booking Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 bg-[#08080b]/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#101014] border border-white/[0.08] rounded-xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-blue-400" />
+                <Calendar className="w-4 h-4 text-pink-300" />
                 <span>Book Service Appointment</span>
               </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
@@ -310,7 +310,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                   value={contactName}
                   onChange={e => setContactName(e.target.value)}
                   placeholder="e.g. Anand Krishnamurthy"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                 />
               </div>
 
@@ -322,7 +322,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                     value={contactPhone}
                     onChange={e => setContactPhone(e.target.value)}
                     placeholder={business.country === 'IN' ? '+91 99001 88765' : '+1 (512) 334-1189'}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   />
                 </div>
                 <div>
@@ -331,7 +331,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                     type="text"
                     value={serviceName}
                     onChange={e => setServiceName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   />
                 </div>
               </div>
@@ -343,7 +343,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                     type="date"
                     value={date}
                     onChange={e => setDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   />
                 </div>
                 <div>
@@ -352,12 +352,12 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                     type="time"
                     value={time}
                     onChange={e => setTime(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
@@ -367,7 +367,7 @@ export function AppointmentsDashboard({ business }: AppointmentsDashboardProps) 
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold"
+                  className="px-5 py-2 rounded-xl bg-pink-500 hover:bg-pink-400 text-white font-bold"
                 >
                   Save & Sync Calendar
                 </button>
