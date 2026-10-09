@@ -273,7 +273,6 @@ export default function App() {
     if (path === '/billing') return 'billing';
     if (path === '/embed') return 'embed';
     if (path === '/admin/account-credentials') return 'account_credentials';
-    if (path === '/admin/design-studio') return 'design_studio';
     if (path === '/admin' || path.startsWith('/admin/')) return 'admin';
     const match = path.match(/^\/dashboard\/([^/]+)$/);
     const slugToTab: Record<string, SaaSNavTab> = {
