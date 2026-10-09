@@ -97,7 +97,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   const aiIsLive = business.agentStatus === 'PUBLISHED';
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="agentdesk-business-overview space-y-8 animate-fadeIn w-full min-w-0">
       {/* Usage Limit Alert Banner if 50% or higher */}
       {usageAlert && usageAlert.alertLevel !== 'NONE' && (
         <div className={`p-4 rounded-2xl border flex items-center justify-between gap-4 ${
