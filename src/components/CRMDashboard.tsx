@@ -119,7 +119,7 @@ export function CRMDashboard({ business }: CRMDashboardProps) {
     .reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="agentdesk-crm-dashboard space-y-6 w-full min-w-0">
       {/* Top Banner & Tab Controls */}
       <div className="bg-[#101014] border border-white/[0.07] rounded-xl p-6 shadow-[0_24px_65px_rgba(0,0,0,.2)] flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

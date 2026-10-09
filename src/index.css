@@ -834,3 +834,60 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 4: CRM dashboard responsive layout safeguards */
+.agentdesk-crm-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-crm-dashboard > * {
+  min-width: 0;
+}
+.agentdesk-crm-dashboard h1,
+.agentdesk-crm-dashboard h2,
+.agentdesk-crm-dashboard h3 {
+  text-wrap: balance;
+}
+.agentdesk-crm-dashboard input,
+.agentdesk-crm-dashboard select,
+.agentdesk-crm-dashboard textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+.agentdesk-crm-dashboard [class*="grid"] > * {
+  min-width: 0;
+}
+.agentdesk-crm-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+@media (max-width: 640px) {
+  .agentdesk-crm-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-crm-dashboard h1 {
+    font-size: clamp(1.35rem, 6vw, 1.875rem);
+    line-height: 1.2;
+  }
+  .agentdesk-crm-dashboard button,
+  .agentdesk-crm-dashboard select,
+  .agentdesk-crm-dashboard input {
+    min-height: 40px;
+  }
+  .agentdesk-crm-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-crm-dashboard *,
+  .agentdesk-crm-dashboard *::before,
+  .agentdesk-crm-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
