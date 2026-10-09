@@ -536,24 +536,43 @@ export default function App() {
           await saveBusiness(biz);
         }
 
-        const list = await getAllBusinesses();
-        if (isMounted) setAllBusinesses(list);
+        // Show the requested tenant as soon as its own lookup succeeds.
+        // The full registry and notifications are secondary and must not hold
+        // the whole dashboard behind the workspace loading screen.
+        if (isMounted && biz) {
+          setBusiness(biz);
+          setWorkspaceLoadError(null);
+          setWorkspaceLoading(false);
+        }
 
-        // Fallback to first available if requested workspace does not exist
-        if (!biz && list.length > 0) {
+        let list: Business[] = [];
+        try {
+          list = await getAllBusinesses();
+          if (isMounted) setAllBusinesses(list);
+        } catch (registryError) {
+          console.warn('[Workspace] Tenant registry unavailable; keeping selected workspace:', registryError);
+        }
+
+        // Only fall back to another tenant for platform admins. Never silently
+        // show one customer's workspace to a different business account.
+        if (!biz && currentUser?.role === 'PLATFORM_ADMIN' && list.length > 0) {
           biz = list[0];
         }
 
-        if (isMounted) {
-          if (biz) {
-            setBusiness(biz);
-            setWorkspaceLoadError(null);
-          } else {
-            setWorkspaceLoadError(`Workspace "${targetId}" could not be located.`);
-          }
-          const notifs = await getNotifications(biz?.id || targetId);
-          setNotifications(notifs);
+        if (isMounted && !biz) {
+          setWorkspaceLoadError(`Workspace "${targetId}" could not be located. Check the tenant ID and access permissions.`);
           setWorkspaceLoading(false);
+        }
+
+        if (isMounted && biz) {
+          try {
+            const notifs = await getNotifications(biz.id || targetId);
+            if (isMounted) setNotifications(notifs);
+          } catch (notificationError) {
+            console.warn('[Workspace] Notifications unavailable:', notificationError);
+          } finally {
+            if (isMounted) setWorkspaceLoading(false);
+          }
         }
       } catch (err: any) {
         if (isMounted) {
