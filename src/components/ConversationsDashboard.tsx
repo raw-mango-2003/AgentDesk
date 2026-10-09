@@ -66,7 +66,7 @@ export const ConversationsDashboard: React.FC<ConversationsDashboardProps> = ({ 
   };
 
   return (
-    <div className="space-y-5 animate-fadeIn text-slate-200">
+    <div className="agentdesk-conversations-dashboard space-y-5 animate-fadeIn text-slate-200 w-full min-w-0">
       <header className="flex flex-col gap-4 border-b border-white/[0.08] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-pink-300">
