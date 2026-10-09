@@ -419,3 +419,73 @@ html, body, #root {
 .agentdesk-platform-admin-shell [class*="text-purple-"]{color:var(--ad-accent,#ff5aa5) !important;}
 .agentdesk-platform-admin-shell [class*="bg-rose-"]{background-color:color-mix(in srgb,var(--ad-danger,#FB7185) 16%,transparent) !important;}
 .agentdesk-platform-admin-shell [class*="text-rose-"]{color:var(--ad-danger,#FB7185) !important;}
+
+
+/* AgentDesk premium console visual system: graphite surfaces, crisp hierarchy, restrained magenta accent. */
+.agentdesk-platform-admin-shell{
+  background:
+    radial-gradient(ellipse at 18% 0%, color-mix(in srgb,var(--ad-primary,#ff2f86) 10%,transparent),transparent 34rem),
+    var(--ad-dashboard-bg,var(--ad-background,#08080b)) !important;
+}
+.agentdesk-platform-admin-shell .w-full.min-h-\[calc\(100vh-4rem\)\]{
+  background:transparent !important;
+}
+.agentdesk-platform-admin-shell aside.fixed,
+.agentdesk-platform-admin-shell aside.md\:static{
+  background:rgba(13,13,18,.96) !important;
+  border-color:rgba(255,255,255,.075) !important;
+  box-shadow:12px 0 40px rgba(0,0,0,.12);
+  backdrop-filter:blur(18px);
+}
+.agentdesk-platform-admin-shell aside button{
+  transition:background-color .18s ease,border-color .18s ease,color .18s ease,transform .18s ease;
+}
+.agentdesk-platform-admin-shell aside button:hover{
+  border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 24%,transparent);
+}
+.agentdesk-platform-admin-shell header,
+.agentdesk-platform-admin-shell .sticky.top-0{
+  background:rgba(12,12,16,.88) !important;
+  border-color:rgba(255,255,255,.08) !important;
+  backdrop-filter:blur(18px);
+}
+.agentdesk-platform-admin-shell .rounded-2xl,
+.agentdesk-platform-admin-shell .rounded-xl,
+.agentdesk-platform-admin-shell .rounded-3xl{
+  border-color:color-mix(in srgb,var(--ad-border,#292630) 80%,transparent);
+}
+.agentdesk-platform-admin-shell .bg-slate-950\/80,
+.agentdesk-platform-admin-shell .bg-slate-950\/90{
+  background-color:color-mix(in srgb,var(--ad-dashboard-bg,#08080b) 92%,transparent) !important;
+}
+.agentdesk-platform-admin-shell button:focus-visible,
+.agentdesk-platform-admin-shell a:focus-visible,
+.agentdesk-platform-admin-shell input:focus-visible,
+.agentdesk-platform-admin-shell select:focus-visible{
+  outline:2px solid var(--ad-accent,var(--ad-primary,#ff2f86));
+  outline-offset:2px;
+}
+.agentdesk-platform-admin-shell .text-purple-400,
+.agentdesk-platform-admin-shell .text-purple-300{
+  color:var(--ad-accent,#ff5aa5) !important;
+}
+.agentdesk-platform-admin-shell .border-purple-500\/30,
+.agentdesk-platform-admin-shell .border-purple-500\/20{
+  border-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 30%,transparent) !important;
+}
+.agentdesk-platform-admin-shell .bg-purple-600\/20{
+  background-color:color-mix(in srgb,var(--ad-primary,#ff2f86) 15%,transparent) !important;
+}
+.agentdesk-platform-admin-shell .bg-purple-600{
+  background-color:var(--ad-primary,#ff2f86) !important;
+}
+.agentdesk-platform-admin-shell .shadow-2xl{
+  box-shadow:0 22px 65px rgba(0,0,0,.4) !important;
+}
+.agentdesk-platform-admin-shell .custom-scrollbar{
+  scrollbar-color:color-mix(in srgb,var(--ad-muted,#8e8995) 45%,transparent) transparent;
+}
+@media(max-width:768px){
+  .agentdesk-platform-admin-shell{overflow-x:hidden;}
+  .agentdesk-platform-admin-shell .p-4.sm\:p-6.lg\:p-8{padding:1rem;}
+}
