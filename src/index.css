@@ -788,3 +788,49 @@ html, body, #root {
     gap: 0.75rem;
   }
 }
+
+
+/* Phase 3: responsive layout resilience for the business dashboard overview. */
+.agentdesk-business-overview {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.agentdesk-business-overview > * {
+  min-width: 0;
+}
+.agentdesk-business-overview h1,
+.agentdesk-business-overview h2,
+.agentdesk-business-overview h3 {
+  text-wrap: balance;
+}
+.agentdesk-business-overview button,
+.agentdesk-business-overview textarea {
+  max-width: 100%;
+}
+.agentdesk-business-overview textarea {
+  resize: vertical;
+}
+.agentdesk-business-overview [class*="grid"] > * {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .agentdesk-business-overview {
+    gap: 1.25rem;
+  }
+  .agentdesk-business-overview h1 {
+    font-size: clamp(1.5rem, 6vw, 2rem);
+    line-height: 1.2;
+  }
+  .agentdesk-business-overview button {
+    min-height: 2.5rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-business-overview,
+  .agentdesk-business-overview * {
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
