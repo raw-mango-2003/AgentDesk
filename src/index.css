@@ -1078,3 +1078,70 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 8: Follow-Up Dashboard responsive layout. Scoped CSS only; preserve existing colors and workflow behavior. */
+.agentdesk-follow-up-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-follow-up-dashboard [class*="grid"],
+.agentdesk-follow-up-dashboard [class*="flex"] {
+  min-width: 0;
+}
+.agentdesk-follow-up-dashboard [class*="grid"] > *,
+.agentdesk-follow-up-dashboard [class*="flex"] > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-follow-up-dashboard input,
+.agentdesk-follow-up-dashboard select,
+.agentdesk-follow-up-dashboard textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-follow-up-dashboard button,
+.agentdesk-follow-up-dashboard a {
+  overflow-wrap: anywhere;
+}
+.agentdesk-follow-up-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(244, 114, 182, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-follow-up-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 640px) {
+  .agentdesk-follow-up-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-follow-up-dashboard h2 {
+    font-size: clamp(1.25rem, 5.5vw, 1.5rem);
+    line-height: 1.25;
+  }
+  .agentdesk-follow-up-dashboard button,
+  .agentdesk-follow-up-dashboard input,
+  .agentdesk-follow-up-dashboard select {
+    min-height: 40px;
+  }
+  .agentdesk-follow-up-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-follow-up-dashboard [class*="overflow-x-auto"] {
+    overscroll-behavior-x: contain;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-follow-up-dashboard *,
+  .agentdesk-follow-up-dashboard *::before,
+  .agentdesk-follow-up-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
