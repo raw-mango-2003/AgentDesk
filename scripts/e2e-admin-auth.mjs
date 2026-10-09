@@ -73,6 +73,26 @@ if (!Array.isArray(tenantFilterAudit.body?.checks) || tenantFilterAudit.body.che
   throw new Error(`Tenant filter audit details are missing or contain failures: ${JSON.stringify(tenantFilterAudit.body?.checks)}`);
 }
 
+// Integration workflow guards: admin-only monitoring, validation, and tenant-provider boundaries.
+const anonymousMonitoring = await request('/api/platform/monitoring');
+if (![401, 403].includes(anonymousMonitoring.response.status)) {
+  throw new Error(`Integration monitoring must reject anonymous access, received HTTP ${anonymousMonitoring.response.status}: ${JSON.stringify(anonymousMonitoring.body)}`);
+}
+
+const missingTenantIntegrations = await request('/api/platform/tenant-integrations');
+if (missingTenantIntegrations.response.status !== 400 || !/tenantId is required/i.test(missingTenantIntegrations.body?.error || '')) {
+  throw new Error(`Platform integration listing should validate tenantId, received HTTP ${missingTenantIntegrations.response.status}: ${JSON.stringify(missingTenantIntegrations.body)}`);
+}
+
+const unsupportedIntegrationProvider = await request('/api/platform/tenant-integrations/e2e-missing-tenant/not-a-provider', {
+  method: 'PUT',
+  headers: { Cookie: cookies },
+  body: JSON.stringify({ api_key: 'must-not-be-saved' })
+});
+if (unsupportedIntegrationProvider.response.status !== 400 || !/unsupported tenant integration provider/i.test(unsupportedIntegrationProvider.body?.error || '')) {
+  throw new Error(`Unsupported integration providers must be rejected before saving, received HTTP ${unsupportedIntegrationProvider.response.status}: ${JSON.stringify(unsupportedIntegrationProvider.body)}`);
+}
+
 // Logout must revoke the session and clear the browser session cookie.
 const logout = await request('/api/auth/logout', {
   method: 'POST',
