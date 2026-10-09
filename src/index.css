@@ -1284,3 +1284,79 @@ html, body, #root {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 11: Integrations Dashboard responsive layout. Scoped styles only. */
+.agentdesk-integrations-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agentdesk-integrations-dashboard [class*="grid"],
+.agentdesk-integrations-dashboard [class*="flex"] {
+  min-width: 0;
+}
+.agentdesk-integrations-dashboard [class*="grid"] > *,
+.agentdesk-integrations-dashboard [class*="flex"] > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-integrations-dashboard input,
+.agentdesk-integrations-dashboard select,
+.agentdesk-integrations-dashboard textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.agentdesk-integrations-dashboard button,
+.agentdesk-integrations-dashboard a {
+  overflow-wrap: anywhere;
+}
+.agentdesk-integrations-dashboard :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.9);
+  outline-offset: 3px;
+}
+.agentdesk-integrations-dashboard pre,
+.agentdesk-integrations-dashboard code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.agentdesk-integrations-dashboard [class*="overflow-x-auto"] {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.agentdesk-integrations-dashboard table {
+  min-width: 34rem;
+}
+@media (max-width: 640px) {
+  .agentdesk-integrations-dashboard {
+    gap: 1rem;
+  }
+  .agentdesk-integrations-dashboard h2 {
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+    line-height: 1.25;
+  }
+  .agentdesk-integrations-dashboard button,
+  .agentdesk-integrations-dashboard input,
+  .agentdesk-integrations-dashboard select {
+    min-height: 40px;
+  }
+  .agentdesk-integrations-dashboard [class*="grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agentdesk-integrations-dashboard [class*="overflow-x-auto"] {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agentdesk-integrations-dashboard *,
+  .agentdesk-integrations-dashboard *::before,
+  .agentdesk-integrations-dashboard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
