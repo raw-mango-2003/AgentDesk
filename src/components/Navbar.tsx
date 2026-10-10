@@ -107,17 +107,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onNavigate('landing')}
               className="flex items-center gap-2 sm:gap-2.5 text-left group cursor-pointer min-w-0"
             >
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
-                <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
+              <div className="agentdesk-brand-mark w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center text-white group-hover:scale-[1.04] transition-transform shrink-0">
+                <Sparkles className="w-[18px] h-[18px]" />
               </div>
-              <div className="min-w-0">
-                <span className="font-extrabold text-sm sm:text-base tracking-tight text-white flex items-center gap-1.5 truncate">
-                  AgentDesk
-                  <span className="hidden xs:inline text-[10px] font-semibold px-1.5 py-0.2 rounded-md bg-slate-800 text-slate-300 border border-slate-700 uppercase tracking-wide">
-                    AI Platform
-                  </span>
-                </span>
-                <span className="text-[10px] text-slate-400 hidden sm:block -mt-0.5 truncate">AI Customer Operations Platform</span>
+              <div className="min-w-0 flex flex-col justify-center">
+                <span className="font-extrabold text-[15px] sm:text-base tracking-tight text-white leading-tight truncate">AgentDesk</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400 mt-0.5 truncate">RevenueOS</span>
               </div>
             </button>
           </div>
