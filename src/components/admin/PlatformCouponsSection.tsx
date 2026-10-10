@@ -365,7 +365,7 @@ export const PlatformCouponsSection: React.FC = () => {
                   placeholder="e.g. WELCOME2025"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ''))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white focus:outline-hidden focus:border-purple-500 uppercase"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500 uppercase" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                 />
               </div>
 
@@ -376,7 +376,7 @@ export const PlatformCouponsSection: React.FC = () => {
                   placeholder="Optional internal note or customer banner"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                 />
               </div>
 
@@ -386,7 +386,7 @@ export const PlatformCouponsSection: React.FC = () => {
                   <select
                     value={discountType}
                     onChange={(e) => setDiscountType(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                   >
                     <option value="percentage">Percentage (%)</option>
                     <option value="fixed">Fixed Amount (Currency)</option>
@@ -404,7 +404,7 @@ export const PlatformCouponsSection: React.FC = () => {
                     required
                     value={discountValue}
                     onChange={(e) => setDiscountValue(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                   />
                 </div>
               </div>
@@ -415,7 +415,7 @@ export const PlatformCouponsSection: React.FC = () => {
                   <select
                     value={appliesTo}
                     onChange={(e) => setAppliesTo(e.target.value as any)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                   >
                     <option value="all">Entire Order (Setup + 1st Month)</option>
                     <option value="setup">Setup & Implementation Fee Only</option>
@@ -429,7 +429,7 @@ export const PlatformCouponsSection: React.FC = () => {
                     <select
                       value={currency}
                       onChange={(e) => setCurrency(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                     >
                       <option value="INR">INR (₹)</option>
                       <option value="USD">USD ($)</option>
@@ -444,7 +444,7 @@ export const PlatformCouponsSection: React.FC = () => {
                       min="1"
                       value={maxUses}
                       onChange={(e) => setMaxUses(Number(e.target.value))}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                     />
                   </div>
                 )}
@@ -458,7 +458,7 @@ export const PlatformCouponsSection: React.FC = () => {
                     min="1"
                     value={maxUses}
                     onChange={(e) => setMaxUses(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                   />
                 </div>
               )}
@@ -469,7 +469,7 @@ export const PlatformCouponsSection: React.FC = () => {
                   type="date"
                   value={expiryDate}
                   onChange={(e) => setExpiryDate(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-purple-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-hidden focus:border-fuchsia-500" style={{ color: "#ffffff", WebkitTextFillColor: "#ffffff", colorScheme: "dark" }}
                 />
               </div>
 
