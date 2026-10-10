@@ -200,6 +200,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
   const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
+  const [selectedGateway, setSelectedGateway] = useState<'razorpay' | 'paypal'>('razorpay');
   const [paymentCapability, setPaymentCapability] = useState<AvailablePaymentMethodsResponse | null>(null);
   const [inrCalculation, setInrCalculation] = useState<OrderCalculationState | null>(null);
   const [successData, setSuccessData] = useState<{
@@ -1559,7 +1560,26 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </div>
               )}
 
-              {/* Functional Payment Methods Selection */}
+              {currency !== 'INR' && (
+                <section className="rounded-xl border border-white/10 bg-[#171719] p-4 space-y-3" aria-labelledby="gateway-choice-title">
+                  <div>
+                    <h3 id="gateway-choice-title" className="text-sm font-semibold text-white">How would you like to pay?</h3>
+                    <p className="mt-1 text-xs text-slate-400">Choose a payment provider for your {currency} checkout.</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button type="button" onClick={() => setSelectedGateway('razorpay')} aria-pressed={selectedGateway === 'razorpay'} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${selectedGateway === 'razorpay' ? 'border-fuchsia-400 bg-[#111114]' : 'border-white/10 bg-[#111114]/60 hover:border-white/20'}`}>
+                      <span className="font-semibold text-white">Razorpay</span>
+                      {selectedGateway === 'razorpay' ? <Check className="h-4 w-4 text-fuchsia-400" /> : <span className="h-4 w-4 rounded-full border border-slate-600" />}
+                    </button>
+                    <button type="button" onClick={() => setSelectedGateway('paypal')} aria-pressed={selectedGateway === 'paypal'} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${selectedGateway === 'paypal' ? 'border-fuchsia-400 bg-[#111114]' : 'border-white/10 bg-[#111114]/60 hover:border-white/20'}`}>
+                      <span className="font-semibold text-white">PayPal</span>
+                      {selectedGateway === 'paypal' ? <Check className="h-4 w-4 text-fuchsia-400" /> : <span className="h-4 w-4 rounded-full border border-slate-600" />}
+                    </button>
+                  </div>
+                </section>
+              )}
+
+              {(currency === 'INR' || selectedGateway === 'razorpay') && (
               <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/10 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-slate-200">
@@ -1639,6 +1659,15 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </div>
               </div>
 
+              )}
+
+              {currency !== 'INR' && selectedGateway === 'paypal' && (
+                <div className="rounded-xl border border-white/10 bg-[#171719] p-4 space-y-2">
+                  <h3 className="text-sm font-semibold text-white">PayPal checkout</h3>
+                  <p className="text-xs leading-relaxed text-slate-300">PayPal is selected. The PayPal order and server-side payment verification must be implemented before this option can accept payments.</p>
+                </div>
+              )}
+
               {/* Required legal acceptance */}
               <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/10">
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -1692,7 +1721,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               ) : (
                 <button
                   type="submit"
-                  disabled={loading || (currency !== 'INR' && !inrCalculation)}
+                  disabled={loading || (currency !== 'INR' && (!inrCalculation || selectedGateway === 'paypal'))}
                   className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-fuchsia-700 to-pink-600 hover:from-fuchsia-600 hover:to-pink-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {loading ? (
