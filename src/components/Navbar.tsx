@@ -99,7 +99,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 transition-all font-sans">
+      <header className={`sticky top-0 z-40 backdrop-blur-xl border-b transition-all font-sans ${currentView === 'dashboard' ? 'agentdesk-dashboard-navbar' : 'bg-slate-900/90 border-slate-800'}`}>
         <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo & Platform Name */}
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
