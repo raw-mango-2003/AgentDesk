@@ -200,7 +200,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
   const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
-  const [selectedGateway, setSelectedGateway] = useState<'razorpay' | 'paypal'>('razorpay');
+  const [selectedGateway, setSelectedGateway] = useState<'razorpay' | 'paypal'>(() => initialCurrency && initialCurrency !== 'INR' ? 'paypal' : 'razorpay');
   const [paymentCapability, setPaymentCapability] = useState<AvailablePaymentMethodsResponse | null>(null);
   const [inrCalculation, setInrCalculation] = useState<OrderCalculationState | null>(null);
   const [successData, setSuccessData] = useState<{
@@ -1078,6 +1078,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         type="button"
                         onClick={() => {
                           setCurrency(cur);
+                          setSelectedGateway(cur === 'INR' ? 'razorpay' : 'paypal');
                           setPayInINROptIn(false);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
@@ -1124,7 +1125,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               </div>
 
               {/* International Currency Notice & Pay in INR Option */}
-              {currency !== 'INR' && !payInINROptIn && (
+              {currency !== 'INR' && !payInINROptIn && selectedGateway === 'razorpay' && (
                 <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/40 text-xs space-y-3 animate-fadeIn">
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -1709,7 +1710,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               </div>
 
               {/* Pay Button */}
-              {currency !== 'INR' && !payInINROptIn ? (
+              {currency !== 'INR' && !payInINROptIn && selectedGateway === 'razorpay' ? (
                 <button
                   type="button"
                   onClick={() => setPayInINROptIn(true)}
@@ -1733,10 +1734,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     <>
                       <Lock className="w-4 h-4" />
                       <span>
-                        Pay {formatCurrencyAmount(
-                          currency === 'INR' ? calculation.total_due_today : (inrCalculation?.total_due_today || 0),
-                          'INR'
-                        )} securely with Razorpay
+                        {currency !== 'INR' && selectedGateway === 'paypal'
+                          ? 'PayPal checkout coming soon'
+                          : `Pay ${formatCurrencyAmount(
+                              currency === 'INR' ? calculation.total_due_today : (inrCalculation?.total_due_today || 0),
+                              'INR'
+                            )} securely with Razorpay`}
                       </span>
                     </>
                   )}
