@@ -2475,7 +2475,9 @@ ui/phase-19-missed-call-textback
 .agentdesk-dashboard-navbar .agentdesk-brand-mark svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.18));}
 .agentdesk-dashboard-navbar .group:hover .agentdesk-brand-mark{box-shadow:0 9px 28px rgba(255,47,134,.3),inset 0 1px 0 rgba(255,255,255,.2) !important;}
 .agentdesk-console-shell>.agentdesk-sidebar{
-  top:88px !important;
+  /* The shell establishes the fixed-position containing block; align to its top edge,
+     just below the global navbar, instead of adding the navbar height a second time. */
+  top:6px !important;
   bottom:16px !important;
   width:252px !important;
   padding:16px 11px 12px !important;
@@ -2540,4 +2542,12 @@ ui/phase-19-missed-call-textback
 }
 @media(prefers-reduced-motion:reduce){
   .agentdesk-sidebar-item:hover{transform:none;}
+}
+
+
+/* Final desktop alignment: sidebar and main dashboard content share the same top rhythm. */
+@media(min-width:1280px){
+  .agentdesk-console-shell{padding-top:30px !important;}
+  .agentdesk-console-shell>.agentdesk-sidebar{top:6px !important;}
+  .agentdesk-console-shell>*:not(.agentdesk-sidebar){scroll-margin-top:88px;}
 }
