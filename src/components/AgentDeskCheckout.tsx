@@ -1083,7 +1083,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         type="button"
                         onClick={() => {
                           setCurrency(cur);
-                          setSelectedGateway(cur === 'INR' ? 'razorpay' : 'paypal');
                           setPayInINROptIn(false);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
