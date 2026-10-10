@@ -865,7 +865,7 @@ export default function App() {
               <div className="agentdesk-sidebar-footer"><div className="px-2 py-2 text-[10px] text-slate-500 truncate">{business?.name||'Workspace Console'}</div><button type="button" onClick={()=>setShowCopilot(true)} className="agentdesk-sidebar-item" data-active="false"><Sparkles className="shrink-0 text-pink-400"/><span>Copilot</span></button></div>
             </aside>
             {/* SaaS Workspace Header & Bento Navigation Tabs */}
-            <div className="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-xl agentdesk-workspace-header">
+            <div className="agentdesk-workspace-header">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
                 {/* Business Workspace Switcher / Tenant Banner */}
                 <div className="relative">
@@ -875,12 +875,6 @@ export default function App() {
                       onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)}
                       className="flex items-center gap-3 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 px-4 py-2.5 rounded-2xl transition-all cursor-pointer"
                     >
-                      <div 
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-sm"
-                        style={{ backgroundColor: business?.primaryColor || '#2563eb' }}
-                      >
-                        {business?.name ? business.name.charAt(0) : 'T'}
-                      </div>
                       <div className="text-left">
                         <div className="text-xs font-bold text-white flex items-center gap-1.5">
                           <span>{business?.name || 'Loading Workspace...'}</span>
@@ -891,20 +885,12 @@ export default function App() {
                           )}
                           <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                         </div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold">
-                          {business?.industry || 'Tenant'} • {business?.currency} • ID: {business?.id} (Switch Business)
-                        </span>
+
                       </div>
                     </button>
                   ) : (
                     // Business Admin: Strictly scoped to authenticated tenant
                     <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-700/60 px-4 py-2.5 rounded-2xl">
-                      <div 
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shadow-sm"
-                        style={{ backgroundColor: business?.primaryColor || '#2563eb' }}
-                      >
-                        {business?.name ? business.name.charAt(0) : 'T'}
-                      </div>
                       <div className="text-left">
                         <div className="text-xs font-bold text-white flex items-center gap-1.5">
                           <span>{business?.name || 'Loading Tenant Workspace...'}</span>
@@ -917,9 +903,7 @@ export default function App() {
                             Authenticated
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 uppercase font-semibold">
-                          {business?.industry || 'Verified'} • {business?.currency} • {business?.timezone}
-                        </span>
+
                       </div>
                     </div>
                   )}
