@@ -2731,3 +2731,31 @@ textarea, select {
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
   outline-color: var(--ad-primary);
 }
+
+
+/* Checkout country control and Razorpay launch transition polish. */
+select {
+  color: #f5f3f0 !important;
+  background-color: #111114 !important;
+  border-color: #343238;
+  color-scheme: dark;
+}
+select option {
+  color: #f5f3f0;
+  background: #19191e;
+}
+body.ad-razorpay-opening::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99998;
+  pointer-events: none;
+  background: rgba(12, 12, 16, 0.64);
+  -webkit-backdrop-filter: blur(14px) saturate(125%);
+  backdrop-filter: blur(14px) saturate(125%);
+  animation: ad-razorpay-backdrop-in 180ms ease-out both;
+}
+@keyframes ad-razorpay-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
