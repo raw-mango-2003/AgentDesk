@@ -209,8 +209,8 @@ export default function App() {
   const [globalDesign, setGlobalDesign] = useState<any | null>(null);
   const liveEditorPageId = activeTab === 'overview' ? 'dashboard' : activeTab === 'voice_receptionist' ? 'voice' : activeTab === 'missed_calls' ? 'missed-call' : activeTab === 'followup' ? 'follow-up' : activeTab === 'reengagement' ? 're-engagement' : activeTab === 'outreach' ? 'cold-outreach' : activeTab === 'knowledge' ? 'knowledge-base' : activeTab === 'account_credentials' ? 'account-credentials' : activeTab === 'admin' ? 'platform-admin' : activeTab;
   const livePageStyle: React.CSSProperties = {
-    backgroundColor: globalDesign?.pages?.dashboard?.backgroundColor || globalDesign?.brand?.backgroundColor || undefined,
-    color: globalDesign?.brand?.textColor || undefined,
+    backgroundColor: '#09090B',
+    color: '#F5F3F0',
     fontFamily: globalDesign?.typography?.bodyFont || undefined,
     borderRadius: String(Number(globalDesign?.pages?.dashboard?.radius || globalDesign?.appearance?.radius || 18)) + 'px'
   };
@@ -222,22 +222,22 @@ export default function App() {
       setGlobalDesign(d);
       const root = document.documentElement;
       const vars: Record<string,string> = {
-        '--ad-primary': d.brand.primaryColor,
-        '--ad-secondary': d.brand.secondaryColor,
-        '--ad-accent': d.brand.accentColor,
-        '--ad-background': d.brand.backgroundColor,
-        '--ad-surface': d.brand.surfaceColor,
-        '--ad-text': d.brand.textColor,
-        '--ad-muted': d.brand.mutedTextColor,
-        '--ad-border': d.brand.borderColor,
+         '--ad-primary': '#FF2F86',
+         '--ad-secondary': '#09090B',
+         '--ad-accent': '#FF5AA5',
+         '--ad-background': '#09090B',
+         '--ad-surface': '#151419',
+         '--ad-text': '#F5F3F0',
+         '--ad-muted': '#AAA5AD',
+         '--ad-border': '#302B32',
         '--ad-radius': d.appearance.radius + 'px',
         '--ad-button-radius': d.buttons.radius + 'px',
         '--ad-icon-color': d.icons.color,
         '--ad-success': d.brand.successColor || '#4ADE80',
         '--ad-danger': d.brand.dangerColor || '#FB7185',
-        '--ad-dashboard-bg': d.pages?.dashboard?.backgroundColor || d.brand.backgroundColor,
-        '--ad-dashboard-surface': d.pages?.dashboard?.surfaceColor || d.brand.surfaceColor,
-        '--ad-pricing-highlight': d.pages?.pricing?.highlightColor || d.brand.primaryColor,
+         '--ad-dashboard-bg': '#09090B',
+         '--ad-dashboard-surface': '#151419',
+         '--ad-pricing-highlight': '#FF2F86',
         '--ad-glass-blur': d.appearance.glassBlur + 'px',
         '--ad-glass-opacity': String(d.appearance.glassOpacity),
         '--ad-font-body': d.typography.bodyFont,
