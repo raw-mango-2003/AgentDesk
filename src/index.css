@@ -200,14 +200,14 @@ select:disabled {
 /* Visual Studio global design tokens. Components can opt into these tokens without
    changing their data or navigation behavior. */
 :root {
-  --ad-primary: #2563EB;
-  --ad-secondary: #0F172A;
-  --ad-accent: #7C3AED;
-  --ad-background: #020617;
-  --ad-surface: #0F172A;
-  --ad-text: #F8FAFC;
-  --ad-muted: #94A3B8;
-  --ad-border: #1E293B;
+  --ad-primary: #FF2F86;
+  --ad-secondary: #09090B;
+  --ad-accent: #FF5AA5;
+  --ad-background: #09090B;
+  --ad-surface: #151419;
+  --ad-text: #F5F3F0;
+  --ad-muted: #AAA5AD;
+  --ad-border: #302B32;
   --ad-radius: 18px;
   --ad-button-radius: 16px;
   --ad-glass-blur: 18px;
@@ -2551,3 +2551,60 @@ ui/phase-19-missed-call-textback
   .agentdesk-console-shell>.agentdesk-sidebar{top:6px !important;}
   .agentdesk-console-shell>*:not(.agentdesk-sidebar){scroll-margin-top:88px;}
 }
+
+
+/* AgentDesk fixed brand palette: Charcoal + Off-White + Electric Pink.
+   Core brand colors are intentionally fixed here; status colors remain semantic. */
+:root{
+  color-scheme:dark;
+  --ad-primary:#FF2F86 !important;
+  --ad-secondary:#09090B !important;
+  --ad-accent:#FF5AA5 !important;
+  --ad-background:#09090B !important;
+  --ad-surface:#151419 !important;
+  --ad-text:#F5F3F0 !important;
+  --ad-muted:#AAA5AD !important;
+  --ad-border:#302B32 !important;
+  --ad-dashboard-bg:#09090B !important;
+  --ad-dashboard-surface:#151419 !important;
+  --ad-pricing-highlight:#FF2F86 !important;
+}
+html,body,#root{background-color:#09090B;color:#F5F3F0;}
+/* Neutral surfaces, borders and copy across all AgentDesk routes. */
+[class~="bg-slate-950"],[class~="bg-gray-950"],[class~="bg-zinc-950"],[class~="bg-black"]{background-color:#09090B !important;}
+[class~="bg-slate-900"],[class~="bg-gray-900"],[class~="bg-zinc-900"]{background-color:#151419 !important;}
+[class~="bg-slate-800"],[class~="bg-gray-800"],[class~="bg-zinc-800"]{background-color:#201D23 !important;}
+[class~="bg-slate-700"],[class~="bg-gray-700"],[class~="bg-zinc-700"]{background-color:#302B32 !important;}
+[class~="bg-white"],[class~="bg-gray-50"],[class~="bg-slate-50"],[class~="bg-zinc-50"]{background-color:#151419 !important;}
+[class*="border-slate-"],[class*="border-gray-"],[class*="border-zinc-"]{border-color:#302B32 !important;}
+[class~="text-white"],[class~="text-black"]{color:#F5F3F0 !important;}
+[class*="text-slate-100"],[class*="text-slate-200"],[class*="text-gray-100"],[class*="text-gray-200"],[class*="text-zinc-100"],[class*="text-zinc-200"]{color:#F5F3F0 !important;}
+[class*="text-slate-300"],[class*="text-slate-400"],[class*="text-slate-500"],[class*="text-gray-300"],[class*="text-gray-400"],[class*="text-gray-500"],[class*="text-zinc-300"],[class*="text-zinc-400"],[class*="text-zinc-500"]{color:#AAA5AD !important;}
+/* Normalize decorative blue, indigo, purple and gold accents to the permanent pink brand accent. */
+[class*="text-blue-"],[class*="text-indigo-"],[class*="text-purple-"]{color:#FF5AA5 !important;}
+[class*="border-blue-"],[class*="border-indigo-"],[class*="border-purple-"]{border-color:rgba(255,47,134,.42) !important;}
+[class*="bg-blue-600"],[class*="bg-indigo-600"],[class*="bg-purple-600"],[class*="bg-violet-600"]{background-color:#FF2F86 !important;color:#09090B !important;}
+[class*="hover:bg-blue-"]:hover,[class*="hover:bg-indigo-"]:hover,[class*="hover:bg-purple-"]:hover{background-color:#FF5AA5 !important;color:#09090B !important;}
+/* Pricing previously used gold; align its highlights and CTAs with the permanent pink accent. */
+.agentdesk-public-pricing-shell [class*="text-blue-"],
+.agentdesk-public-pricing-shell [class*="text-indigo-"],
+.agentdesk-public-pricing-shell [class*="text-purple-"],
+.agentdesk-public-pricing-shell [class*="text-emerald-"]{color:#FF5AA5 !important;}
+.agentdesk-public-pricing-shell [class*="bg-blue-"],
+.agentdesk-public-pricing-shell [class*="bg-indigo-"],
+.agentdesk-public-pricing-shell [class*="bg-purple-"],
+.agentdesk-public-pricing-shell [class*="bg-gradient-to-r"]{background:#FF2F86 !important;color:#09090B !important;}
+.agentdesk-public-pricing-shell [class*="border-blue-"],
+.agentdesk-public-pricing-shell [class*="border-indigo-"],
+.agentdesk-public-pricing-shell [class*="border-purple-"]{border-color:#FF2F86 !important;}
+.agentdesk-public-pricing-shell [class*="shadow-blue-"],
+.agentdesk-public-pricing-shell [class*="shadow-indigo-"],
+.agentdesk-public-pricing-shell [class*="shadow-purple-"]{box-shadow:0 18px 45px rgba(255,47,134,.16) !important;}
+/* Form controls stay charcoal with legible off-white values and muted placeholders. */
+input:not([type="checkbox"]):not([type="radio"]),textarea,select{
+  color:#F5F3F0;
+  caret-color:#FF5AA5;
+  color-scheme:dark;
+}
+input::placeholder,textarea::placeholder{color:#817B86 !important;opacity:1;}
+input:focus,textarea:focus,select:focus{outline-color:#FF5AA5;}
