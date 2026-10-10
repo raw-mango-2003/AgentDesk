@@ -865,7 +865,7 @@ export default function App() {
               <div className="agentdesk-sidebar-footer"><div className="px-2 py-2 text-[10px] text-slate-500 truncate">{business?.name||'Workspace Console'}</div><button type="button" onClick={()=>setShowCopilot(true)} className="agentdesk-sidebar-item" data-active="false"><Sparkles className="shrink-0 text-pink-400"/><span>Copilot</span></button></div>
             </aside>
             {/* SaaS Workspace Header & Bento Navigation Tabs */}
-            <div className="bg-slate-900/90 border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-xl agentdesk-workspace-header">
+            <div className="relative z-40 bg-slate-900/90 border border-slate-800/90 rounded-3xl p-4 sm:p-5 shadow-xl agentdesk-workspace-header">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
                 {/* Business Workspace Switcher / Tenant Banner */}
                 <div className="relative">
@@ -925,7 +925,7 @@ export default function App() {
                   )}
 
                   {isPlatformAdmin && showWorkspaceDropdown && (
-                    <div className="absolute top-full left-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 text-xs">
+                    <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-2rem)] max-h-[min(70vh,32rem)] overflow-y-auto overscroll-contain bg-[#111014] border border-fuchsia-500/25 rounded-2xl shadow-[0_24px_70px_rgba(0,0,0,.65)] p-2 z-[100] text-xs">
                       <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 mb-1">
                         Select Business Workspace (Platform Admin)
                       </div>
