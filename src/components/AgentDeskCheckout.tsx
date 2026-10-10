@@ -200,7 +200,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
   const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
-  const [selectedGateway, setSelectedGateway] = useState<'razorpay' | 'paypal'>(() => initialCurrency && initialCurrency !== 'INR' ? 'paypal' : 'razorpay');
+  const selectedGateway: 'razorpay' | 'paypal' = currency === 'INR' || payInINROptIn ? 'razorpay' : 'paypal';
   const [paymentCapability, setPaymentCapability] = useState<AvailablePaymentMethodsResponse | null>(null);
   const [inrCalculation, setInrCalculation] = useState<OrderCalculationState | null>(null);
   const [successData, setSuccessData] = useState<{
@@ -457,8 +457,13 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       return;
     }
 
+    if (currency !== 'INR' && selectedGateway === 'paypal') {
+      setError('PayPal checkout is not enabled yet. Please contact AgentDesk support to complete your purchase.');
+      return;
+    }
+
     if (currency !== 'INR' && !payInINROptIn) {
-      setError(`International payment in ${currency} is not currently available. Please choose "Pay in INR" to proceed with payment via Razorpay.`);
+      setError(`International payment in ${currency} is not currently available through Razorpay. Choose Pay in INR to proceed via Razorpay.`);
       return;
     }
 
@@ -1078,7 +1083,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         type="button"
                         onClick={() => {
                           setCurrency(cur);
-                          setSelectedGateway(cur === 'INR' ? 'razorpay' : 'paypal');
                           setPayInINROptIn(false);
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
@@ -1480,12 +1484,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </h3>
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
-                  Payment provider: Razorpay
+                  Payment provider: {selectedGateway === 'paypal' ? 'PayPal (coming soon)' : 'Razorpay'}
                 </span>
               </div>
 
               {/* International Payment Unavailable Notice (when user hasn't opted in to Pay in INR) */}
-              {currency !== 'INR' && !payInINROptIn && (
+              {currency !== 'INR' && !payInINROptIn && selectedGateway === 'razorpay' && (
                 <div className="p-4 rounded-2xl bg-[#111111]/90 border border-white/10 text-center space-y-2.5 animate-fadeIn">
                   <div className="text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
                     <AlertCircle className="w-4 h-4 text-amber-400" />
@@ -1559,25 +1563,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     The payment order is processed through Razorpay in Indian Rupees (INR ₹). If paying with an international card, your bank or card issuer will convert this on your card statement according to their applicable exchange rates. Bank conversion rates are not guaranteed by AgentDesk.
                   </p>
                 </div>
-              )}
-
-              {currency !== 'INR' && (
-                <section className="rounded-xl border border-white/10 bg-[#171719] p-4 space-y-3" aria-labelledby="gateway-choice-title">
-                  <div>
-                    <h3 id="gateway-choice-title" className="text-sm font-semibold text-white">How would you like to pay?</h3>
-                    <p className="mt-1 text-xs text-slate-400">Choose a payment provider for your {currency} checkout.</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button type="button" onClick={() => setSelectedGateway('razorpay')} aria-pressed={selectedGateway === 'razorpay'} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${selectedGateway === 'razorpay' ? 'border-fuchsia-400 bg-[#111114]' : 'border-white/10 bg-[#111114]/60 hover:border-white/20'}`}>
-                      <span className="font-semibold text-white">Razorpay</span>
-                      {selectedGateway === 'razorpay' ? <Check className="h-4 w-4 text-fuchsia-400" /> : <span className="h-4 w-4 rounded-full border border-slate-600" />}
-                    </button>
-                    <button type="button" onClick={() => setSelectedGateway('paypal')} aria-pressed={selectedGateway === 'paypal'} className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left transition-colors ${selectedGateway === 'paypal' ? 'border-fuchsia-400 bg-[#111114]' : 'border-white/10 bg-[#111114]/60 hover:border-white/20'}`}>
-                      <span className="font-semibold text-white">PayPal</span>
-                      {selectedGateway === 'paypal' ? <Check className="h-4 w-4 text-fuchsia-400" /> : <span className="h-4 w-4 rounded-full border border-slate-600" />}
-                    </button>
-                  </div>
-                </section>
               )}
 
               {(currency === 'INR' || selectedGateway === 'razorpay') && (
