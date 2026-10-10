@@ -1579,7 +1579,6 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               )}
 
               {(currency === 'INR' || selectedGateway === 'razorpay') && (
-              {/* Functional Payment Methods Selection */}
               <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/10 space-y-3">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-slate-200">
