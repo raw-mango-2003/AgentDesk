@@ -2360,3 +2360,64 @@ ui/phase-19-missed-call-textback
 @media (prefers-reduced-motion: reduce) {
   [data-visual-section="workspace-preview"] .agentdesk-public-product-preview { animation: none !important; }
 }
+
+
+/* Cinematic dashboard shell: keep controls intact, update only presentation. */
+.agentdesk-dashboard-navbar{
+  background:rgba(8,8,12,.92) !important;
+  border-bottom:1px solid rgba(255,47,134,.18) !important;
+  box-shadow:0 12px 40px rgba(0,0,0,.28),0 1px 0 rgba(255,47,134,.06) !important;
+}
+.agentdesk-dashboard-navbar > div{min-height:72px;}
+.agentdesk-dashboard-navbar button{transition:background-color .18s ease,border-color .18s ease,color .18s ease,box-shadow .18s ease;}
+.agentdesk-dashboard-navbar button:hover{color:#fff;}
+.agentdesk-dashboard-navbar button[class*="bg-slate-800"]{
+  background:rgba(255,47,134,.12) !important;
+  box-shadow:inset 0 0 0 1px rgba(255,47,134,.2);
+}
+.agentdesk-dashboard-navbar button[class*="bg-gradient-to-tr"]{
+  background:linear-gradient(140deg,#ff2f86,#a80d5b) !important;
+  box-shadow:0 0 24px rgba(255,47,134,.24) !important;
+}
+.agentdesk-console-shell>.agentdesk-sidebar{
+  top:92px !important;
+  bottom:18px !important;
+  padding:18px 13px !important;
+  background:linear-gradient(180deg,rgba(16,13,19,.98),rgba(8,8,11,.98)) !important;
+  border-color:rgba(255,47,134,.16) !important;
+  box-shadow:0 24px 70px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.035),inset -1px 0 0 rgba(255,47,134,.08) !important;
+}
+.agentdesk-sidebar-brand{padding-bottom:18px !important;margin-bottom:12px !important;border-bottom-color:rgba(255,47,134,.14) !important;}
+.agentdesk-sidebar-nav{scrollbar-width:thin;scrollbar-color:rgba(255,47,134,.3) transparent;}
+.agentdesk-sidebar-section{margin-top:18px !important;color:#817783 !important;letter-spacing:.16em !important;}
+.agentdesk-sidebar-item{min-height:40px !important;border-radius:12px !important;font-size:11px !important;}
+.agentdesk-sidebar-item[data-active="true"]{
+  background:linear-gradient(100deg,rgba(255,47,134,.2),rgba(255,47,134,.045)) !important;
+  border-color:rgba(255,47,134,.3) !important;
+  box-shadow:inset 3px 0 0 #ff2f86,0 8px 24px rgba(255,47,134,.09) !important;
+}
+.agentdesk-workspace-loading{
+  color:#f7f3f7 !important;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,47,134,.11),transparent 65%),linear-gradient(180deg,rgba(18,14,20,.92),rgba(8,8,11,.94)) !important;
+  border:1px solid rgba(255,47,134,.15) !important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 24px 70px rgba(0,0,0,.22) !important;
+}
+.agentdesk-loading-orb{
+  width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+  border:1px solid rgba(255,47,134,.24);
+  background:radial-gradient(circle,rgba(255,47,134,.16),rgba(255,47,134,.025) 68%);
+  box-shadow:0 0 36px rgba(255,47,134,.14);
+}
+.agentdesk-loading-orb span{
+  width:28px;height:28px;border:2px solid rgba(255,47,134,.22);
+  border-top-color:#ff2f86;border-right-color:#ff5aa5;border-radius:50%;
+  animation:agentdesk-loading-spin .85s linear infinite;
+}
+.agentdesk-workspace-loading p{color:#8f8792 !important;}
+.agentdesk-loading-action{color:#ff5aa5 !important;}
+.agentdesk-loading-action:hover{color:#ff9ac6 !important;}
+@keyframes agentdesk-loading-spin{to{transform:rotate(360deg);}}
+@media(max-width:1279px){
+  .agentdesk-console-shell>.agentdesk-sidebar{display:none !important;}
+}
+@media(prefers-reduced-motion:reduce){.agentdesk-loading-orb span{animation-duration:2s;}}
