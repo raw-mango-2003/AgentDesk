@@ -2608,3 +2608,126 @@ input:not([type="checkbox"]):not([type="radio"]),textarea,select{
 }
 input::placeholder,textarea::placeholder{color:#817B86 !important;opacity:1;}
 input:focus,textarea:focus,select:focus{outline-color:#FF5AA5;}
+
+
+/* AgentDesk global brand theme: charcoal + off-white + fixed electric-pink accent.
+   Keep this block last so public pages, customer console, and platform admin share one palette.
+   Pink is a fixed brand token, not a user-configurable theme value. */
+:root {
+  --ad-primary: #ff2f86;
+  --ad-secondary: #171719;
+  --ad-accent: #ff2f86;
+  --ad-background: #111114;
+  --ad-surface: #1b1b20;
+  --ad-text: #f5f3f0;
+  --ad-muted: #aaa6ad;
+  --ad-border: #343238;
+  --ad-pink: #ff2f86;
+  --ad-pink-soft: #ff5aa5;
+  --ad-black: #111114;
+  --ad-panel: #19191e;
+  --ad-panel-2: #202026;
+  --ad-line: #343238;
+  --ad-copy: #f5f3f0;
+}
+html, body, #root {
+  background-color: var(--ad-background);
+  color: var(--ad-text);
+}
+body { color-scheme: dark; }
+
+/* Neutralize inconsistent navy, pure-black, and gold page foundations. */
+.min-h-screen.bg-slate-950.text-slate-100.font-sans,
+.agentdesk-public-pricing-shell {
+  background: var(--ad-background) !important;
+  color: var(--ad-text) !important;
+}
+.agentdesk-public-pricing-shell [class*="bg-slate-950"],
+.agentdesk-public-pricing-shell [class*="bg-slate-900"],
+.agentdesk-public-pricing-shell [class*="bg-slate-800"],
+.agentdesk-public-pricing-shell [class*="bg-neutral-"],
+.agentdesk-public-pricing-shell [class*="bg-zinc-"] {
+  background-color: var(--ad-surface) !important;
+}
+.agentdesk-public-pricing-shell [class*="text-blue-"],
+.agentdesk-public-pricing-shell [class*="text-indigo-"],
+.agentdesk-public-pricing-shell [class*="text-purple-"],
+.agentdesk-public-pricing-shell [class*="text-emerald-"] {
+  color: var(--ad-primary) !important;
+}
+.agentdesk-public-pricing-shell [class*="bg-blue-"],
+.agentdesk-public-pricing-shell [class*="bg-indigo-"],
+.agentdesk-public-pricing-shell [class*="bg-purple-"],
+.agentdesk-public-pricing-shell [class*="bg-emerald-"],
+.agentdesk-public-pricing-shell button[class*="bg-gradient-to-r"] {
+  background: var(--ad-primary) !important;
+  color: #fffafc !important;
+}
+.agentdesk-public-pricing-shell [class*="border-blue-"],
+.agentdesk-public-pricing-shell [class*="border-indigo-"],
+.agentdesk-public-pricing-shell [class*="border-purple-"] {
+  border-color: var(--ad-primary) !important;
+}
+.agentdesk-public-pricing-shell [class*="shadow-blue-"],
+.agentdesk-public-pricing-shell [class*="shadow-indigo-"],
+.agentdesk-public-pricing-shell [class*="shadow-purple-"] {
+  box-shadow: 0 18px 45px rgba(255, 47, 134, .14) !important;
+}
+
+/* Consistent dashboard/sidebar surfaces and readable neutral text. */
+.agentdesk-console-shell {
+  --ad-pink: #ff2f86;
+  --ad-pink-soft: #ff5aa5;
+  --ad-black: #111114;
+  --ad-panel: #19191e;
+  --ad-panel-2: #202026;
+  --ad-line: #343238;
+  --ad-copy: #f5f3f0;
+  --ad-muted: #aaa6ad;
+  background-color: var(--ad-background);
+  color: var(--ad-text);
+}
+.agentdesk-console-shell::before {
+  background: radial-gradient(circle at 72% 8%, rgba(255,47,134,.055), transparent 26rem), #111114;
+}
+.agentdesk-console-shell > .agentdesk-sidebar {
+  background: rgba(25,25,30,.97);
+  border-color: var(--ad-border);
+}
+.agentdesk-console-shell [class*="bg-slate-950"],
+.agentdesk-console-shell [class*="bg-slate-900"],
+.agentdesk-console-shell [class*="bg-slate-800"],
+.agentdesk-console-shell [class*="bg-zinc-950"],
+.agentdesk-console-shell [class*="bg-zinc-900"],
+.agentdesk-console-shell [class*="bg-neutral-900"] {
+  background-color: var(--ad-surface) !important;
+}
+.agentdesk-console-shell [class*="border-slate-"],
+.agentdesk-console-shell [class*="border-zinc-"],
+.agentdesk-console-shell [class*="border-neutral-"] {
+  border-color: var(--ad-border) !important;
+}
+.agentdesk-console-shell [class*="text-blue-"],
+.agentdesk-console-shell [class*="text-indigo-"],
+.agentdesk-console-shell [class*="text-purple-"] {
+  color: var(--ad-primary) !important;
+}
+.agentdesk-console-shell [class*="bg-blue-"],
+.agentdesk-console-shell [class*="bg-indigo-"],
+.agentdesk-console-shell [class*="bg-purple-"] {
+  background-color: var(--ad-primary) !important;
+}
+.agentdesk-console-shell [class*="border-blue-"],
+.agentdesk-console-shell [class*="border-indigo-"],
+.agentdesk-console-shell [class*="border-purple-"] {
+  border-color: var(--ad-primary) !important;
+}
+
+/* Preserve high contrast on forms while keeping their borders in the brand system. */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea, select {
+  border-color: var(--ad-border);
+}
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline-color: var(--ad-primary);
+}
