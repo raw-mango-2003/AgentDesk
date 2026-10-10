@@ -200,6 +200,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
   const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
+  const [selectedGateway, setSelectedGateway] = useState<'razorpay' | 'paypal'>('razorpay');
   const [paymentCapability, setPaymentCapability] = useState<AvailablePaymentMethodsResponse | null>(null);
   const [inrCalculation, setInrCalculation] = useState<OrderCalculationState | null>(null);
   const [successData, setSuccessData] = useState<{
