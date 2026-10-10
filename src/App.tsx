@@ -862,7 +862,28 @@ export default function App() {
                 ].map(item=>{const Icon=item.icon;const active=activeTab===item.id;return <button key={item.id} type="button" className="agentdesk-sidebar-item" data-active={active} onClick={()=>navigateTab(item.id as SaaSNavTab)}><Icon className="shrink-0"/><span className="truncate">{item.label}</span></button>})}
                 {currentUser?.role==='PLATFORM_ADMIN'&&<button type="button" className="agentdesk-sidebar-item" data-active={activeTab==='admin'} onClick={()=>navigateTab('admin')}><ShieldCheck className="shrink-0"/><span className="truncate">Platform Admin</span></button>}
               </div>
-              <div className="agentdesk-sidebar-footer"><div className="px-2 py-2 text-[10px] text-slate-500 truncate">{business?.name||'Workspace Console'}</div><button type="button" onClick={()=>setShowCopilot(true)} className="agentdesk-sidebar-item" data-active="false"><Sparkles className="shrink-0 text-pink-400"/><span>Copilot</span></button></div>
+              <div className="agentdesk-sidebar-footer">
+                {currentUser?.role === 'PLATFORM_ADMIN' && (
+                  <div className="relative px-1 pb-2">
+                    <button type="button" onClick={() => setShowWorkspaceDropdown(!showWorkspaceDropdown)} className="w-full rounded-xl border border-fuchsia-500/20 bg-white/[0.03] px-3 py-2 text-left text-xs text-slate-200 hover:bg-fuchsia-500/10 transition-colors" aria-expanded={showWorkspaceDropdown}>
+                      <span className="block text-[9px] uppercase tracking-widest text-slate-500">Active workspace</span>
+                      <span className="mt-1 flex items-center justify-between gap-2"><span className="truncate">{business?.name || 'Select workspace'}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-fuchsia-300"/></span>
+                    </button>
+                    {showWorkspaceDropdown && (
+                      <div className="absolute bottom-full left-1 right-1 z-[100] mb-2 max-h-72 overflow-y-auto rounded-xl border border-fuchsia-500/20 bg-[#111014] p-2 shadow-2xl">
+                        {allBusinesses.map(b => (
+                          <button key={b.id} type="button" onClick={() => handleSelectWorkspace(b.id)} className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${b.id === activeBusinessId ? 'bg-fuchsia-500/15 text-fuchsia-200' : 'text-slate-300 hover:bg-white/5'}`}>
+                            <span className="block font-semibold">{b.name}</span>
+                            <span className="text-[10px] text-slate-500">{b.industry} · {b.country}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="px-2 py-2 text-[10px] text-slate-500 truncate">{business?.name||'Workspace Console'}</div>
+                <button type="button" onClick={()=>setShowCopilot(true)} className="agentdesk-sidebar-item" data-active="false"><Sparkles className="shrink-0 text-pink-400"/><span>Copilot</span></button>
+              </div>
             </aside>
             {/* Redundant workspace header and duplicate module-tab row removed. Primary navigation remains in the left sidebar. */}
             {/* Mobile Navigation Drawer */}
