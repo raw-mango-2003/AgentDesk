@@ -689,6 +689,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         },
         modal: {
           ondismiss: () => {
+            document.body.classList.remove('ad-razorpay-opening');
             setLoading(false);
           }
         },
@@ -697,6 +698,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           razorpay_order_id: string;
           razorpay_signature: string;
         }) => {
+          document.body.classList.remove('ad-razorpay-opening');
           try {
             // 6. Server Signature Verification & Tenant Activation
             const verifyRes = await fetch('/api/billing/verify-payment', {
@@ -790,6 +792,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
 
       const rzpInstance = new (window as any).Razorpay(rzpOptions);
       rzpInstance.on('payment.failed', (resp: any) => {
+        document.body.classList.remove('ad-razorpay-opening');
         setPaymentFailed(true);
 
         const paymentError = resp?.error;
@@ -813,8 +816,10 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         );
         setLoading(false);
       });
+      document.body.classList.add('ad-razorpay-opening');
       rzpInstance.open();
     } catch (err: any) {
+      document.body.classList.remove('ad-razorpay-opening');
       setPaymentFailed(true);
       setError(getCheckoutErrorMessage(err, 'Payment service temporarily unavailable. Please try again.'));
       setLoading(false);
