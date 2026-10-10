@@ -200,7 +200,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [payInINROptIn, setPayInINROptIn] = useState<boolean>(false);
   const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<string>('upi');
-  const [selectedGateway, setSelectedGateway] = useState<'razorpay' | 'paypal'>(() => initialCurrency && initialCurrency !== 'INR' ? 'paypal' : 'razorpay');
+  const selectedGateway: 'razorpay' | 'paypal' = currency === 'INR' || payInINROptIn ? 'razorpay' : 'paypal';
   const [paymentCapability, setPaymentCapability] = useState<AvailablePaymentMethodsResponse | null>(null);
   const [inrCalculation, setInrCalculation] = useState<OrderCalculationState | null>(null);
   const [successData, setSuccessData] = useState<{
@@ -1480,7 +1480,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </h3>
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
-                  Payment provider: {currency !== 'INR' && selectedGateway === 'paypal' ? 'PayPal (coming soon)' : 'Razorpay'}
+                  Payment provider: {selectedGateway === 'paypal' ? 'PayPal (coming soon)' : 'Razorpay'}
                 </span>
               </div>
 
@@ -1561,7 +1561,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </div>
               )}
 
-              {currency !== 'INR' && (
+              {false && currency !== 'INR' && (
                 <section className="rounded-xl border border-white/10 bg-[#171719] p-4 space-y-3" aria-labelledby="gateway-choice-title">
                   <div>
                     <h3 id="gateway-choice-title" className="text-sm font-semibold text-white">How would you like to pay?</h3>
