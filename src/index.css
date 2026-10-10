@@ -2421,3 +2421,46 @@ ui/phase-19-missed-call-textback
   .agentdesk-console-shell>.agentdesk-sidebar{display:none !important;}
 }
 @media(prefers-reduced-motion:reduce){.agentdesk-loading-orb span{animation-duration:2s;}}
+
+
+/* Final dashboard overlap correction: compact workspace toolbar, keep it in normal flow. */
+.agentdesk-console-shell>.agentdesk-sidebar{top:82px !important;bottom:12px !important;}
+.agentdesk-console-shell .agentdesk-workspace-header{
+  position:relative !important;
+  z-index:10 !important;
+  margin:0 0 18px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  overflow:visible !important;
+}
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child{
+  min-height:0 !important;
+  padding:0 0 10px !important;
+  gap:12px !important;
+  border-bottom:1px solid rgba(255,47,134,.12) !important;
+}
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > button,
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > div{
+  min-height:42px !important;
+  padding:7px 12px !important;
+  background:rgba(17,17,22,.82) !important;
+  border:1px solid rgba(255,47,134,.16) !important;
+  border-radius:13px !important;
+}
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > button > div:first-child,
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > div > div:first-child{
+  display:none !important;
+}
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > button > div:nth-child(2),
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > div > div:nth-child(2){
+  min-width:0 !important;
+}
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > button span.text-\[10px\],
+.agentdesk-console-shell .agentdesk-workspace-header > div:first-child > div:first-child > div span.text-\[10px\]{
+  display:none !important;
+}
+.agentdesk-console-shell .agentdesk-workspace-header .agentdesk-legacy-module-tabs{display:none !important;}
+@media(max-width:1279px){.agentdesk-console-shell>.agentdesk-sidebar{top:82px !important;}}
