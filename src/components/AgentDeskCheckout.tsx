@@ -150,7 +150,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
   const [address, setAddress] = useState(() => getSavedSession('ad_checkout_addr', ''));
   const [city, setCity] = useState(() => getSavedSession('ad_checkout_city', ''));
   const [state, setState] = useState(() => getSavedSession('ad_checkout_state', ''));
-  const [country] = useState('India');
+  const [country, setCountry] = useState(() => getSavedSession('ad_checkout_country', 'India'));
   const [gstin, setGstin] = useState(() => getSavedSession('ad_checkout_gstin', ''));
 
   // Sync back to sessionStorage on input
@@ -161,6 +161,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     setSavedSession('ad_checkout_phone', phone);
     setSavedSession('ad_checkout_addr', address);
     setSavedSession('ad_checkout_city', city);
+    setSavedSession('ad_checkout_country', country);
     setSavedSession('ad_checkout_state', state);
     setSavedSession('ad_checkout_gstin', gstin);
   }, [fullName, businessName, email, phone, address, city, state, gstin]);
@@ -684,7 +685,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           selected_method: selectedMethod
         },
         theme: {
-          color: '#2563EB' // AgentDesk Brand Blue
+          color: '#FF2F86' // Fixed AgentDesk electric-pink brand accent
         },
         modal: {
           ondismiss: () => {
@@ -1375,12 +1376,25 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     <label className="block text-xs font-medium text-slate-300 mb-1">
                       Country
                     </label>
-                    <input
-                      type="text"
-                      disabled
+                    <select
                       value={country}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950/60 border border-white/10 text-xs text-slate-400 cursor-not-allowed"
-                    />
+                      onChange={e => setCountry(e.target.value)}
+                      autoComplete="country-name"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-fuchsia-500 transition-colors"
+                    >
+                      {[
+                        'Afghanistan','Albania','Algeria','Andorra','Angola','Antigua and Barbuda','Argentina','Armenia','Australia','Austria','Azerbaijan',
+                        'Bahamas','Bahrain','Bangladesh','Barbados','Belarus','Belgium','Belize','Benin','Bhutan','Bolivia','Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
+                        'Cabo Verde','Cambodia','Cameroon','Canada','Central African Republic','Chad','Chile','China','Colombia','Comoros','Congo','Costa Rica','Croatia','Cuba','Cyprus','Czechia',
+                        'Democratic Republic of the Congo','Denmark','Djibouti','Dominica','Dominican Republic','Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia',
+                        'Fiji','Finland','France','Gabon','Gambia','Georgia','Germany','Ghana','Greece','Grenada','Guatemala','Guinea','Guinea-Bissau','Guyana','Haiti','Honduras','Hungary',
+                        'Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy','Jamaica','Japan','Jordan','Kazakhstan','Kenya','Kiribati','Kuwait','Kyrgyzstan',
+                        'Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg','Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Marshall Islands','Mauritania','Mauritius','Mexico','Micronesia','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique','Myanmar',
+                        'Namibia','Nauru','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria','North Korea','North Macedonia','Norway','Oman','Pakistan','Palau','Palestine','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal','Qatar',
+                        'Romania','Russia','Rwanda','Saint Kitts and Nevis','Saint Lucia','Saint Vincent and the Grenadines','Samoa','San Marino','Sao Tome and Principe','Saudi Arabia','Senegal','Serbia','Seychelles','Sierra Leone','Singapore','Slovakia','Slovenia','Solomon Islands','Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan','Suriname','Sweden','Switzerland','Syria',
+                        'Taiwan','Tajikistan','Tanzania','Thailand','Timor-Leste','Togo','Tonga','Trinidad and Tobago','Tunisia','Turkey','Turkmenistan','Tuvalu','Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan','Vanuatu','Vatican City','Venezuela','Vietnam','Yemen','Zambia','Zimbabwe'
+                      ].map(countryName => <option key={countryName} value={countryName}>{countryName}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -1575,12 +1589,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         onClick={() => setSelectedMethod(method.id)}
                         className={`p-2.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
                           isSelected
-                            ? 'bg-blue-600/15 border-blue-500 text-white shadow-sm ring-1 ring-blue-500/40'
-                            : 'bg-[#111111]/60 border-white/10/80 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                            ? 'bg-[#111114]/80 border-white/20 text-white shadow-none ring-0'
+                            : 'bg-[#111114]/60 border-white/10 text-slate-400 hover:text-slate-200 hover:border-white/20'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-blue-500/20 text-fuchsia-400' : 'bg-slate-800 text-slate-400'}`}>
+                          <div className={`p-1.5 rounded-lg shrink-0 ${isSelected ? 'bg-slate-800 text-slate-200' : 'bg-slate-800 text-slate-400'}`}>
                             <MethodIcon className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
@@ -1598,9 +1612,9 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                           </div>
                         </div>
                         <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ml-2 flex items-center justify-center ${
-                          isSelected ? 'border-blue-500 bg-blue-500' : 'border-slate-700'
+                          isSelected ? 'border-fuchsia-400 bg-transparent' : 'border-slate-700'
                         }`}>
-                          {isSelected && <Check className="w-2.5 h-2.5 text-white stroke-[3]" />}
+                          {isSelected && <Check className="w-2.5 h-2.5 text-fuchsia-400 stroke-[3]" />}
                         </div>
                       </button>
                     );
