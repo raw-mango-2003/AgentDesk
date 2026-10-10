@@ -1480,12 +1480,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </h3>
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
-                  Payment provider: Razorpay
+                  Payment provider: {currency !== 'INR' && selectedGateway === 'paypal' ? 'PayPal (coming soon)' : 'Razorpay'}
                 </span>
               </div>
 
               {/* International Payment Unavailable Notice (when user hasn't opted in to Pay in INR) */}
-              {currency !== 'INR' && !payInINROptIn && (
+              {currency !== 'INR' && !payInINROptIn && selectedGateway === 'razorpay' && (
                 <div className="p-4 rounded-2xl bg-[#111111]/90 border border-white/10 text-center space-y-2.5 animate-fadeIn">
                   <div className="text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
                     <AlertCircle className="w-4 h-4 text-amber-400" />
