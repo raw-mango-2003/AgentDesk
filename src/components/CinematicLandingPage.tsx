@@ -151,12 +151,14 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
     return () => { active = false; };
   }, []);
 
-  const primary = design.brand?.primaryColor || FALLBACK_DESIGN.brand.primaryColor;
-  const background = design.brand?.backgroundColor || FALLBACK_DESIGN.brand.backgroundColor;
-  const text = design.brand?.textColor || FALLBACK_DESIGN.brand.textColor;
-  const muted = design.brand?.mutedTextColor || FALLBACK_DESIGN.brand.mutedTextColor;
-  const border = design.brand?.borderColor || FALLBACK_DESIGN.brand.borderColor;
-  const accent = design.brand?.accentColor || FALLBACK_DESIGN.brand.accentColor;
+  // Fixed AgentDesk brand palette: charcoal, off-white, and permanent electric pink.
+  // Site-design settings may still control content and typography, but cannot override brand colors.
+  const primary = '#FF2F86';
+  const background = '#09090B';
+  const text = '#F5F3F0';
+  const muted = '#AAA5AD';
+  const border = '#302B32';
+  const accent = '#FF5AA5';
   const motion = design.appearance?.enableMotion !== false;
   const radius = Number(design.appearance?.radius || 18);
   const configuredImage = normalizeAssetUrl(design.background?.imageUrl || '');
