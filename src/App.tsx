@@ -951,42 +951,7 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Agent Persona Pill & Copilot Button */}
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  {currentUser?.role === 'PLATFORM_ADMIN' && (
-                    <button
-                      onClick={() => {
-                        navigateTab('admin');
-                        setAdminSubTab('my_agent');
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                      title="Open Platform Admin AI Agent (platform-admin-agent)"
-                    >
-                      <Bot className="w-3.5 h-3.5 text-purple-200" />
-                      <span>My AI Agent</span>
-                    </button>
-                  )}
-
-                  {business?.agentSettings?.agentName && (
-                    <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 text-xs">
-                      <Bot className="w-3.5 h-3.5 text-blue-400" />
-                      <span>{business.agentSettings.agentName} (AI)</span>
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={() => setShowCopilot(true)}
-                    className="px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Copilot Assistant</span>
-                  </button>
-
-                  <span className="px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 font-semibold text-xs flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                    <span>{currentUser?.role || 'BUSINESS_ADMIN'}</span>
-                  </span>
-                </div>
+                {/* Removed redundant secondary action row; these actions remain available in the main navbar and sidebar. */}
               </div>
 
               {/* Omnichannel Suite Tabs Bar (Desktop: Horizontal, Mobile: Mobile Drawer) */}
