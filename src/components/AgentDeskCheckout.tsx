@@ -1734,10 +1734,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                     <>
                       <Lock className="w-4 h-4" />
                       <span>
-                        Pay {formatCurrencyAmount(
-                          currency === 'INR' ? calculation.total_due_today : (inrCalculation?.total_due_today || 0),
-                          'INR'
-                        )} securely with Razorpay
+                        {currency !== 'INR' && selectedGateway === 'paypal'
+                          ? 'PayPal checkout coming soon'
+                          : `Pay ${formatCurrencyAmount(
+                              currency === 'INR' ? calculation.total_due_today : (inrCalculation?.total_due_today || 0),
+                              'INR'
+                            )} securely with Razorpay`}
                       </span>
                     </>
                   )}
