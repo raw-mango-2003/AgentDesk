@@ -2759,3 +2759,76 @@ body.ad-razorpay-opening::before {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+ 
+/* GLOBAL BRAND-FILL CORRECTION
+   AgentDesk keeps electric pink as a fixed accent, not a large surface fill.
+   This last-layer rule applies across public pages, checkout, dashboards, modals,
+   Platform Admin and shared widgets without changing their behavior. */
+:root {
+  --ad-primary: #ff2f86;
+  --ad-accent: #ff5aa5;
+  --ad-pink: #ff2f86;
+  --ad-pink-soft: #ff5aa5;
+  --ad-background: #111114;
+  --ad-surface: #19191e;
+  --ad-border: #343238;
+}
+
+/* Any utility background that was previously recolored to brand pink/blue/purple
+   becomes a neutral charcoal surface. Pink stays visible through text/borders/icons. */
+[class^="bg-pink-"], [class*=" bg-pink-"],
+[class^="bg-fuchsia-"], [class*=" bg-fuchsia-"],
+[class^="bg-purple-"], [class*=" bg-purple-"],
+[class^="bg-violet-"], [class*=" bg-violet-"],
+[class^="bg-indigo-"], [class*=" bg-indigo-"],
+[class^="bg-blue-"], [class*=" bg-blue-"] {
+  background-color: #19191e !important;
+  color: var(--ad-text, #f5f3f0);
+  border-color: color-mix(in srgb, var(--ad-primary, #ff2f86) 38%, transparent) !important;
+}
+
+/* Remove filled pink/blue gradient CTA backgrounds while preserving affordance. */
+button[class*="bg-gradient-to-"],
+a[class*="bg-gradient-to-"],
+[role="button"][class*="bg-gradient-to-"] {
+  background: #19191e !important;
+  color: var(--ad-text, #f5f3f0) !important;
+  border: 1px solid color-mix(in srgb, var(--ad-primary, #ff2f86) 48%, transparent) !important;
+  box-shadow: none !important;
+}
+button[class*="bg-gradient-to-"]:hover,
+a[class*="bg-gradient-to-"]:hover,
+[role="button"][class*="bg-gradient-to-"]:hover {
+  background: #222027 !important;
+  color: #ff5aa5 !important;
+}
+
+/* Neutralize the custom brand/logo tiles and active navigation fills that use
+   authored CSS gradients rather than Tailwind background utility classes. */
+.agentdesk-sidebar-brand-mark,
+.agentdesk-brand-mark,
+.agentdesk-dashboard-navbar .agentdesk-brand-mark {
+  background: #19191e !important;
+  color: #ff5aa5 !important;
+  border: 1px solid rgba(255, 47, 134, .55) !important;
+  box-shadow: none !important;
+}
+.agentdesk-sidebar-item[data-active="true"] {
+  background: #19191e !important;
+  border-color: rgba(255, 47, 134, .55) !important;
+  box-shadow: inset 3px 0 0 #ff2f86 !important;
+}
+.agentdesk-console-shell .agentdesk-sidebar-item[data-active="true"] {
+  background: #19191e !important;
+  border-color: rgba(255, 47, 134, .55) !important;
+  box-shadow: inset 3px 0 0 #ff2f86 !important;
+}
+
+/* Neutralize the two admin brand marks and any matching utility-based badge tiles. */
+.agentdesk-platform-admin-shell [class*="bg-pink-"],
+.agentdesk-platform-admin-shell [class*="bg-fuchsia-"],
+.agentdesk-platform-admin-shell [class*="bg-purple-"],
+.agentdesk-platform-admin-shell [class*="bg-blue-"] {
+  background-color: #19191e !important;
+  border-color: rgba(255, 47, 134, .45) !important;
+}
