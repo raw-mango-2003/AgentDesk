@@ -1518,7 +1518,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                 </h3>
                 <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-fuchsia-400" />
-                  Payment provider: {selectedGateway === 'paypal' ? 'PayPal (coming soon)' : 'Razorpay'}
+                  Payment provider: {selectedGateway === 'paypal' ? 'PayPal' : 'Razorpay'}
                 </span>
               </div>
 
@@ -1684,7 +1684,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               {currency !== 'INR' && selectedGateway === 'paypal' && (
                 <div className="rounded-xl border border-white/10 bg-[#171719] p-4 space-y-2">
                   <h3 className="text-sm font-semibold text-white">PayPal checkout</h3>
-                  <p className="text-xs leading-relaxed text-slate-300">PayPal is selected. The PayPal order and server-side payment verification must be implemented before this option can accept payments.</p>
+                  <p className="text-xs leading-relaxed text-slate-300">You will be redirected to PayPal to approve the payment. Your subscription will activate only after the server verifies the completed payment.</p>
                 </div>
               )}
 
@@ -1741,7 +1741,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
               ) : (
                 <button
                   type="submit"
-                  disabled={loading || (currency !== 'INR' && (!inrCalculation || selectedGateway === 'paypal'))}
+                  disabled={loading || (currency !== 'INR' && !inrCalculation)}
                   className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-fuchsia-700 to-pink-600 hover:from-fuchsia-600 hover:to-pink-500 text-white font-bold text-sm shadow-xl shadow-blue-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                 >
                   {loading ? (
@@ -1754,7 +1754,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                       <Lock className="w-4 h-4" />
                       <span>
                         {currency !== 'INR' && selectedGateway === 'paypal'
-                          ? 'PayPal checkout coming soon'
+                          ? 'Continue to PayPal'
                           : `Pay ${formatCurrencyAmount(
                               currency === 'INR' ? calculation.total_due_today : (inrCalculation?.total_due_today || 0),
                               'INR'
