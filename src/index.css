@@ -2832,3 +2832,50 @@ a[class*="bg-gradient-to-"]:hover,
   background-color: #19191e !important;
   border-color: rgba(255, 47, 134, .45) !important;
 }
+/* Higher-specificity guard for pages that previously remapped blue/purple fills to pink. */
+.agentdesk-public-pricing-shell [class^="bg-blue-"],
+.agentdesk-public-pricing-shell [class*=" bg-blue-"],
+.agentdesk-public-pricing-shell [class^="bg-indigo-"],
+.agentdesk-public-pricing-shell [class*=" bg-indigo-"],
+.agentdesk-public-pricing-shell [class^="bg-purple-"],
+.agentdesk-public-pricing-shell [class*=" bg-purple-"],
+.agentdesk-public-pricing-shell [class^="bg-fuchsia-"],
+.agentdesk-public-pricing-shell [class*=" bg-fuchsia-"],
+.agentdesk-public-pricing-shell [class^="bg-pink-"],
+.agentdesk-public-pricing-shell [class*=" bg-pink-"],
+.agentdesk-console-shell [class^="bg-blue-"],
+.agentdesk-console-shell [class*=" bg-blue-"],
+.agentdesk-console-shell [class^="bg-indigo-"],
+.agentdesk-console-shell [class*=" bg-indigo-"],
+.agentdesk-console-shell [class^="bg-purple-"],
+.agentdesk-console-shell [class*=" bg-purple-"],
+.agentdesk-platform-admin-shell [class^="bg-blue-"],
+.agentdesk-platform-admin-shell [class*=" bg-blue-"],
+.agentdesk-platform-admin-shell [class^="bg-purple-"],
+.agentdesk-platform-admin-shell [class*=" bg-purple-"] {
+  background-color: #19191e !important;
+  color: #f5f3f0 !important;
+  border-color: rgba(255, 47, 134, .48) !important;
+}
+
+/* Brand-colored hover fills become dark hover states, not pink blocks. */
+[class*="hover:bg-pink-"]:hover,
+[class*="hover:bg-fuchsia-"]:hover,
+[class*="hover:bg-purple-"]:hover,
+[class*="hover:bg-violet-"]:hover,
+[class*="hover:bg-indigo-"]:hover,
+[class*="hover:bg-blue-"]:hover,
+.agentdesk-public-pricing-shell button[class*="bg-gradient-to-r"]:hover {
+  background: #242128 !important;
+  color: #ff5aa5 !important;
+}
+
+/* Fixed-palette custom backgrounds used by logos, badges and inline utility colors. */
+[class*="bg-[#FF2F86]"],
+[class*="bg-[#ff2f86]"],
+[class*="bg-[var(--ad-primary)"],
+[class*="bg-[var(--ad-pink)"] {
+  background: #19191e !important;
+  color: #ff5aa5 !important;
+  border: 1px solid rgba(255, 47, 134, .5) !important;
+}
