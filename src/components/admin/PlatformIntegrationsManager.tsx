@@ -700,8 +700,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
             onClick={() => setActiveTab('config')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'config'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/70 shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-fuchsia-300 border border-slate-800'
             }`}
           >
             <Key className="w-4 h-4" />
@@ -712,8 +712,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
             onClick={() => setActiveTab('brevo')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'brevo'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/70 shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-fuchsia-300 border border-slate-800'
             }`}
           >
             <Mail className="w-4 h-4" />
@@ -731,8 +731,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
             onClick={() => setActiveTab('gmail')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'gmail'
-                ? 'bg-slate-700 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/70 shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-fuchsia-300 border border-slate-800'
             }`}
           >
             <Mail className="w-4 h-4" />
@@ -746,8 +746,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'env'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/70 shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-fuchsia-300 border border-slate-800'
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
@@ -758,8 +758,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
             onClick={() => setActiveTab('tenant')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'tenant'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/70 shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-fuchsia-300 border border-slate-800'
             }`}
           >
             <Shield className="w-4 h-4" />
@@ -770,8 +770,8 @@ export const PlatformIntegrationsManager: React.FC = () => {
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
               activeTab === 'all'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/70 shadow-sm'
+                : 'bg-slate-900 text-slate-400 hover:text-fuchsia-300 border border-slate-800'
             }`}
           >
             <Shield className="w-4 h-4" />
