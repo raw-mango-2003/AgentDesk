@@ -2879,3 +2879,13 @@ a[class*="bg-gradient-to-"]:hover,
   color: #ff5aa5 !important;
   border: 1px solid rgba(255, 47, 134, .5) !important;
 }
+/* Also catch gradient stop utilities on non-button elements, including decorative pills and banners. */
+[class*="from-pink-"], [class*="to-pink-"], [class*="via-pink-"],
+[class*="from-fuchsia-"], [class*="to-fuchsia-"], [class*="via-fuchsia-"],
+[class*="from-purple-"], [class*="to-purple-"], [class*="via-purple-"],
+[class*="from-violet-"], [class*="to-violet-"], [class*="via-violet-"] {
+  background-color: #19191e !important;
+  background-image: none !important;
+  color: #f5f3f0 !important;
+  border-color: rgba(255, 47, 134, .48) !important;
+}
