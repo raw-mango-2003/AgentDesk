@@ -823,9 +823,22 @@ billingRouter.post('/webhooks/razorpay', async (req: Request, res: Response) => 
   }
 });
 
+// PayPal webhook: verify each transmission against the existing PayPal webhook ID.
+billingRouter.post('/webhooks/paypal', async (req: Request, res: Response) => {
+  try {
+    const result = await billingService.handleWebhook('paypal', req.body, req.headers);
+    if (!result?.handled) return res.status(400).json({ success:false, error:result?.message || 'PayPal webhook verification failed.' });
+    return res.status(200).json(result);
+  } catch (err: any) {
+    logBillingError('PayPal webhook processing failed', err);
+    return res.status(400).json({ success:false, error:'Webhook could not be processed.' });
+  }
+});
+
 // 9. Webhooks Metadata & Registration Information
 billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
   const isRazorpaySecretConfigured = Boolean(process.env.RAZORPAY_WEBHOOK_SECRET);
+  const isPayPalWebhookConfigured = Boolean(process.env.PAYPAL_WEBHOOK_ID);
   const host = req.get('host') || 'localhost:3000';
   const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
   const baseUrl = `${protocol}://${host}`;
@@ -850,9 +863,19 @@ billingRouter.get('/webhooks/status', (req: Request, res: Response) => {
           'subscription.paused'
         ],
         verificationMethod: 'HMAC-SHA256 signature verification via x-razorpay-signature'
+      },
+      {
+        provider: 'PayPal',
+        method: 'POST',
+        path: '/api/billing/webhooks/paypal',
+        fullUrl: `${baseUrl}/api/billing/webhooks/paypal`,
+        secretEnvVar: 'PAYPAL_WEBHOOK_ID',
+        isConfigured: isPayPalWebhookConfigured,
+        supportedEvents: ['CHECKOUT.ORDER.APPROVED', 'PAYMENT.CAPTURE.COMPLETED', 'PAYMENT.CAPTURE.DENIED'],
+        verificationMethod: 'PayPal verify-webhook-signature API'
       }
     ],
     idempotencyEngine: 'In-memory + DB Deduplication Active',
-    note: 'When deploying to production, register the /api/webhooks/razorpay endpoint in your Razorpay Developer Dashboard.'
+    note: 'Register each provider webhook endpoint separately in its respective developer dashboard.'
   });
 });

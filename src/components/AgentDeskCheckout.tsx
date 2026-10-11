@@ -219,6 +219,42 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     nextBillingDate: string;
   } | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paypalState = params.get('paypal');
+    const orderId = params.get('token');
+    if (paypalState === 'cancel') {
+      setError('PayPal checkout was cancelled. You can choose PayPal to try again.');
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    if (paypalState !== 'success' || !orderId) return;
+    let intent: any = null;
+    try { intent = JSON.parse(sessionStorage.getItem('ad_paypal_checkout_intent') || 'null'); } catch {}
+    if (!intent || intent.orderId !== orderId) {
+      setError('We could not match this PayPal return to your checkout. Please contact support before retrying payment.');
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    setLoading(true);
+    fetch('/api/billing/verify-payment', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ ...intent, provider:'paypal', paymentId:orderId, orderId, signature:undefined })
+    }).then(async response => {
+      const data = await response.json().catch(()=>({}));
+      if (!response.ok || !data.success || data.status !== 'ACTIVATED') throw new Error(getCheckoutErrorMessage(data.error, 'PayPal payment verification is pending. Please contact support.'));
+      if (data.business) await saveBusiness(data.business);
+      if (data.agent) await saveAgent(data.agent);
+      const nextDate = new Date(); nextDate.setDate(nextDate.getDate()+30);
+      const payload = { tenantId:data.business?.id || intent.businessId, businessName:intent.businessName, customerEmail:intent.customerEmail, planName:intent.planName, paymentId:data.paymentId || orderId, amount:intent.amount, currency:intent.currency as CurrencyCode, displayCurrency:intent.currency as CurrencyCode, displayAmount:intent.amount, setupFee:intent.setupFee, subscriptionFee:intent.subscriptionFee, gstAmount:0, nextBillingDate:data.nextBillingDate || nextDate.toLocaleDateString('en-GB',{month:'short',day:'numeric',year:'numeric'}) };
+      sessionStorage.removeItem('ad_paypal_checkout_intent');
+      ['ad_checkout_name','ad_checkout_biz','ad_checkout_email','ad_checkout_phone','ad_checkout_addr','ad_checkout_city','ad_checkout_state','ad_checkout_gstin'].forEach(key=>sessionStorage.removeItem(key));
+      setSuccessData(payload);
+      if (onSuccess) onSuccess(payload);
+    }).catch(err => setError(err?.message || 'PayPal payment verification failed. Please contact support.'))
+      .finally(() => { setLoading(false); window.history.replaceState({}, '', window.location.pathname); });
+  }, []);
+
   // Query server for authoritative calculation
   const fetchAuthoritativeCalculation = useCallback(async (
     planIdToCalc: string,
@@ -457,13 +493,8 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       return;
     }
 
-    if (currency !== 'INR' && selectedGateway === 'paypal') {
-      setError('PayPal checkout is not enabled yet. Please contact AgentDesk support to complete your purchase.');
-      return;
-    }
-
-    if (currency !== 'INR' && !payInINROptIn) {
-      setError(`International payment in ${currency} is not currently available through Razorpay. Choose Pay in INR to proceed via Razorpay.`);
+    if (currency !== 'INR' && selectedGateway !== 'paypal' && !payInINROptIn) {
+      setError('Select PayPal for USD/GBP payments, or explicitly choose Pay in INR to use Razorpay.');
       return;
     }
 
@@ -472,25 +503,12 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
     try {
       // 1. Authoritative calculation check
       let totalAmountToCharge = 0;
-      if (currency === 'INR') {
-        const calcData = await fetchAuthoritativeCalculation(
-          selectedPlanId,
-          appliedCoupon,
-          'INR',
-          state,
-          gstin,
-          email
-        );
-        totalAmountToCharge = calcData?.total_due_today ?? calculation.total_due_today;
+      if (currency === 'INR' || payInINROptIn) {
+        const calcData = await fetchAuthoritativeCalculation(selectedPlanId, appliedCoupon, 'INR', state, gstin, email);
+        totalAmountToCharge = calcData?.total_due_today ?? (currency === 'INR' ? calculation.total_due_today : inrCalculation?.total_due_today ?? 0);
       } else {
-        const inrData = await fetchAuthoritativeINRCalculation(
-          selectedPlanId,
-          appliedCoupon,
-          state,
-          gstin,
-          email
-        );
-        totalAmountToCharge = inrData?.total_due_today ?? inrCalculation?.total_due_today ?? 0;
+        const calcData = await fetchAuthoritativeCalculation(selectedPlanId, appliedCoupon, currency, state, gstin, email);
+        totalAmountToCharge = calcData?.total_due_today ?? calculation.total_due_today;
       }
 
       // A legitimate 100% promotional checkout has a real payable amount of ₹0.
@@ -596,7 +614,10 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         .slice(0, 24) || 'workspace';
       const tenantId = `${cleanSlug}-${Date.now().toString().slice(-4)}`;
 
-      // 3. Create server-side Razorpay Checkout Session
+      const paymentCurrency: CurrencyCode = selectedGateway === 'paypal' ? currency : 'INR';
+      const paymentProvider = selectedGateway;
+
+      // Create a provider-specific server-side checkout session
       const sessionRes = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -605,10 +626,10 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           businessName: businessName.trim(),
           planId: selectedPlanId,
           type: 'initial_checkout',
-          currency: 'INR',
+          currency: paymentCurrency,
           displayCurrency: currency,
-          displayAmount: calculation.total_due_today,
-          provider: 'razorpay',
+          displayAmount: totalAmountToCharge,
+          provider: paymentProvider,
           customerName: fullName.trim(),
           customerEmail: email.trim(),
           customerPhone: phone.trim(),
@@ -646,7 +667,20 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
         );
       }
 
-      // 4. Ensure Razorpay SDK script is ready
+      if (selectedGateway === 'paypal') {
+        if (!sessionData.approvalUrl) throw new Error('PayPal approval URL was not returned. Please try again.');
+        sessionStorage.setItem('ad_paypal_checkout_intent', JSON.stringify({
+          businessId: tenantId, businessName: businessName.trim(), customerName: fullName.trim(),
+          customerEmail: email.trim(), customerPhone: phone.trim(), type:'initial_checkout',
+          planId:selectedPlanId, currency:paymentCurrency, amount:totalAmountToCharge,
+          displayCurrency:currency, displayAmount:totalAmountToCharge, setupFee:calculation.setup_fee,
+          subscriptionFee:calculation.subscription_fee, planName:calculation.planName, orderId:sessionData.orderId
+        }));
+        window.location.assign(sessionData.approvalUrl);
+        return;
+      }
+
+      // Razorpay flow remains independent
       const rzpReady = await ensureRazorpayLoaded();
       if (!rzpReady || typeof (window as any).Razorpay !== 'function') {
         throw new Error('Payment service temporarily unavailable. Please check your connection and try again.');
