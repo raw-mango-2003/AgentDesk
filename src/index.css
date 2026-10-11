@@ -3017,3 +3017,38 @@ a[class*="bg-gradient-to-"]:hover,
 [class*="text-neutral-700"], [class*="text-neutral-600"] {
   color: #c8c1b8 !important;
 }
+
+/* PR #120 follow-up: remove pale gray filled panels and fix low-contrast disabled UI.
+   Dark AgentDesk surfaces should remain charcoal; disabled controls still need legible text. */
+[class~="bg-gray-300"], [class~="bg-gray-400"], [class~="bg-gray-500"],
+[class~="bg-slate-300"], [class~="bg-slate-400"], [class~="bg-slate-500"],
+[class~="bg-zinc-300"], [class~="bg-zinc-400"], [class~="bg-zinc-500"],
+[class~="bg-neutral-300"], [class~="bg-neutral-400"], [class~="bg-neutral-500"] {
+  background-color: #242128 !important;
+  color: #f5f0e8 !important;
+  border-color: #3a353d !important;
+}
+button:disabled, [role="button"][aria-disabled="true"],
+button[disabled], input:disabled, select:disabled, textarea:disabled {
+  background-color: #242128 !important;
+  color: #c8c1b8 !important;
+  border-color: #3a353d !important;
+  opacity: 1 !important;
+}
+.agentdesk-platform-admin-shell [class*="bg-gray-300"],
+.agentdesk-platform-admin-shell [class*="bg-gray-400"],
+.agentdesk-platform-admin-shell [class*="bg-gray-500"],
+.agentdesk-platform-admin-shell [class*="bg-slate-300"],
+.agentdesk-platform-admin-shell [class*="bg-slate-400"],
+.agentdesk-platform-admin-shell [class*="bg-slate-500"] {
+  background-color: #242128 !important;
+  color: #f5f0e8 !important;
+}
+.agentdesk-platform-admin-shell [class*="text-gray-300"],
+.agentdesk-platform-admin-shell [class*="text-gray-400"],
+.agentdesk-platform-admin-shell [class*="text-slate-300"],
+.agentdesk-platform-admin-shell [class*="text-slate-400"],
+.agentdesk-platform-admin-shell [class*="text-zinc-300"],
+.agentdesk-platform-admin-shell [class*="text-zinc-400"] {
+  color: #c8c1b8 !important;
+}
