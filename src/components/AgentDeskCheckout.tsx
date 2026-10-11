@@ -498,6 +498,14 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       return;
     }
 
+    // Open the PayPal window synchronously from the user's click so popup blockers allow it.
+    // The original checkout tab remains open while PayPal runs in the new tab.
+    const paypalWindow = selectedGateway === 'paypal' ? window.open('about:blank', '_blank') : null;
+    if (selectedGateway === 'paypal' && !paypalWindow) {
+      setError('Your browser blocked the PayPal window. Allow pop-ups for this site and try again.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -676,7 +684,8 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
           displayCurrency:currency, displayAmount:totalAmountToCharge, setupFee:calculation.setup_fee,
           subscriptionFee:calculation.subscription_fee, planName:calculation.planName, orderId:sessionData.orderId
         }));
-        window.location.assign(sessionData.approvalUrl);
+        if (!paypalWindow) throw new Error('Could not open the PayPal checkout window. Please allow pop-ups and try again.');
+        paypalWindow.location.href = sessionData.approvalUrl;
         return;
       }
 
@@ -859,6 +868,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
       document.body.classList.add('ad-razorpay-opening');
       rzpInstance.open();
     } catch (err: any) {
+      try { paypalWindow?.close(); } catch {}
       document.body.classList.remove('ad-razorpay-opening');
       setPaymentFailed(true);
       setError(getCheckoutErrorMessage(err, 'Payment service temporarily unavailable. Please try again.'));
