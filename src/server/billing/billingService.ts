@@ -10,6 +10,7 @@ import {
   ProviderHealthReport
 } from './paymentProvider.js';
 import { RazorpayProvider } from './razorpayProvider.js';
+import { PayPalProvider } from './paypalProvider.js';
 import { 
   CurrencyCode, 
   PaymentRecord, 
@@ -247,6 +248,7 @@ export interface BillingInvoice {
 
 export class BillingService {
   private razorpay: RazorpayProvider;
+  private paypal: PayPalProvider;
   private paymentAuditLogsStore: PaymentAuditLogEntry[] = [];
 
   // Server-authoritative Tax Configuration (Current Business is NOT GST Registered)
@@ -283,6 +285,7 @@ export class BillingService {
 
   constructor() {
     this.razorpay = new RazorpayProvider();
+    this.paypal = new PayPalProvider();
     this.seedDefaultCurrencies();
     this.seedDefaultPlanPrices();
     this.seedDefaultTenants();
@@ -741,7 +744,8 @@ export class BillingService {
     }
   }
 
-  public getProvider(_name?: PaymentProviderName): PaymentProvider {
+  public getProvider(name: PaymentProviderName = 'razorpay'): PaymentProvider {
+    if (name === 'paypal') return this.paypal;
     return this.razorpay;
   }
 
@@ -760,17 +764,11 @@ export class BillingService {
       supportsRecurring: boolean;
     }> = [];
 
-    // Razorpay is the designated active billing provider
-    list.push({
-      name: 'razorpay',
-      label: currency === 'INR'
-        ? 'Razorpay (Cards, UPI, QR, NetBanking, Wallets)'
-        : 'Razorpay (International Cards & Currencies)',
-      isConfigured: this.razorpay.isConfigured(),
-      isRecommended: true,
-      supportsRecurring: this.razorpay.supportsRecurring(currency)
-    });
-
+    if (currency === 'INR') {
+      list.push({ name:'razorpay', label:'Razorpay (Cards, UPI, QR, NetBanking, Wallets)', isConfigured:this.razorpay.isConfigured(), isRecommended:true, supportsRecurring:this.razorpay.supportsRecurring(currency) });
+    } else if (currency === 'USD' || currency === 'GBP') {
+      list.push({ name:'paypal', label:'PayPal (USD/GBP)', isConfigured:this.paypal.isConfigured(), isRecommended:true, supportsRecurring:false });
+    }
     return list;
   }
 
@@ -780,8 +778,9 @@ export class BillingService {
     planId?: string;
   }): Promise<AvailablePaymentMethodsResponse> {
     const { currency, country, planId } = params;
-    const isConfigured = this.razorpay.isConfigured();
-    const isCurrencySupported = this.razorpay.supportsCurrency(currency);
+    const provider = currency === 'INR' ? this.razorpay : this.paypal;
+    const isConfigured = provider.isConfigured();
+    const isCurrencySupported = provider.supportsCurrency(currency);
     const isPaymentAvailable = isConfigured && isCurrencySupported;
 
     if (!isPaymentAvailable) {
@@ -791,9 +790,9 @@ export class BillingService {
         country,
         planId,
         isPaymentAvailable: false,
-        provider: 'razorpay',
-        providerName: 'Razorpay',
-        providerLabel: 'Razorpay',
+        provider: provider.name,
+        providerName: provider.name === 'paypal' ? 'PayPal' : 'Razorpay',
+        providerLabel: provider.name === 'paypal' ? 'PayPal' : 'Razorpay',
         methods: [],
         allowsINRFallback: false,
         unavailableMessage: !isConfigured
