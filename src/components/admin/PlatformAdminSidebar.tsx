@@ -195,8 +195,8 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
                   transition-all cursor-pointer group relative
                   ${
                     isActive
-                      ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20 font-bold'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/70'
+                      ? 'bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/60 shadow-sm font-bold'
+                      : 'text-slate-300 hover:text-fuchsia-300 hover:bg-slate-800/70'
                   }
                   ${collapsed && !mobileOpen ? 'justify-center px-2' : ''}
                 `}
@@ -204,7 +204,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
               >
                 <Icon
                   className={`w-4 h-4 shrink-0 transition-colors ${
-                    isActive ? 'text-white' : 'text-slate-400 group-hover:text-purple-300'
+                    isActive ? 'text-fuchsia-300' : 'text-slate-400 group-hover:text-fuchsia-300'
                   }`}
                 />
 
@@ -218,7 +218,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
                       ml-auto px-1.5 py-0.2 rounded-full text-[10px] font-bold shrink-0
                       ${
                         isActive
-                          ? 'bg-purple-800/80 text-white'
+                          ? 'bg-[#252027] text-fuchsia-200 border border-fuchsia-500/30'
                           : 'bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-slate-200'
                       }
                     `}
