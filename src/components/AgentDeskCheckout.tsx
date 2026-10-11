@@ -1131,7 +1131,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         }}
                         className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                           currency === cur
-                            ? 'bg-blue-600 text-white shadow-xs'
+                            ? 'bg-transparent text-white border border-fuchsia-500/70'
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                       >
@@ -1152,7 +1152,7 @@ export const AgentDeskCheckoutInner: React.FC<AgentDeskCheckoutProps> = ({
                         onClick={() => setSelectedPlanId(plan.id)}
                         className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-blue-600/20 border-blue-500 text-white shadow-xs'
+                            ? 'bg-[#111111] border-fuchsia-500/70 text-white shadow-xs'
                             : 'bg-[#111111] border-white/10 text-slate-400 hover:text-slate-200 hover:border-slate-700'
                         }`}
                       >
