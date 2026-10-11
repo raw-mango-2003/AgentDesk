@@ -2889,3 +2889,84 @@ a[class*="bg-gradient-to-"]:hover,
   color: #f5f3f0 !important;
   border-color: rgba(255, 47, 134, .48) !important;
 }
+
+/* PR #119: Global contrast and filled-accent correction.
+   Keep AgentDesk's electric pink as an accent, not a large surface fill. */
+[class*="text-blue-900"], [class*="text-blue-950"],
+[class*="text-indigo-900"], [class*="text-indigo-950"],
+[class*="text-purple-900"], [class*="text-purple-950"],
+[class*="text-violet-900"], [class*="text-violet-950"],
+[class*="text-fuchsia-900"], [class*="text-pink-900"],
+[class*="text-slate-900"], [class*="text-gray-900"],
+[class*="text-zinc-900"], [class*="text-neutral-900"],
+[class*="text-slate-800"], [class*="text-gray-800"],
+[class*="text-zinc-800"], [class*="text-neutral-800"] {
+  color: #f5f3f0 !important;
+}
+
+[class*="bg-pink-"], [class*="bg-fuchsia-"],
+[class*="bg-purple-"], [class*="bg-violet-"],
+[class*="bg-indigo-"], [class*="bg-blue-"] {
+  background-color: #19191e !important;
+  background-image: none !important;
+  color: #f5f3f0 !important;
+  border-color: rgba(255, 47, 134, .48) !important;
+}
+[class*="hover:bg-pink-"]:hover, [class*="hover:bg-fuchsia-"]:hover,
+[class*="hover:bg-purple-"]:hover, [class*="hover:bg-violet-"]:hover,
+[class*="hover:bg-indigo-"]:hover, [class*="hover:bg-blue-"]:hover {
+  background-color: #242128 !important;
+  color: #ff5aa5 !important;
+}
+[class*="from-pink-"], [class*="to-pink-"], [class*="via-pink-"],
+[class*="from-fuchsia-"], [class*="to-fuchsia-"], [class*="via-fuchsia-"],
+[class*="from-purple-"], [class*="to-purple-"], [class*="via-purple-"],
+[class*="from-violet-"], [class*="to-violet-"], [class*="via-violet-"],
+[class*="from-blue-"], [class*="to-blue-"], [class*="via-blue-"] {
+  background-image: none !important;
+  background-color: #19191e !important;
+}
+
+[class~="bg-white"], [class~="bg-gray-50"], [class~="bg-slate-50"],
+[class~="bg-zinc-50"], [class~="bg-blue-50"], [class~="bg-indigo-50"],
+[class~="bg-purple-50"], [class~="bg-violet-50"], [class~="bg-pink-50"] {
+  background-color: #19191e !important;
+  border-color: #343238 !important;
+}
+
+.agentdesk-platform-admin-shell [class*="text-blue-"],
+.agentdesk-platform-admin-shell [class*="text-indigo-"],
+.agentdesk-platform-admin-shell [class*="text-purple-"],
+.agentdesk-platform-admin-shell [class*="text-violet-"] {
+  color: #ff5aa5 !important;
+}
+.agentdesk-platform-admin-shell [class*="text-blue-900"],
+.agentdesk-platform-admin-shell [class*="text-indigo-900"],
+.agentdesk-platform-admin-shell [class*="text-purple-900"],
+.agentdesk-platform-admin-shell [class*="text-violet-900"],
+.agentdesk-platform-admin-shell [class*="text-blue-950"],
+.agentdesk-platform-admin-shell [class*="text-indigo-950"],
+.agentdesk-platform-admin-shell [class*="text-purple-950"],
+.agentdesk-platform-admin-shell [class*="text-violet-950"] {
+  color: #f5f3f0 !important;
+}
+.agentdesk-platform-admin-shell [class*="bg-blue-"],
+.agentdesk-platform-admin-shell [class*="bg-indigo-"],
+.agentdesk-platform-admin-shell [class*="bg-purple-"],
+.agentdesk-platform-admin-shell [class*="bg-violet-"],
+.agentdesk-platform-admin-shell [class*="bg-fuchsia-"],
+.agentdesk-platform-admin-shell [class*="bg-pink-"] {
+  background-color: #19191e !important;
+  background-image: none !important;
+  color: #f5f3f0 !important;
+  border-color: rgba(255, 47, 134, .48) !important;
+}
+
+.agentdesk-platform-admin-shell [style*="#2563eb"],
+.agentdesk-platform-admin-shell [style*="#7c3aed"],
+.agentdesk-platform-admin-shell [style*="rgb(37, 99, 235)"],
+.agentdesk-platform-admin-shell [style*="rgb(124, 58, 237)"] {
+  background-color: #19191e !important;
+  border: 1px solid rgba(255, 47, 134, .55) !important;
+  box-shadow: none !important;
+}
