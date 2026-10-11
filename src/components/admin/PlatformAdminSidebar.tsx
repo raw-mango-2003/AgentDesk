@@ -140,7 +140,7 @@ export const PlatformAdminSidebar: React.FC<PlatformAdminSidebarProps> = ({
         {/* Sidebar Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0">
               <ShieldCheck className="w-4 h-4" />
             </div>
             {(!collapsed || mobileOpen) && (
