@@ -42,7 +42,7 @@ export class PayPalProvider implements PaymentProvider {
     const order = await this.api('/v2/checkout/orders', { method:'POST', headers:{ 'PayPal-Request-Id': `agentdesk-${params.businessId}-${Date.now()}` }, body:JSON.stringify({
       intent:'CAPTURE',
       purchase_units:[{ reference_id:params.businessId, custom_id:params.businessId, description:params.description.slice(0,127), amount:{ currency_code:params.currency, value:Number(params.amount).toFixed(2) }, invoice_id:`AD-${params.businessId}-${Date.now()}` }],
-      application_context:{ brand_name:'AgentDesk', user_action:'PAY_NOW', return_url:`${origin}/?paypal=success`, cancel_url:`${origin}/?paypal=cancel` }
+      application_context:{ brand_name:'AgentDesk', user_action:'PAY_NOW', return_url:`${origin}/checkout?paypal=success`, cancel_url:`${origin}/checkout?paypal=cancel` }
     }) }) as PayPalOrder;
     const approval = order.links?.find(link=>link.rel==='approve')?.href;
     if (!order.id || !approval) throw new Error('PayPal did not return an approval URL.');
