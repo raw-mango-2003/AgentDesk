@@ -719,7 +719,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-[#19171b] text-fuchsia-300 border border-fuchsia-500/40">
                   Platform Admin
                 </span>
                 <span className="text-slate-500 text-xs hidden sm:inline">/</span>
