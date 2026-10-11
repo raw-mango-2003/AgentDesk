@@ -803,7 +803,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                 </div>
                 <p className="text-sm text-slate-400 mt-1">Connect AgentDesk to the services your customer already uses, including their own APIs.</p>
               </div>
-              <button onClick={openNewCustomIntegration} disabled={!selectedTenantId} className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 disabled:opacity-50">
+              <button onClick={openNewCustomIntegration} disabled={!selectedTenantId} className="px-4 py-2.5 rounded-xl bg-[#19171b] hover:bg-[#211e23] text-fuchsia-300 border border-fuchsia-500/60 text-xs font-bold flex items-center gap-2 disabled:opacity-50">
                 <Plus className="w-4 h-4" /> Add Custom Integration
               </button>
             </div>
@@ -819,7 +819,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
             </div>
             <div className="mt-3 flex gap-2 flex-wrap">
               {['All','AI','CRM','Voice','SMS','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(category => (
-                <button key={category} onClick={() => setIntegrationCategory(category)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${integrationCategory === category ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'}`}>{category}</button>
+                <button key={category} onClick={() => setIntegrationCategory(category)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${integrationCategory === category ? 'bg-[#19171b] text-fuchsia-300 border-fuchsia-500/70' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-fuchsia-300'}`}>{category}</button>
               ))}
             </div>
           </div>
@@ -869,7 +869,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                             event.stopPropagation();
                             openTenantIntegration(item.provider);
                           }}
-                          className="relative z-10 pointer-events-auto flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
+                          className="relative z-10 pointer-events-auto flex-1 py-2 rounded-xl bg-[#19171b] hover:bg-[#211e23] text-fuchsia-300 border border-fuchsia-500/60 text-xs font-bold cursor-pointer"
                         >
                           {item.configured ? 'Configure' : 'Connect'}
                         </button>
@@ -1063,13 +1063,13 @@ export const PlatformIntegrationsManager: React.FC = () => {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-md">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-center text-blue-400 shrink-0">
+                <div className="w-12 h-12 bg-[#19171b] border border-fuchsia-500/40 rounded-2xl flex items-center justify-center text-fuchsia-300 shrink-0">
                   <Mail className="w-6 h-6" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-white">Brevo Transactional Email</h2>
-                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-bold rounded-full border border-blue-500/30">
+                    <span className="px-2 py-0.5 bg-[#19171b] text-fuchsia-300 text-[10px] font-bold rounded-full border border-fuchsia-500/40">
                       PRIMARY SENDER
                     </span>
                   </div>
@@ -1121,7 +1121,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                   <button
                     onClick={handleSendBrevoTestEmail}
                     disabled={sendingBrevoTest}
-                    className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2"
+                    className="px-4 py-2.5 rounded-xl bg-[#19171b] hover:bg-[#211e23] text-fuchsia-300 border border-fuchsia-500/60 disabled:opacity-50 font-bold text-xs flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
                     {sendingBrevoTest ? 'Sending...' : 'Send Test Email'}
@@ -1148,7 +1148,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                 )}
               </div>
 
-              <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-xs text-slate-300">
+              <div className="rounded-xl border border-fuchsia-500/30 bg-[#19171b] p-4 text-xs text-slate-300">
                 <div className="font-bold text-blue-300 mb-1">Environment</div>
                 <div className="font-mono text-slate-400">BREVO_API_KEY: {integrations.find(i => i.id === 'brevo_email')?.isConfigured ? 'Configured' : 'Not configured'}</div>
                 <div className="mt-1 text-slate-500">The API key is never displayed; only its configured state is shown.</div>
@@ -1170,7 +1170,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-white">Gmail</h2>
-                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[10px] font-bold rounded-full border border-blue-500/30">
+                    <span className="px-2 py-0.5 bg-[#19171b] text-fuchsia-300 text-[10px] font-bold rounded-full border border-fuchsia-500/40">
                       OFFICIAL SENDER
                     </span>
                   </div>
