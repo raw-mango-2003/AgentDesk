@@ -2970,3 +2970,65 @@ a[class*="bg-gradient-to-"]:hover,
   border: 1px solid rgba(255, 47, 134, .55) !important;
   box-shadow: none !important;
 }
+
+/* PR #119 correction: this is primarily a text-contrast fix, not a pink-fill change.
+   Legacy navy/blue text is unreadable on AgentDesk's charcoal surfaces, so use
+   neutral off-white for primary text and warm muted gray for secondary text. */
+.agentdesk-platform-admin-shell [class*="text-blue-"],
+.agentdesk-platform-admin-shell [class*="text-indigo-"],
+.agentdesk-platform-admin-shell [class*="text-purple-"],
+.agentdesk-platform-admin-shell [class*="text-violet-"],
+.agentdesk-platform-admin-shell [class*="text-slate-900"],
+.agentdesk-platform-admin-shell [class*="text-slate-800"],
+.agentdesk-platform-admin-shell [class*="text-gray-900"],
+.agentdesk-platform-admin-shell [class*="text-gray-800"],
+.agentdesk-platform-admin-shell [class*="text-zinc-900"],
+.agentdesk-platform-admin-shell [class*="text-neutral-900"] {
+  color: #f5f0e8 !important;
+}
+.agentdesk-platform-admin-shell [class*="text-slate-700"],
+.agentdesk-platform-admin-shell [class*="text-slate-600"],
+.agentdesk-platform-admin-shell [class*="text-gray-700"],
+.agentdesk-platform-admin-shell [class*="text-gray-600"],
+.agentdesk-platform-admin-shell [class*="text-blue-700"],
+.agentdesk-platform-admin-shell [class*="text-blue-600"],
+.agentdesk-platform-admin-shell [class*="text-indigo-700"],
+.agentdesk-platform-admin-shell [class*="text-indigo-600"] {
+  color: #c8c1b8 !important;
+}
+
+/* Global equivalent for legacy dark text classes on dark backgrounds, including
+   pricing, webhooks, credentials, subscriptions, isolation tests and agent settings. */
+[class*="text-blue-900"], [class*="text-blue-950"],
+[class*="text-indigo-900"], [class*="text-indigo-950"],
+[class*="text-purple-900"], [class*="text-purple-950"],
+[class*="text-violet-900"], [class*="text-violet-950"],
+[class*="text-slate-900"], [class*="text-slate-800"],
+[class*="text-gray-900"], [class*="text-gray-800"],
+[class*="text-zinc-900"], [class*="text-zinc-800"],
+[class*="text-neutral-900"], [class*="text-neutral-800"] {
+  color: #f5f0e8 !important;
+}
+[class*="text-blue-800"], [class*="text-blue-700"],
+[class*="text-indigo-800"], [class*="text-indigo-700"],
+[class*="text-slate-700"], [class*="text-slate-600"],
+[class*="text-gray-700"], [class*="text-gray-600"],
+[class*="text-zinc-700"], [class*="text-zinc-600"],
+[class*="text-neutral-700"], [class*="text-neutral-600"] {
+  color: #c8c1b8 !important;
+}
+
+/* Ensure headings/paragraphs that inherited dark navy inline or component styles
+   stay readable inside the dark Platform Admin cards. */
+.agentdesk-platform-admin-shell h1,
+.agentdesk-platform-admin-shell h2,
+.agentdesk-platform-admin-shell h3,
+.agentdesk-platform-admin-shell h4,
+.agentdesk-platform-admin-shell h5,
+.agentdesk-platform-admin-shell h6,
+.agentdesk-platform-admin-shell p,
+.agentdesk-platform-admin-shell label,
+.agentdesk-platform-admin-shell th,
+.agentdesk-platform-admin-shell td {
+  color: #f5f0e8;
+}
