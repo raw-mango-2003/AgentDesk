@@ -2889,3 +2889,37 @@ a[class*="bg-gradient-to-"]:hover,
   color: #f5f3f0 !important;
   border-color: rgba(255, 47, 134, .48) !important;
 }
+
+/* Platform Admin tenant cards: restore readable contrast after dark-surface normalization.
+   The legacy card markup uses text-slate-900 on bg-white; with dark backgrounds those labels
+   must become off-white instead of near-black navy. */
+.agentdesk-platform-admin-shell [class*="text-slate-900"],
+.agentdesk-platform-admin-shell [class*="text-slate-800"],
+.agentdesk-platform-admin-shell [class*="text-blue-900"],
+.agentdesk-platform-admin-shell [class*="text-blue-950"] {
+  color: #f5f3f0 !important;
+}
+.agentdesk-platform-admin-shell [class*="text-slate-700"],
+.agentdesk-platform-admin-shell [class*="text-blue-800"] {
+  color: #d0cbd2 !important;
+}
+.agentdesk-platform-admin-shell [class*="bg-white"],
+.agentdesk-platform-admin-shell [class*="bg-slate-50"],
+.agentdesk-platform-admin-shell [class*="bg-blue-50"] {
+  background-color: #19191e !important;
+  border-color: #343238 !important;
+}
+.agentdesk-platform-admin-shell [class*="bg-fuchsia-"],
+.agentdesk-platform-admin-shell [class*="bg-pink-"],
+.agentdesk-platform-admin-shell [class*="bg-purple-"],
+.agentdesk-platform-admin-shell [class*="bg-blue-"] {
+  background-color: #19191e !important;
+  color: #ff5aa5 !important;
+  border: 1px solid rgba(255, 47, 134, .48) !important;
+}
+.agentdesk-platform-admin-shell [class*="bg-emerald-"],
+.agentdesk-platform-admin-shell [class*="bg-green-"] {
+  background-color: rgba(16, 185, 129, .12) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(16, 185, 129, .3) !important;
+}
