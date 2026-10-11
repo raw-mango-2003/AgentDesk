@@ -2923,3 +2923,108 @@ a[class*="bg-gradient-to-"]:hover,
   color: #6ee7b7 !important;
   border-color: rgba(16, 185, 129, .3) !important;
 }
+
+/* GLOBAL CONTRAST + NO-FILL PASS
+   Prevent dark navy text on charcoal surfaces and stop old blue/purple utility
+   classes from reintroducing filled brand blocks across any AgentDesk route. */
+[class*="text-blue-900"], [class*="text-blue-950"],
+[class*="text-indigo-900"], [class*="text-indigo-950"],
+[class*="text-purple-900"], [class*="text-purple-950"],
+[class*="text-violet-900"], [class*="text-violet-950"],
+[class*="text-fuchsia-900"], [class*="text-pink-900"],
+[class*="text-slate-900"], [class*="text-gray-900"],
+[class*="text-zinc-900"], [class*="text-neutral-900"],
+[class*="text-slate-800"], [class*="text-gray-800"],
+[class*="text-zinc-800"], [class*="text-neutral-800"] {
+  color: #f5f3f0 !important;
+}
+
+/* Dark theme uses charcoal surfaces for colored utilities; accent is limited to
+   text, icon, border and focus styling rather than large solid fills. */
+[class*="bg-pink-"], [class*="bg-fuchsia-"],
+[class*="bg-purple-"], [class*="bg-violet-"],
+[class*="bg-indigo-"], [class*="bg-blue-"] {
+  background-color: #19191e !important;
+  background-image: none !important;
+  color: #f5f3f0 !important;
+  border-color: rgba(255, 47, 134, .48) !important;
+}
+[class*="hover:bg-pink-"]:hover, [class*="hover:bg-fuchsia-"]:hover,
+[class*="hover:bg-purple-"]:hover, [class*="hover:bg-violet-"]:hover,
+[class*="hover:bg-indigo-"]:hover, [class*="hover:bg-blue-"]:hover {
+  background-color: #242128 !important;
+  color: #ff5aa5 !important;
+}
+[class*="from-pink-"], [class*="to-pink-"], [class*="via-pink-"],
+[class*="from-fuchsia-"], [class*="to-fuchsia-"], [class*="via-fuchsia-"],
+[class*="from-purple-"], [class*="to-purple-"], [class*="via-purple-"],
+[class*="from-violet-"], [class*="to-violet-"], [class*="via-violet-"],
+[class*="from-blue-"], [class*="to-blue-"], [class*="via-blue-"] {
+  background-image: none !important;
+  background-color: #19191e !important;
+}
+
+/* Darken legacy white/pale surfaces while keeping their contents legible. */
+[class~="bg-white"], [class~="bg-gray-50"], [class~="bg-slate-50"],
+[class~="bg-zinc-50"], [class~="bg-blue-50"], [class~="bg-indigo-50"],
+[class~="bg-purple-50"], [class~="bg-violet-50"], [class~="bg-pink-50"] {
+  background-color: #19191e !important;
+  border-color: #343238 !important;
+}
+
+/* Platform Admin pages have a legacy navy text palette. Normalize all headings,
+   labels and values in the admin shell to readable off-white/muted neutrals. */
+.agentdesk-platform-admin-shell h1,
+.agentdesk-platform-admin-shell h2,
+.agentdesk-platform-admin-shell h3,
+.agentdesk-platform-admin-shell h4,
+.agentdesk-platform-admin-shell h5,
+.agentdesk-platform-admin-shell h6,
+.agentdesk-platform-admin-shell strong,
+.agentdesk-platform-admin-shell label,
+.agentdesk-platform-admin-shell th,
+.agentdesk-platform-admin-shell td,
+.agentdesk-platform-admin-shell p,
+.agentdesk-platform-admin-shell li,
+.agentdesk-platform-admin-shell span,
+.agentdesk-platform-admin-shell div {
+  color: inherit;
+}
+.agentdesk-platform-admin-shell [class*="text-blue-"],
+.agentdesk-platform-admin-shell [class*="text-indigo-"],
+.agentdesk-platform-admin-shell [class*="text-purple-"],
+.agentdesk-platform-admin-shell [class*="text-violet-"] {
+  color: #ff5aa5 !important;
+}
+.agentdesk-platform-admin-shell [class*="text-blue-900"],
+.agentdesk-platform-admin-shell [class*="text-indigo-900"],
+.agentdesk-platform-admin-shell [class*="text-purple-900"],
+.agentdesk-platform-admin-shell [class*="text-violet-900"],
+.agentdesk-platform-admin-shell [class*="text-blue-950"],
+.agentdesk-platform-admin-shell [class*="text-indigo-950"],
+.agentdesk-platform-admin-shell [class*="text-purple-950"],
+.agentdesk-platform-admin-shell [class*="text-violet-950"] {
+  color: #f5f3f0 !important;
+}
+.agentdesk-platform-admin-shell [class*="bg-blue-"],
+.agentdesk-platform-admin-shell [class*="bg-indigo-"],
+.agentdesk-platform-admin-shell [class*="bg-purple-"],
+.agentdesk-platform-admin-shell [class*="bg-violet-"],
+.agentdesk-platform-admin-shell [class*="bg-fuchsia-"],
+.agentdesk-platform-admin-shell [class*="bg-pink-"] {
+  background-color: #19191e !important;
+  background-image: none !important;
+  color: #f5f3f0 !important;
+  border-color: rgba(255, 47, 134, .48) !important;
+}
+
+/* Inline blue/purple brand tiles (agent and tenant initials/icons) become charcoal.
+   White foreground icons remain legible; the brand accent is carried by the border. */
+.agentdesk-platform-admin-shell [style*="#2563eb"],
+.agentdesk-platform-admin-shell [style*="#7c3aed"],
+.agentdesk-platform-admin-shell [style*="rgb(37, 99, 235)"],
+.agentdesk-platform-admin-shell [style*="rgb(124, 58, 237)"] {
+  background-color: #19191e !important;
+  border: 1px solid rgba(255, 47, 134, .55) !important;
+  box-shadow: none !important;
+}
