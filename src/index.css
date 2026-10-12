@@ -3017,3 +3017,75 @@ a[class*="bg-gradient-to-"]:hover,
 [class*="text-neutral-700"], [class*="text-neutral-600"] {
   color: #c8c1b8 !important;
 }
+
+/* PR #121: Fix actual dark-theme readability failures, including gray panels. */
+[class*="bg-gray-300"], [class*="bg-gray-400"], [class*="bg-gray-500"],
+[class*="bg-slate-300"], [class*="bg-slate-400"], [class*="bg-slate-500"],
+[class*="bg-zinc-300"], [class*="bg-zinc-400"], [class*="bg-zinc-500"],
+[class*="bg-neutral-300"], [class*="bg-neutral-400"], [class*="bg-neutral-500"],
+[class*="bg-stone-300"], [class*="bg-stone-400"], [class*="bg-stone-500"],
+[class*="bg-[#8c8c8c]"], [class*="bg-[#8b8b8b]"],
+[class*="bg-[#808080]"], [class*="bg-[rgb(140,140,140)]"] {
+  background-color: #242128 !important;
+  background-image: none !important;
+  color: #f5f0e8 !important;
+  border-color: #3a353d !important;
+}
+[style*="background-color: rgb(140, 140, 140)"],
+[style*="background: rgb(140, 140, 140)"],
+[style*="background-color: #8c8c8c"],
+[style*="background: #8c8c8c"],
+[style*="background-color: #808080"],
+[style*="background: #808080"] {
+  background-color: #242128 !important;
+  background-image: none !important;
+  color: #f5f0e8 !important;
+  border-color: #3a353d !important;
+}
+button:disabled, [role="button"][aria-disabled="true"],
+input:disabled, select:disabled, textarea:disabled {
+  background-color: #242128 !important;
+  background-image: none !important;
+  color: #c8c1b8 !important;
+  border-color: #3a353d !important;
+  opacity: 1 !important;
+}
+
+/* Legacy dark navy text is not allowed on charcoal surfaces. */
+[class*="text-blue-900"], [class*="text-blue-950"],
+[class*="text-indigo-900"], [class*="text-indigo-950"],
+[class*="text-purple-900"], [class*="text-purple-950"],
+[class*="text-violet-900"], [class*="text-violet-950"],
+[class*="text-slate-900"], [class*="text-slate-800"],
+[class*="text-gray-900"], [class*="text-gray-800"],
+[class*="text-zinc-900"], [class*="text-zinc-800"],
+[class*="text-neutral-900"], [class*="text-neutral-800"],
+[style*="color: rgb(15, 23, 42)"],
+[style*="color: rgb(30, 41, 59)"],
+[style*="color: #0f172a"],
+[style*="color: #1e293b"] {
+  color: #f5f0e8 !important;
+}
+[class*="text-blue-800"], [class*="text-blue-700"], [class*="text-blue-600"],
+[class*="text-indigo-800"], [class*="text-indigo-700"], [class*="text-indigo-600"],
+[class*="text-slate-700"], [class*="text-slate-600"],
+[class*="text-gray-700"], [class*="text-gray-600"],
+[class*="text-zinc-700"], [class*="text-zinc-600"],
+[class*="text-neutral-700"], [class*="text-neutral-600"] {
+  color: #c8c1b8 !important;
+}
+.agentdesk-platform-admin-shell th,
+.agentdesk-platform-admin-shell td,
+.agentdesk-platform-admin-shell h1,
+.agentdesk-platform-admin-shell h2,
+.agentdesk-platform-admin-shell h3,
+.agentdesk-platform-admin-shell h4,
+.agentdesk-platform-admin-shell p,
+.agentdesk-platform-admin-shell label {
+  color: #f5f0e8;
+}
+.agentdesk-platform-admin-shell [class*="text-slate-500"],
+.agentdesk-platform-admin-shell [class*="text-gray-500"],
+.agentdesk-platform-admin-shell [class*="text-zinc-500"] {
+  color: #c8c1b8 !important;
+}
