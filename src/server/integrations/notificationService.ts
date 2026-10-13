@@ -7,7 +7,6 @@ import {
   NotificationChannel
 } from './interfaces.js';
 import { EmailService } from './emailService.js';
-import { SMSService } from './smsService.js';
 import { PushNotificationService } from './pushNotificationService.js';
 import { WhatsAppService } from './whatsAppService.js';
 import { AnalyticsService } from './analyticsService.js';
@@ -19,7 +18,6 @@ export class NotificationService implements INotificationService {
 
   constructor(
     private emailService: EmailService,
-    private smsService: SMSService,
     private pushService: PushNotificationService,
     private whatsAppService: WhatsAppService,
     private analyticsService: AnalyticsService,
@@ -33,7 +31,6 @@ export class NotificationService implements INotificationService {
     const defaultPrefs: UserNotificationPreferences = {
       userId,
       emailEnabled: true,
-      smsEnabled: true,
       pushEnabled: true,
       whatsappEnabled: true,
       securityNotifications: true, // Non-negotiable security channel
@@ -52,6 +49,7 @@ export class NotificationService implements INotificationService {
     const updated: UserNotificationPreferences = {
       ...current,
       ...prefs,
+      smsEnabled: false,
       securityNotifications: true, // Always enforce true
       updatedAt: new Date().toISOString()
     };
@@ -125,14 +123,9 @@ export class NotificationService implements INotificationService {
       }
     }
 
-    // 3. SMS Delivery
-    const shouldSendSMS = phone && (!prefs || (prefs.smsEnabled && (category === 'security' || category === 'billing' || category === 'leads')));
-    if (shouldSendSMS && phone) {
-      const smsText = `${title || 'AgentDesk Notification'}: ${body || this.getDefaultBodyForEvent(event, payload)}`;
-      await this.smsService.sendSMS(phone, smsText, tenantId);
-    }
+    // SMS dispatch is intentionally disabled. WhatsApp is the only supported messaging channel.
 
-    // 4. Push Notification Delivery
+    // 3. Push Notification Delivery
     if (userId && (!prefs || prefs.pushEnabled)) {
       await this.pushService.sendPush(
         userId,
@@ -142,13 +135,13 @@ export class NotificationService implements INotificationService {
       );
     }
 
-    // 5. WhatsApp Delivery (Transactional)
+    // 4. WhatsApp Delivery (Transactional)
     if (phone && (!prefs || prefs.whatsappEnabled) && (category === 'billing' || category === 'leads' || event === 'PAYMENT_SUCCESS')) {
       const waText = `*${title || 'AgentDesk Update'}*\n${body || this.getDefaultBodyForEvent(event, payload)}`;
       await this.whatsAppService.sendWhatsAppMessage(phone, waText, tenantId);
     }
 
-    // 6. Product Analytics Tracking (PostHog)
+    // 5. Product Analytics Tracking (PostHog)
     const analyticsEvent = this.mapEventToAnalytics(event);
     if (analyticsEvent) {
       await this.analyticsService.track(analyticsEvent as any, {
