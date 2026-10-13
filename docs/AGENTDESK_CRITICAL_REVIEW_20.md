@@ -1,4 +1,4 @@
-# AgentDesk: 20-point critical review
+# AgentDesk: Critical review (22 findings)
 
 **Review date:** 2026-10-13  
 **Scope:** Static review of the default branch source, deployment configuration, CSS and existing CI. This is not a penetration test or live browser test. Findings are classified as confirmed code issues or verification risks so untested assumptions are not presented as proven defects.
@@ -27,6 +27,13 @@
 | 18 | Rate limiting | The limiter has an in-memory map as an acceleration/fallback path; per-process state cannot guarantee a shared quota across multiple instances. | Medium/High | Needs production deployment topology confirmation and shared-store tests. |
 | 19 | CI reproducibility | CI and Docker use `npm install`, while the repository tree includes `bun.lock` and no `package-lock.json`. Dependency resolution can change between builds. | Medium | Needs a deliberate single package-manager decision and lockfile migration. |
 | 20 | Testing/deployment | Existing CI runs typecheck, build and selected smoke/E2E checks, but it does not test the screenshot-specific sidebar alignment, visual contrast, all payment currencies/providers, or tenant access matrix. | High | Add browser-level regression and authorization matrix tests before declaring production readiness. |
+| 21 | Admin permissions / integrations | The agreed product boundary is that **Integrations belongs to Platform Admin only** and must not appear as a Business Admin section. The Platform Admin must retain access to integration configuration. Any Business Admin navigation, route or UI that exposes a tenant integrations section would violate this decision; verify navigation and direct-route authorization, not just whether the menu item is hidden. | High | Product requirement confirmed from prior decisions; audit current routes and navigation, then add role-based tests. |
+| 22 | Business owner onboarding / authentication | The current admin workflow does not successfully create usable login credentials for a Business Owner. This blocks owner onboarding even if the business/tenant record is created. The workflow needs a secure owner-user creation path, tenant/role assignment, credential setup or invitation, and clear success/failure feedback; do not create or expose plaintext default passwords. | Critical to onboarding | User-reported functional defect; trace the create-business and user-provisioning paths, then add an end-to-end test proving the owner can sign in and is restricted to their own tenant. |
+
+## Additional product requirements / reported defect
+
+- **Integrations visibility:** Keep integration management in Platform Admin only. Do not add an Integrations section to Business Admin. Verify both navigation visibility and server-side access controls so hiding a menu item is not the only protection.
+- **Business Owner credentials:** The user reports that login credentials cannot currently be created for a Business Owner. Treat this as a blocking onboarding defect. Investigate whether the owner user is being created, assigned the correct tenant and role, and given a secure credential setup/invitation path. This is documented, not yet fixed by this CSS-focused PR.
 
 ## Changes included in this PR
 
@@ -35,7 +42,7 @@
 
 ## Not claimed as fixed
 
-This PR does **not** claim all 20 findings are fixed. Several are architecture/security risks that need targeted tests and careful changes. In particular, tenant authorization, payment processing, database TLS and rate-limit behavior must not be changed by guesswork.
+This PR does **not** claim all 22 findings are fixed. Several are architecture/security risks that need targeted tests and careful changes. In particular, tenant authorization, payment processing, database TLS and rate-limit behavior must not be changed by guesswork.
 
 ## Required next validation
 
