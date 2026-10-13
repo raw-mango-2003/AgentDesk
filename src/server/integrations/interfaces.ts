@@ -293,7 +293,7 @@ export interface IAuditLogService {
 // ----------------------------------------------------
 // 12. NOTIFICATION DATABASE & DISPATCHER
 // ----------------------------------------------------
-export type NotificationChannel = 'in_app' | 'email' | 'sms' | 'push' | 'whatsapp';
+export type NotificationChannel = 'in_app' | 'email' | 'push' | 'whatsapp';
 export type NotificationCategory = 'security' | 'billing' | 'product' | 'marketing' | 'leads';
 
 export interface UserNotificationPreferences {
