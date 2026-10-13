@@ -371,7 +371,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
                     onChange={e => setChannel(e.target.value as any)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400"
                   >
-                    <option value="SMS">SMS</option>
+                    
                     <option value="WhatsApp">WhatsApp</option>
                     <option value="Email">Email</option>
                   </select>
