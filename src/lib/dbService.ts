@@ -799,7 +799,7 @@ async function ensureContactForLead(lead: Lead) {
       tags: ['Lead Inbound', lead.scoreCategory || 'HOT'],
       totalRevenue: lead.value || 0,
       optOut: false,
-      preferredChannel: biz?.country === 'IN' ? 'WhatsApp' : 'SMS',
+      preferredChannel: 'WhatsApp',
       lastInteraction: new Date().toISOString(),
       status: 'lead',
       timeline: [
