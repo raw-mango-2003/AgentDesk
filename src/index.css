@@ -3281,3 +3281,19 @@ input:disabled, select:disabled, textarea:disabled {
     align-self: start !important;
   }
 }
+
+/* PR #125: Correct the over-offset introduced by the previous alignment attempt.
+   The console route wrapper is already offset below the global navbar, and it forms
+   the containing block for the fixed sidebar. A second positive top offset stacks on
+   that wrapper offset, pushing the sidebar far below the main content. Counteract the
+   wrapper offset so the sidebar begins at the same viewport line as the content. */
+@media (min-width: 1280px) {
+  .agentdesk-console-shell > .agentdesk-sidebar {
+    top: -31px !important;
+    bottom: 16px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin-top: 0 !important;
+  }
+}
