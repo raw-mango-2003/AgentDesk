@@ -84,7 +84,7 @@ export const PlanUpgradeModal: React.FC<PlanUpgradeModalProps> = ({
           </div>
           <div className="flex items-start gap-2.5 text-xs text-slate-300">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-            <span>Expanded 2,500 Voice Minutes + 2,500 SMS & WhatsApp channels.</span>
+            <span>Expanded 2,500 Voice Minutes + 2,500 WhatsApp messages.</span>
           </div>
           <div className="flex items-start gap-2.5 text-xs text-slate-300">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
