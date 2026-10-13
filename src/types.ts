@@ -79,7 +79,7 @@ export interface LocalizationConfig {
   locale: string;
   dateFormat?: string;
   numberFormat?: string;
-  primaryChannel: 'SMS' | 'WhatsApp';
+  primaryChannel: 'WhatsApp';
   languages: string[];
 }
 
@@ -175,7 +175,7 @@ export interface Business {
   dateFormat?: string;
   numberFormat?: string;
   language?: string;
-  primaryChannel?: 'SMS' | 'WhatsApp';
+  primaryChannel?: 'WhatsApp';
   businessHours?: string;
   logo?: string;
   primaryColor?: string;
@@ -287,7 +287,7 @@ export interface Contact {
   tags: string[];
   totalRevenue: number;
   optOut: boolean;
-  preferredChannel: 'SMS' | 'WhatsApp' | 'Email' | 'Phone';
+  preferredChannel: 'WhatsApp' | 'Email' | 'Phone';
   lastInteraction: string;
   status: 'active' | 'inactive' | 'lead' | 'customer';
   inactiveDays?: number;
@@ -377,7 +377,7 @@ export interface MissedCallRecovery {
   callerName: string;
   callTimestamp: string;
   textBackStatus: 'sent' | 'replied' | 'recovered' | 'expired';
-  channel: 'SMS' | 'WhatsApp';
+  channel: 'WhatsApp';
   initialMessage: string;
   conversationMessages: Array<{ sender: 'system' | 'customer' | 'ai'; text: string; timestamp: string }>;
   recoveredLeadId?: string;
@@ -470,7 +470,7 @@ export interface FollowUpTask {
   contactPhone: string;
   contactEmail: string;
   triggerReason: 'new_lead' | 'no_response' | 'missed_call' | 'estimate_sent' | 'appointment_no_show' | 'lost_opportunity';
-  channel: 'Email' | 'SMS' | 'WhatsApp' | 'Voice';
+  channel: 'Email' | 'WhatsApp' | 'Voice';
   sequenceDay: 'Day 0' | 'Day 1' | 'Day 3' | 'Day 7' | 'Custom';
   scheduledTime: string;
   messageText: string;
@@ -488,7 +488,7 @@ export interface ReEngagementAudience {
   contactCount: number;
   aiOfferSuggestion: string;
   messageTemplate: string;
-  channel: 'WhatsApp' | 'SMS' | 'Email';
+  channel: 'WhatsApp' | 'Email';
   status: 'draft' | 'scheduled' | 'active' | 'completed';
   metrics: {
     messagesSent: number;
@@ -528,7 +528,7 @@ export interface ColdOutreachCampaign {
   businessId: string;
   name: string;
   targetSegment?: string;
-  channel: 'Email' | 'SMS' | string;
+  channel: 'Email' | string;
 
   complianceStatus?: 'APPROVED' | 'REVIEW_REQUIRED' | 'BLOCKED' | string;
   legalBasis?: 'opt_in' | 'legitimate_business_inquiry' | 'prior_consent' | string;
@@ -725,7 +725,6 @@ export interface DashboardWidgetConfig {
 export type IntegrationProvider = 
   | 'google_calendar' 
   | 'twilio_voice' 
-  | 'twilio_sms' 
   | 'whatsapp_business' 
   | 'sendgrid_email' 
   | 'resend_email' 
@@ -737,7 +736,7 @@ export type IntegrationProvider =
 export interface IntegrationStatus {
   id: IntegrationProvider;
   name: string;
-  category: 'Voice' | 'SMS' | 'WhatsApp' | 'Email' | 'Calendar' | 'AI' | 'CRM' | 'Webhooks';
+  category: 'Voice' | 'WhatsApp' | 'Email' | 'Calendar' | 'AI' | 'CRM' | 'Webhooks';
   status: 'CONNECTED' | 'NOT_CONNECTED' | 'DEMO_MODE';
   description: string;
   lastSync?: string;
