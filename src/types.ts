@@ -754,7 +754,7 @@ export type PlanTierKey = 'starter' | 'growth' | 'enterprise' | 'enterprise_cust
 export interface PlanUsageLimits {
   planId: string;
   voiceMinutes: number;
-  smsMessages: number;
+  whatsappMessages: number;
   whatsappConversations: number;
   emailMessages: number;
   aiUsage: number | string;
@@ -792,7 +792,7 @@ export interface Plan {
 }
 
 export interface UsageMetricItem {
-  key: 'voice' | 'sms' | 'whatsapp' | 'email' | 'ai' | 'contacts' | 'team' | 'knowledge' | 'storage';
+  key: 'voice' | 'whatsapp' | 'email' | 'ai' | 'contacts' | 'team' | 'knowledge' | 'storage';
   label: string;
   unit: string;
   used: number;
@@ -876,7 +876,6 @@ export interface BillingInfo {
   transactions?: BillingTransaction[];
   usage: {
     voice: { used: number; included: number; unit: string };
-    sms: { used: number; included: number; unit: string };
     whatsapp: { used: number; included: number; unit: string };
     email: { used: number; included: number; unit: string };
     ai: { used: number; included: number; unit: string };
