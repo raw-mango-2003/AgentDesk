@@ -59,7 +59,7 @@ export function MissedCallTextBackDashboard({ business }: MissedCallTextBackDash
   const estimatedRevenueSaved = recoveredCount * (business.country === 'IN' ? 18000 : 3200);
 
   const handleSimulateMissedCall = async () => {
-    const channel = business.country === 'IN' ? 'WhatsApp' : 'SMS';
+    const channel = 'WhatsApp';
     const initialMsg = templateText
       .replace('{{business_name}}', business.name)
       .replace('{{first_name}}', simulatingName);
@@ -171,7 +171,7 @@ export function MissedCallTextBackDashboard({ business }: MissedCallTextBackDash
               Revenue Leakage Prevention
             </span>
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">
-              {business.country === 'IN' ? 'WhatsApp Gateway' : 'A2P 10DLC SMS'}
+              WhatsApp Gateway
             </span>
           </div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -179,7 +179,7 @@ export function MissedCallTextBackDashboard({ business }: MissedCallTextBackDash
             <span>Missed Call Text Back Automation</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            Never lose a customer to a competitor. When an inbound phone call is missed or after hours, AI RevenueOS instantly dispatches an intelligent SMS / WhatsApp message within 15 seconds to begin two-way qualification and appointment booking.
+            Never lose a customer to a competitor. When an inbound phone call is missed or after hours, AgentDesk can dispatch a WhatsApp message to begin two-way qualification and appointment booking.
           </p>
         </div>
 
@@ -233,7 +233,7 @@ export function MissedCallTextBackDashboard({ business }: MissedCallTextBackDash
               <MessageSquare className="w-4 h-4 text-blue-400" />
               <span>Recovery Threads ({recoveries.length})</span>
             </h3>
-            <span className="text-[11px] text-slate-400 font-mono">Channel: {business.country === 'IN' ? 'WhatsApp' : 'SMS'}</span>
+            <span className="text-[11px] text-slate-400 font-mono">Channel: WhatsApp</span>
           </div>
 
           <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
@@ -396,7 +396,7 @@ export function MissedCallTextBackDashboard({ business }: MissedCallTextBackDash
 
             <div className="flex items-center justify-between pt-1">
               <span className="text-[11px] text-slate-400">
-                Dispatches automatically via {business.country === 'IN' ? 'WhatsApp Cloud API' : 'Twilio SMS'} within 15 seconds.
+                Dispatches automatically via WhatsApp Cloud API within 15 seconds.
               </span>
               <button
                 onClick={() => setIsSavedTemplate(true)}
