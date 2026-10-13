@@ -1,6 +1,5 @@
 import { GmailService } from './gmailService.js';
 import { EmailService } from './emailService.js';
-import { SMSService } from './smsService.js';
 import { OTPService } from './otpService.js';
 import { PushNotificationService } from './pushNotificationService.js';
 import { WhatsAppService } from './whatsAppService.js';
@@ -20,7 +19,6 @@ import { voiceCallService } from './voiceCallService.js';
 // Central singletons
 export const gmailService = new GmailService();
 export const emailService = new EmailService(gmailService);
-export const smsService = new SMSService();
 export const otpService = new OTPService();
 export const pushService = new PushNotificationService();
 export const whatsAppService = new WhatsAppService();
@@ -35,7 +33,6 @@ export { queueService };
 
 export const notificationService = new NotificationService(
   emailService,
-  smsService,
   pushService,
   whatsAppService,
   analyticsService,
@@ -57,10 +54,6 @@ queueService.registerHandler('send_email', async (payload: any) => {
   } else {
     await emailService.sendEmail(payload);
   }
-});
-
-queueService.registerHandler('send_sms', async (payload: any) => {
-  await smsService.sendSMS(payload.to, payload.message, payload.tenantId);
 });
 
 queueService.registerHandler('send_push', async (payload: any) => {
