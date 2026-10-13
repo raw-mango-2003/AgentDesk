@@ -33,7 +33,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
   const [showModal, setShowModal] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
-  const [channel, setChannel] = useState<'Email' | 'SMS' | 'WhatsApp'>('SMS');
+  const [channel, setChannel] = useState<'Email' | 'WhatsApp'>('WhatsApp');
   const [sequenceDay, setSequenceDay] = useState<'Day 0' | 'Day 1' | 'Day 3' | 'Day 7'>('Day 1');
   const [messageText, setMessageText] = useState('');
 
@@ -121,7 +121,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
             <span>AI Lead Follow-Up Engine</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
-            80% of sales require 5 follow-ups, yet 44% of reps give up after one. AI RevenueOS executes automated, context-aware follow-up sequences across SMS, WhatsApp, and Email until the lead responds or books an appointment.
+            80% of sales require 5 follow-ups, yet 44% of reps give up after one. AI RevenueOS executes automated, context-aware follow-up sequences across WhatsApp and Email until the lead responds or books an appointment.
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
             </div>
             <h4 className="text-xs font-bold text-white">Instant Qualification</h4>
             <p className="text-[11px] text-slate-400">
-              Dispatches SMS / WhatsApp greeting, verified RAG pricing brochure, and calendar booking link.
+              Dispatches a WhatsApp greeting, verified RAG pricing brochure, and calendar booking link.
             </p>
           </div>
 
