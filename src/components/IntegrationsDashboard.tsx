@@ -48,7 +48,6 @@ export function IntegrationsDashboard({ business, onBusinessUpdated }: Integrati
   const integrationCatalog: Array<{ id: IntegrationProvider; name: string; category: IntegrationStatus['category']; description: string; fields: string[] }> = [
     { id: 'google_calendar', name: 'Google Calendar', category: 'Calendar', description: 'Two-way appointment availability and conflict sync.', fields: ['client_id', 'client_secret', 'refresh_token'] },
     { id: 'twilio_voice', name: 'Twilio Voice', category: 'Voice', description: 'Inbound calls, routing, recording and transcription.', fields: ['account_sid', 'auth_token', 'phone_number'] },
-    { id: 'twilio_sms', name: 'Twilio SMS', category: 'SMS', description: 'Missed-call text-back and SMS notifications.', fields: ['account_sid', 'auth_token', 'phone_number'] },
     { id: 'whatsapp_business', name: 'Meta WhatsApp Cloud', category: 'WhatsApp', description: 'WhatsApp Business messaging for customer conversations.', fields: ['phone_number_id', 'business_account_id', 'access_token'] },
     { id: 'resend_email', name: 'Resend Email API', category: 'Email', description: 'Transactional and follow-up email delivery.', fields: ['api_key', 'from_email'] },
     { id: 'gemini_ai', name: 'Google Gemini', category: 'AI', description: 'AI reasoning, RAG and conversation intelligence.', fields: ['api_key', 'model'] },
