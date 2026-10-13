@@ -3223,18 +3223,19 @@ input:disabled, select:disabled, textarea:disabled {
   color: #c8c1b8 !important;
 }
 
-/* PR #123: Keep the business-console sidebar a stable, viewport-sized rail on every route.
-   Previously the fixed sidebar was constrained by the console shell's containing block,
-   so its height/top changed when route content had a different height or scroll position.
-   Anchor it to the viewport and scroll the navigation internally instead. */
+/* PR #126: Single source of truth for the desktop business sidebar position.
+   Remove the accumulated PR #123-125 overrides above this point. The shell is offset
+   by the global app layout, so a negative top compensates for that containing-block
+   offset and aligns the sidebar's outer top edge with the content panel below the nav. */
 @media (min-width: 1280px) {
   .agentdesk-console-shell > .agentdesk-sidebar {
     position: fixed !important;
-    top: 82px !important;
-    bottom: auto !important;
-    height: calc(100dvh - 98px) !important;
-    min-height: 420px !important;
-    max-height: calc(100dvh - 98px) !important;
+    top: -57px !important;
+    bottom: 16px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin-top: 0 !important;
     width: 252px !important;
     box-sizing: border-box !important;
   }
@@ -3244,56 +3245,5 @@ input:disabled, select:disabled, textarea:disabled {
     min-height: 0 !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-  }
-
-  .agentdesk-console-shell > .agentdesk-sidebar > .agentdesk-sidebar-footer {
-    flex: 0 0 auto !important;
-  }
-
-  .agentdesk-console-shell {
-    padding-left: 280px !important;
-  }
-}
-
-/* Route changes must not animate or resize the sidebar rail itself. */
-.agentdesk-console-shell > .agentdesk-sidebar {
-  flex-shrink: 0 !important;
-  transform: none !important;
-  transition: none !important;
-}
-
-/* PR #124: Correct sidebar/content vertical alignment using a stable viewport anchor.
-   The prior fixed offsets accumulated across duplicate rules and a positioned ancestor,
-   leaving the sidebar lower than the main content. Normalize the final winning rule. */
-@media (min-width: 1280px) {
-  .agentdesk-console-shell {
-    padding-top: 0 !important;
-  }
-
-  .agentdesk-console-shell > .agentdesk-sidebar {
-    position: fixed !important;
-    top: 122px !important;
-    bottom: 16px !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin-top: 0 !important;
-    align-self: start !important;
-  }
-}
-
-/* PR #125: Correct the over-offset introduced by the previous alignment attempt.
-   The console route wrapper is already offset below the global navbar, and it forms
-   the containing block for the fixed sidebar. A second positive top offset stacks on
-   that wrapper offset, pushing the sidebar far below the main content. Counteract the
-   wrapper offset so the sidebar begins at the same viewport line as the content. */
-@media (min-width: 1280px) {
-  .agentdesk-console-shell > .agentdesk-sidebar {
-    top: -31px !important;
-    bottom: 16px !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin-top: 0 !important;
   }
 }
