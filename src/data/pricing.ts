@@ -69,7 +69,7 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     usageLimits: {
       planId: 'starter',
       voiceMinutes: 250,
-      smsMessages: 500,
+      whatsappMessages: 500,
       whatsappConversations: 250,
       emailMessages: 2500,
       aiUsage: 2000, // 2,000 AI conversations/month
@@ -117,7 +117,7 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     usageLimits: {
       planId: 'growth',
       voiceMinutes: 1000,
-      smsMessages: 2500,
+      whatsappMessages: 2500,
       whatsappConversations: 1000,
       emailMessages: 10000,
       aiUsage: 7500, // 7,500 AI conversations/month
@@ -165,7 +165,7 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     usageLimits: {
       planId: 'scale',
       voiceMinutes: 3000,
-      smsMessages: 5000,
+      whatsappMessages: 5000,
       whatsappConversations: 3000,
       emailMessages: 25000,
       aiUsage: 20000, // 20,000 AI conversations/month
@@ -211,7 +211,7 @@ const CANONICAL_PLAN_CONFIGS: Record<string, PlanConfig> = {
     usageLimits: {
       planId: 'enterprise',
       voiceMinutes: 10000,
-      smsMessages: 25000,
+      whatsappMessages: 25000,
       whatsappConversations: 10000,
       emailMessages: 100000,
       aiUsage: 'Custom Volume',
@@ -459,12 +459,12 @@ export function getFeatureGateInfo(featureKey: PlanFeatureKey, userPlan: string 
 export const COMMUNICATION_USAGE_DISCLOSURE = {
   title: 'Platform-Managed Telephony & Messaging Infrastructure',
   sectionTitle: 'Platform-Managed Telephony & Messaging Infrastructure',
-  headline: 'All AI Voice telephony trunks, SMS routing, and WhatsApp Business API gateways are natively provisioned and managed by AgentDesk Technologies.',
+  headline: 'All AI Voice telephony trunks and WhatsApp Business API gateways are natively provisioned and managed by AgentDesk Technologies.',
   subtext: 'Standard monthly allowances are included in your platform fee. Transparent metered rates apply for high-volume overages with zero carrier setup headaches.',
-  summary: 'AgentDesk operates as an autonomous, fully hosted Managed AI Service. Voice AI telephony trunks, SMS routing, and WhatsApp Business API gateways are pre-provisioned, monitored, and scaled natively by AgentDesk Technologies.',
+  summary: 'AgentDesk operates as an autonomous, fully hosted Managed AI Service. Voice AI telephony trunks and WhatsApp Business API gateways are pre-provisioned, monitored, and scaled natively by AgentDesk Technologies.',
   categories: [
     { name: 'AI Voice Receptionist Telephony', description: 'Inbound & outbound conversational voice minutes with real-time speech synthesis and sentiment detection.', includedEnterprise: '2,500 Mins / Month' },
-    { name: 'Missed-Call SMS & Drips', description: 'Two-way SMS text messaging, missed call instant recovery, estimate follow-ups, and review requests.', includedEnterprise: '5,000 Texts / Month' },
+    { name: 'WhatsApp Follow-Ups', description: 'WhatsApp missed-call recovery, estimate follow-ups, and review requests.', includedEnterprise: '5,000 messages / month' },
     { name: 'WhatsApp Business API', description: 'Meta-verified official WhatsApp Business Cloud API session windows and template notifications.', includedEnterprise: '3,000 Convos / Month' },
     { name: 'Cold Outreach & Email Delivery', description: 'High-deliverability dedicated SMTP pools, SPF/DKIM verification, and spam throttling.', includedEnterprise: '15,000 Emails / Month' },
     { name: 'Autonomous AI Processing', description: 'Gemini 2.5 Flash neural processing, RAG vector retrieval, and live call transcripts.', includedEnterprise: 'Controlled Quota per Plan' },
@@ -473,7 +473,7 @@ export const COMMUNICATION_USAGE_DISCLOSURE = {
   items: [
     {
       title: 'Included Base Tier Quotas',
-      desc: 'Each plan includes dedicated monthly pools of AI Conversations (2,000 for Starter, 7,500 for Growth, 20,000 for Scale), Voice AI minutes, and SMS/WhatsApp sessions.'
+      desc: 'Each plan includes dedicated monthly pools of AI Conversations (2,000 for Starter, 7,500 for Growth, 20,000 for Scale), Voice AI minutes, and WhatsApp messages.'
     },
     {
       title: 'Transparent Overages & No Contract Traps',
@@ -481,7 +481,7 @@ export const COMMUNICATION_USAGE_DISCLOSURE = {
     },
     {
       title: 'Zero Telecom Setup Required',
-      desc: 'No requirement to purchase third-party Twilio, Telnyx, or Meta developer accounts unless custom BYO-carrier routing is requested under Enterprise.'
+      desc: 'No requirement to purchase third-party Meta developer accounts unless custom BYO-carrier routing is requested under Enterprise.'
     }
   ]
 };
@@ -516,8 +516,8 @@ export const IMPLEMENTATION_EXPLANATION = {
     { step: 2, title: 'Knowledge Base Ingestion', desc: 'Semantic indexing of service catalogs, pricing guides, PDFs, warranty terms, and FAQs.' },
     { step: 3, title: 'AI Voice & Chat Persona Tuning', desc: 'Customization of conversational voice tone, polite boundary guardrails, and brand voice.' },
     { step: 4, title: 'CRM & Pipeline Configuration', desc: 'Custom deal stages, automated contact tagging, and qualification scoring formulas.' },
-    { step: 5, title: 'Missed-Call Text Back Setup', desc: 'Configuring instant SMS/WhatsApp recovery sequences with personalized customer prompts.' },
-    { step: 6, title: 'Multi-Touch Follow-Up Sequencing', desc: 'Day 0 to Day 7 automated outreach templates across email, SMS, and WhatsApp.' },
+    { step: 5, title: 'Missed-Call WhatsApp Setup', desc: 'Configuring instant WhatsApp recovery sequences with personalized customer prompts.' },
+    { step: 6, title: 'Multi-Touch Follow-Up Sequencing', desc: 'Day 0 to Day 7 automated outreach templates across email and WhatsApp.' },
     { step: 7, title: 'Telephony & Calendar Integration', desc: 'SIP trunking, 10DLC registration, WebRTC client setup, and 2-way Google Calendar sync.' },
     { step: 8, title: 'Review & Reputation Automations', desc: 'Post-service review requests and AI sentiment escalation triage routing.' },
     { step: 9, title: 'Rigorous Simulation & QA', desc: 'Testing edge cases, accents, complex booking requests, and objection handling.' },
@@ -536,7 +536,7 @@ export const ENTERPRISE_CONSOLIDATION_VALUE = {
     { name: 'Missed Call Recovery', replaces: 'Custom Zapier automations, third-party text back ($200+/mo)' },
     { name: 'Lead Qualification', replaces: 'Manual intake coordinators, SDR screening hours ($3,000+/mo)' },
     { name: 'CRM & Pipeline', replaces: 'HubSpot Pro, Salesforce seats, Pipedrive ($500+/mo)' },
-    { name: 'Automated Follow-Up', replaces: 'ActiveCampaign, Klaviyo SMS, Mailchimp ($350+/mo)' },
+    { name: 'Automated Follow-Up', replaces: 'ActiveCampaign, Mailchimp ($350+/mo)' },
     { name: 'Appointment Booking', replaces: 'Calendly, Acuity, Chili Piper ($100+/mo)' },
     { name: 'Review Generation', replaces: 'BirdEye, Podium, Birdeye ($400+/mo)' },
     { name: 'Quote Follow-Up', replaces: 'PandaDoc, Proposify alerts ($150+/mo)' },
@@ -546,7 +546,7 @@ export const ENTERPRISE_CONSOLIDATION_VALUE = {
     { stage: 'Inbound Signal', desc: 'Inbound call, website chat, or form submitted 24/7' },
     { stage: 'AI Qualification', desc: 'Evaluates budget, timeline & scores lead 1-100 instantly' },
     { stage: 'Instant Booking', desc: 'Books calendar slot or dispatches technician on-call' },
-    { stage: 'Autonomous Nudge', desc: 'Follows up via SMS/WhatsApp until estimate is approved' },
+    { stage: 'Autonomous Nudge', desc: 'Follows up via WhatsApp until estimate is approved' },
     { stage: 'Cash Collected', desc: 'Review requested & contact enrolled in re-engagement loop' }
   ]
 };
