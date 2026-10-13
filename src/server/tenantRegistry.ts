@@ -739,7 +739,6 @@ export async function provisionCustomerTenant(params: {
     capabilities: {
       voiceCalls: true,
       webChat: true,
-      sms: true,
       whatsapp: planKey === 'growth' || planKey === 'scale',
       appointmentBooking: true,
       leadScoring: true,
