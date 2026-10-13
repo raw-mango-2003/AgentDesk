@@ -215,7 +215,7 @@ export const SEED_BUSINESSES: Business[] = [
     locale: 'en-US',
     phoneCountryCode: '+1',
     dateFormat: 'MM/DD/YYYY',
-    primaryChannel: 'SMS',
+    primaryChannel: 'WhatsApp',
     businessHours: 'Mon - Sun: 7:00 AM - 8:00 PM (24/7 Emergency Dispatch)',
     primaryColor: '#0284c7', // Sky Blue
     secondaryColor: '#0f172a',
@@ -853,13 +853,13 @@ export const SEED_CONTACTS: Contact[] = [
     tags: ['VIP', 'Commercial Landlord', 'High-Value'],
     totalRevenue: 24500,
     optOut: false,
-    preferredChannel: 'SMS',
+    preferredChannel: 'WhatsApp',
     lastInteraction: '2026-08-22T14:30:00Z',
     status: 'customer',
     timeline: [
       { id: 't1', timestamp: '2026-08-21T09:15:00Z', type: 'chat', title: 'Website Chat Interaction', description: 'Chatted with Sarah regarding 2 heat pump replacements.' },
       { id: 't2', timestamp: '2026-08-21T09:18:00Z', type: 'lead_created', title: 'Lead Auto-Created', description: 'Lead score calculated: 94/100 (HOT).' },
-      { id: 't3', timestamp: '2026-08-22T10:00:00Z', type: 'estimate_sent', title: 'Estimate #EST-1052 Sent', description: 'Sent formal quote for $18,500 via Email & SMS.' },
+      { id: 't3', timestamp: '2026-08-22T10:00:00Z', type: 'estimate_sent', title: 'Estimate #EST-1052 Sent', description: 'Sent formal quote for $18,500 via Email & WhatsApp.' },
       { id: 't4', timestamp: '2026-08-22T14:30:00Z', type: 'appointment_booked', title: 'On-site Inspection Scheduled', description: 'Booked technician site inspection for Aug 24, 2:00 PM.' }
     ],
     createdAt: '2026-08-21T09:15:00Z',
@@ -882,7 +882,7 @@ export const SEED_CONTACTS: Contact[] = [
     status: 'customer',
     timeline: [
       { id: 't5', timestamp: '2026-08-20T17:15:00Z', type: 'missed_call', title: 'Missed Inbound Call', description: 'Caller reached voicemail after hours.' },
-      { id: 't6', timestamp: '2026-08-20T17:16:00Z', type: 'follow_up_sent', title: 'Instant Text-Back Sent', description: 'Auto-SMS: "Hi Elena, sorry we missed your call. How can Summit help you today?"' },
+      { id: 't6', timestamp: '2026-08-20T17:16:00Z', type: 'follow_up_sent', title: 'Instant WhatsApp Follow-Up Sent', description: 'Auto-WhatsApp: "Hi Elena, sorry we missed your call. How can Summit help you today?"' },
       { id: 't7', timestamp: '2026-08-20T17:22:00Z', type: 'appointment_booked', title: 'Appointment Confirmed', description: 'Booked water heater replacement for Tuesday.' }
     ],
     createdAt: '2026-08-20T17:15:00Z',
@@ -1045,7 +1045,7 @@ export const SEED_CALLS: CallRecord[] = [
       { speaker: 'caller', text: 'Hi Sarah, our creative studio AC unit is blowing lukewarm air and making grinding noises. Can we get an emergency technician out?', time: '00:15' },
       { speaker: 'ai_receptionist', text: 'I understand how critical cooling is for your studio. I can dispatch a commercial technician. Are you located within the Austin metro area?', time: '00:26' },
       { speaker: 'caller', text: 'Yes, East 6th Street in Austin.', time: '00:32' },
-      { speaker: 'ai_receptionist', text: 'Perfect. I have dispatched an emergency service alert to our lead technician David Miller. You will receive an SMS confirmation with ETA shortly.', time: '00:45' }
+      { speaker: 'ai_receptionist', text: 'Perfect. I have dispatched an emergency service alert to our lead technician David Miller. You will receive a WhatsApp confirmation with ETA shortly.', time: '00:45' }
     ],
     summary: 'Commercial studio owner reported AC grinding noise and lukewarm air on East 6th. Qualified lead ($8,400 est), dispatched to senior technician.',
     disposition: 'Qualified Lead',
@@ -1120,7 +1120,7 @@ export const SEED_MISSED_CALLS: MissedCallRecovery[] = [
     callerName: 'Elena Rostova',
     callTimestamp: '2026-08-20T17:15:00Z',
     textBackStatus: 'recovered',
-    channel: 'SMS',
+    channel: 'WhatsApp',
     initialMessage: 'Hi Elena, sorry we missed your call at Summit Home Services! How can we assist you with your home repairs today?',
     conversationMessages: [
       { sender: 'system', text: 'Hi Elena, sorry we missed your call at Summit Home Services! How can we assist you with your home repairs today?', timestamp: '2026-08-20T17:16:00Z' },
@@ -1628,7 +1628,7 @@ export const SEED_NOTIFICATIONS: NotificationItem[] = [
     businessId: SUMMIT_ID,
     type: 'missed_call',
     title: '📞 Missed Call Auto-Recovered',
-    message: 'Elena Rostova booked water heater replacement after instant SMS text-back.',
+    message: 'Elena Rostova booked water heater replacement after an instant WhatsApp follow-up.',
     linkTab: 'missed-calls',
     read: false,
     createdAt: '2026-08-20T17:22:00Z'
@@ -1671,7 +1671,7 @@ export const SEED_AUDIT_LOGS: AuditLog[] = [
     actorEmail: 'system-bot@ai-revenueos.internal',
     action: 'MISSED_CALL_TEXTBACK',
     entity: '+1 (512) 334-1189',
-    details: 'Auto-triggered recovery SMS within 45 seconds of missed after-hours call.',
+    details: 'Auto-triggered WhatsApp recovery message after a missed after-hours call.',
     timestamp: '2026-08-20T17:16:00Z'
   },
   {
