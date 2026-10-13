@@ -177,7 +177,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   const [planMonthlyINR, setPlanMonthlyINR] = useState(0);
   const [planSetupINR, setPlanSetupINR] = useState(0);
   const [planVoiceMinutes, setPlanVoiceMinutes] = useState(0);
-  const [planSmsMessages, setPlanSmsMessages] = useState(0);
   const [planWhatsappConvos, setPlanWhatsappConvos] = useState(0);
   const [planAiUsage, setPlanAiUsage] = useState(0);
   const [planContacts, setPlanContacts] = useState(0);
@@ -368,7 +367,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
     setPlanMonthlyINR(planItem.pricing?.INR?.monthlyPrice || 29999);
     setPlanSetupINR(planItem.pricing?.INR?.setupPrice || 249000);
     setPlanVoiceMinutes(typeof planItem.usageLimits?.voiceMinutes === 'number' ? planItem.usageLimits.voiceMinutes : 0);
-    setPlanSmsMessages(typeof planItem.usageLimits?.smsMessages === 'number' ? planItem.usageLimits.smsMessages : 0);
     setPlanWhatsappConvos(typeof planItem.usageLimits?.whatsappConversations === 'number' ? planItem.usageLimits.whatsappConversations : 0);
     setPlanAiUsage(typeof planItem.usageLimits?.aiUsage === 'number' ? planItem.usageLimits.aiUsage : 0);
     setPlanContacts(typeof planItem.usageLimits?.contacts === 'number' ? planItem.usageLimits.contacts : 0);
@@ -390,7 +388,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
           ...editingPlanModal.usageLimits,
           planId: editingPlanModal.id,
           voiceMinutes: planVoiceMinutes,
-          smsMessages: planSmsMessages,
           whatsappConversations: planWhatsappConvos,
           aiUsage: planAiUsage,
           contacts: planContacts
@@ -403,7 +400,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
         actorEmail: 'admin@ai-revenueos.internal',
         action: 'UPDATE_PRICING_PLAN',
         entity: editingPlanModal.name,
-        details: `Updated plan specs & limits for ${editingPlanModal.name}. USD: $${planMonthlyUSD}/mo ($${planSetupUSD} setup), INR: ₹${planMonthlyINR}/mo. Voice Mins: ${planVoiceMinutes}, SMS: ${planSmsMessages}, WhatsApp: ${planWhatsappConvos}`
+        details: `Updated plan specs & limits for ${editingPlanModal.name}. USD: $${planMonthlyUSD}/mo ($${planSetupUSD} setup), INR: ₹${planMonthlyINR}/mo. Voice Mins: ${planVoiceMinutes}, WhatsApp: ${planWhatsappConvos}`
       });
 
       setAdminPlans(prev => ({
@@ -1558,12 +1555,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                         <span>Voice Telephony:</span>
                         <span className="font-bold text-slate-900">
                           {typeof pItem.usageLimits?.voiceMinutes === 'number' ? `${pItem.usageLimits.voiceMinutes.toLocaleString()} mins` : 'Custom'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>SMS Messages:</span>
-                        <span className="font-bold text-slate-900">
-                          {typeof pItem.usageLimits?.smsMessages === 'number' ? `${pItem.usageLimits.smsMessages.toLocaleString()} msgs` : 'Custom'}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -3061,15 +3052,6 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                       type="number"
                       value={planVoiceMinutes}
                       onChange={(e) => setPlanVoiceMinutes(Number(e.target.value))}
-                      className="w-full p-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-700 font-medium mb-1">SMS Messages (/mo)</label>
-                    <input
-                      type="number"
-                      value={planSmsMessages}
-                      onChange={(e) => setPlanSmsMessages(Number(e.target.value))}
                       className="w-full p-2 bg-white border border-slate-200 rounded-xl text-slate-900 font-semibold"
                     />
                   </div>
