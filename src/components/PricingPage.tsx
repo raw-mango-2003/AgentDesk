@@ -274,10 +274,10 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                       </span>
                     </div>
                     <div className="flex justify-between text-slate-300 px-1 gap-2">
-                      <span className="shrink-0">SMS & WhatsApp:</span>
+                      <span className="shrink-0">WhatsApp Conversations:</span>
                       <span className="font-bold text-white text-right truncate">
-                        {typeof plan.usageLimits.smsMessages === 'number'
-                          ? `${plan.usageLimits.smsMessages.toLocaleString()} / mo`
+                        {typeof plan.usageLimits.whatsappConversations === 'number'
+                          ? `${plan.usageLimits.whatsappConversations.toLocaleString()} / mo`
                           : 'Custom'}
                       </span>
                     </div>

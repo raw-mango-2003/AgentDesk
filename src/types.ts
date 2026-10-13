@@ -755,7 +755,6 @@ export type PlanTierKey = 'starter' | 'growth' | 'enterprise' | 'enterprise_cust
 export interface PlanUsageLimits {
   planId: string;
   voiceMinutes: number;
-  smsMessages: number;
   whatsappConversations: number;
   emailMessages: number;
   aiUsage: number | string;

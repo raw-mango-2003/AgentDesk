@@ -2011,7 +2011,7 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
       },
       sms: {
         used: smsUsed,
-        included: typeof planConfig.usageLimits.smsMessages === 'number' ? planConfig.usageLimits.smsMessages : 2500,
+        included: 0,
         unit: 'messages'
       },
       whatsapp: {
