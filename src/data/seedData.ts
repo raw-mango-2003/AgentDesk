@@ -268,7 +268,7 @@ export const SEED_BUSINESSES: Business[] = [
     locale: 'en-US',
     phoneCountryCode: '+1',
     dateFormat: 'MM/DD/YYYY',
-    primaryChannel: 'SMS',
+    primaryChannel: 'WhatsApp',
     businessHours: 'Mon - Fri: 8:00 AM - 6:00 PM PST',
     primaryColor: '#0284c7',
     secondaryColor: '#0f172a',
@@ -320,7 +320,7 @@ export const SEED_BUSINESSES: Business[] = [
     locale: 'en-US',
     phoneCountryCode: '+1',
     dateFormat: 'MM/DD/YYYY',
-    primaryChannel: 'SMS',
+    primaryChannel: 'WhatsApp',
     businessHours: 'Mon - Fri: 9:00 AM - 6:00 PM EST',
     primaryColor: '#7c3aed',
     secondaryColor: '#0f172a',
@@ -426,7 +426,7 @@ export const SEED_BUSINESSES: Business[] = [
     locale: 'en-GB',
     phoneCountryCode: '+44',
     dateFormat: 'DD/MM/YYYY',
-    primaryChannel: 'SMS',
+    primaryChannel: 'WhatsApp',
     businessHours: 'Mon - Fri: 8:30 AM - 6:00 PM GMT',
     primaryColor: '#6366f1', // Indigo
     secondaryColor: '#0f172a',
@@ -877,7 +877,7 @@ export const SEED_CONTACTS: Contact[] = [
     tags: ['Emergency Recovery', 'Residential'],
     totalRevenue: 3200,
     optOut: false,
-    preferredChannel: 'SMS',
+    preferredChannel: 'WhatsApp',
     lastInteraction: '2026-08-22T16:45:00Z',
     status: 'customer',
     timeline: [
@@ -923,7 +923,7 @@ export const SEED_CONTACTS: Contact[] = [
     tags: ['Fintech', 'Scaleup', 'Advisory'],
     totalRevenue: 25000,
     optOut: false,
-    preferredChannel: 'SMS',
+    preferredChannel: 'WhatsApp',
     lastInteraction: '2026-08-22T11:00:00Z',
     status: 'lead',
     timeline: [
@@ -1326,7 +1326,7 @@ export const SEED_FOLLOW_UPS: FollowUpTask[] = [
     contactPhone: '+1 (512) 745-9921',
     contactEmail: 'marcus@vanceprops.com',
     triggerReason: 'estimate_sent',
-    channel: 'SMS',
+    channel: 'WhatsApp',
     sequenceDay: 'Day 1',
     scheduledTime: '2026-08-23T16:00:00Z',
     messageText: 'Hi Marcus, Sarah from Summit here. Did you receive Estimate #EST-1052 for the heat pump replacement? Let us know if you need any adjustments.',
@@ -1372,7 +1372,7 @@ export const SEED_RE_ENGAGEMENT: ReEngagementAudience[] = [
     contactCount: 142,
     aiOfferSuggestion: '$99 Fall Furnace Safety Inspection + Free Carbon Monoxide Detector Replacement',
     messageTemplate: 'Hi {{first_name}}, before the Texas winter chills arrive, Summit is offering existing homeowners an exclusive $99 Furnace & Heat Pump safety checkup. Reply YES to reserve your preferred weekend slot!',
-    channel: 'SMS',
+    channel: 'WhatsApp',
     status: 'active',
     metrics: {
       messagesSent: 142,
@@ -1552,9 +1552,9 @@ export const SEED_INTEGRATIONS: IntegrationStatus[] = [
     lastSync: '2026-08-23T01:40:00Z'
   },
   {
-    id: 'twilio_sms',
-    name: 'Twilio 10DLC SMS Gateway (US & UK)',
-    category: 'SMS',
+    id: 'whatsapp_business',
+     name: 'WhatsApp Business Cloud API',
+     category: 'WhatsApp',
     status: 'DEMO_MODE',
     description: 'A2P 10DLC registered messaging for missed call text-back and appointment reminders.',
     lastSync: '2026-08-23T01:30:00Z'
