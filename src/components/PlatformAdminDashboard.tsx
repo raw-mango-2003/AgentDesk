@@ -177,7 +177,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
   const [planMonthlyINR, setPlanMonthlyINR] = useState(0);
   const [planSetupINR, setPlanSetupINR] = useState(0);
   const [planVoiceMinutes, setPlanVoiceMinutes] = useState(0);
-  const [planSmsMessages, setPlanSmsMessages] = useState(0);
+  const [planWhatsappMessages, setPlanSmsMessages] = useState(0);
   const [planWhatsappConvos, setPlanWhatsappConvos] = useState(0);
   const [planAiUsage, setPlanAiUsage] = useState(0);
   const [planContacts, setPlanContacts] = useState(0);
@@ -368,7 +368,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
     setPlanMonthlyINR(planItem.pricing?.INR?.monthlyPrice || 29999);
     setPlanSetupINR(planItem.pricing?.INR?.setupPrice || 249000);
     setPlanVoiceMinutes(typeof planItem.usageLimits?.voiceMinutes === 'number' ? planItem.usageLimits.voiceMinutes : 0);
-    setPlanSmsMessages(typeof planItem.usageLimits?.smsMessages === 'number' ? planItem.usageLimits.smsMessages : 0);
+    setPlanSmsMessages(typeof planItem.usageLimits?.whatsappMessages === 'number' ? planItem.usageLimits.smsMessages : 0);
     setPlanWhatsappConvos(typeof planItem.usageLimits?.whatsappConversations === 'number' ? planItem.usageLimits.whatsappConversations : 0);
     setPlanAiUsage(typeof planItem.usageLimits?.aiUsage === 'number' ? planItem.usageLimits.aiUsage : 0);
     setPlanContacts(typeof planItem.usageLimits?.contacts === 'number' ? planItem.usageLimits.contacts : 0);
@@ -1561,7 +1561,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span>SMS Messages:</span>
+                        <span>WhatsApp Messages:</span>
                         <span className="font-bold text-slate-900">
                           {typeof pItem.usageLimits?.smsMessages === 'number' ? `${pItem.usageLimits.smsMessages.toLocaleString()} msgs` : 'Custom'}
                         </span>
@@ -3065,7 +3065,7 @@ export const PlatformAdminDashboard: React.FC<PlatformAdminDashboardProps> = ({
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-700 font-medium mb-1">SMS Messages (/mo)</label>
+                    <label className="block text-slate-700 font-medium mb-1">WhatsApp Messages (/mo)</label>
                     <input
                       type="number"
                       value={planSmsMessages}
