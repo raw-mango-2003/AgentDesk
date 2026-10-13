@@ -2684,8 +2684,9 @@ body { color-scheme: dark; }
   --ad-line: #343238;
   --ad-copy: #f5f3f0;
   --ad-muted: #aaa6ad;
-  background-color: var(--ad-background);
-  color: var(--ad-text);
+  background: #111114 !important;
+  color: #f5f3f0;
+  min-height: calc(100vh - 90px);
 }
 .agentdesk-console-shell::before {
   background: radial-gradient(circle at 72% 8%, rgba(255,47,134,.055), transparent 26rem), #111114;
@@ -3228,7 +3229,7 @@ input:disabled, select:disabled, textarea:disabled {
 @media (min-width: 1280px) {
   .agentdesk-console-shell > .agentdesk-sidebar {
     position: fixed !important;
-    top: 14px !important;
+    top: 0 !important;
     bottom: 16px !important;
     height: auto !important;
     min-height: 0 !important;
@@ -3244,4 +3245,18 @@ input:disabled, select:disabled, textarea:disabled {
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
+}
+
+
+/* PR #128: Keep the area below short dashboard content on the same charcoal canvas.
+   The app shell and document background must match so the viewport does not show a
+   separate gray strip when a route has less content than the screen height. */
+html:has(.agentdesk-console-shell),
+body:has(.agentdesk-console-shell),
+#root:has(.agentdesk-console-shell) {
+  background-color: #111114 !important;
+}
+.agentdesk-console-shell {
+  min-height: calc(100vh - 90px) !important;
+  background-color: #111114 !important;
 }
