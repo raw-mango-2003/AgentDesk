@@ -3261,3 +3261,14 @@ input:disabled, select:disabled, textarea:disabled {
   transform: none !important;
   transition: none !important;
 }
+
+/* Align the sidebar's top edge with the first main-content panel.
+   In the current dashboard DOM, the shell creates the fixed-position containing
+   block, so the rail's top offset is relative to the shell rather than the viewport. */
+@media (min-width: 1280px) {
+  .agentdesk-console-shell > .agentdesk-sidebar {
+    top: -59px !important;
+    height: calc(100dvh - 134px) !important;
+    max-height: calc(100dvh - 134px) !important;
+  }
+}
