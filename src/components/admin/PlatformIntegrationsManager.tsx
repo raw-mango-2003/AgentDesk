@@ -587,10 +587,6 @@ export const PlatformIntegrationsManager: React.FC = () => {
         endpoint = '/api/platform/integrations/test-email';
         body = { to: testEmailInput };
         break;
-      case 'twilio_communications':
-        endpoint = '/api/platform/integrations/test-sms';
-        body = { phone: testPhoneInput };
-        break;
       case 'razorpay_payments':
         endpoint = '/api/platform/integrations/test-payment';
         body = { amount: 4900 };
@@ -637,7 +633,6 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const tenantProviderLabels: Record<string, string> = {
     google_calendar: 'Google Calendar',
     twilio_voice: 'Twilio Voice',
-    twilio_sms: 'Twilio SMS',
     whatsapp_business: 'WhatsApp Business',
     resend_email: 'Resend Email',
     gemini_ai: 'Google Gemini',
@@ -649,7 +644,6 @@ export const PlatformIntegrationsManager: React.FC = () => {
   const tenantProviderFields: Record<string, string[]> = {
     google_calendar: ['client_id', 'client_secret', 'refresh_token'],
     twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
-    twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
     whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
     resend_email: ['api_key', 'from_email'],
     gemini_ai: ['api_key', 'model'],
@@ -818,7 +812,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
               </select>
             </div>
             <div className="mt-3 flex gap-2 flex-wrap">
-              {['All','AI','CRM','Voice','SMS','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(category => (
+              {['All','AI','CRM','Voice','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(category => (
                 <button key={category} onClick={() => setIntegrationCategory(category)} className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition ${integrationCategory === category ? 'bg-[#19171b] text-fuchsia-300 border-fuchsia-500/70' : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-fuchsia-300'}`}>{category}</button>
               ))}
             </div>
@@ -834,7 +828,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {tenantIntegrations
                 .filter(item => {
-                  const category = item.provider.includes('twilio') ? (item.provider.includes('voice') ? 'Voice' : 'SMS') :
+                  const category = item.provider === 'twilio_voice' ? 'Voice' :
                     item.provider === 'whatsapp_business' ? 'WhatsApp' :
                     item.provider.includes('crm') ? 'CRM' :
                     item.provider.includes('calendar') ? 'Calendar' :
@@ -845,7 +839,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                 })
                 .map(item => {
                   const labels: Record<string,string> = {
-                    google_calendar:'Google Calendar', twilio_voice:'Twilio Voice', twilio_sms:'Twilio SMS',
+                    google_calendar:'Google Calendar', twilio_voice:'Twilio Voice',
                     whatsapp_business:'WhatsApp Business', resend_email:'Resend Email', gemini_ai:'Google Gemini',
                     hubspot_crm:'HubSpot CRM', salesforce_crm:'Salesforce CRM', custom_webhook:'Custom Webhook'
                   };
@@ -944,7 +938,7 @@ export const PlatformIntegrationsManager: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <label className="text-xs text-slate-300">Integration name<input value={customIntegrationForm.name} onChange={e=>setCustomIntegrationForm(p=>({...p,name:e.target.value}))} placeholder="Client AI API" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label>
-                  <label className="text-xs text-slate-300">Category<select value={customIntegrationForm.category} onChange={e=>setCustomIntegrationForm(p=>({...p,category:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white">{['AI','CRM','Voice','SMS','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(x=><option key={x}>{x}</option>)}</select></label>
+                  <label className="text-xs text-slate-300">Category<select value={customIntegrationForm.category} onChange={e=>setCustomIntegrationForm(p=>({...p,category:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white">{['AI','CRM','Voice','WhatsApp','Email','Calendar','Payments','Analytics','Other'].map(x=><option key={x}>{x}</option>)}</select></label>
                   <label className="md:col-span-2 text-xs text-slate-300">API base URL<input value={customIntegrationForm.base_url} onChange={e=>setCustomIntegrationForm(p=>({...p,base_url:e.target.value}))} placeholder="https://api.client.com/v1" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white font-mono" /></label>
                   <label className="md:col-span-2 text-xs text-slate-300">Description<input value={customIntegrationForm.description} onChange={e=>setCustomIntegrationForm(p=>({...p,description:e.target.value}))} placeholder="Client's internal AI endpoint" className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white" /></label>
                   <label className="text-xs text-slate-300">Authentication<select value={customIntegrationForm.auth_type} onChange={e=>setCustomIntegrationForm(p=>({...p,auth_type:e.target.value}))} className="mt-1 w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white">{[['none','No auth'],['bearer','Bearer token'],['api_key','API key'],['custom_header','Custom header'],['basic','Basic auth']].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></label>
@@ -1641,7 +1635,6 @@ export const PlatformIntegrationsManager: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {[
                 { name: 'Razorpay Billing', vars: ['RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'], desc: 'Payment Gateway & HMAC Webhooks' },
-                { name: 'Twilio SMS & 2FA', vars: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER'], desc: 'SMS Dispatch & Two-Factor Auth' },
                 { name: 'PostHog Analytics', vars: ['POSTHOG_API_KEY', 'POSTHOG_HOST'], desc: 'Product Telemetry & Usage Logs' },
                 { name: 'Sentry Monitoring', vars: ['SENTRY_DSN'], desc: 'Error Tracking & Performance Tracing' },
                 { name: 'S3 Object Storage', vars: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET'], desc: 'Knowledge Base Attachments' },
