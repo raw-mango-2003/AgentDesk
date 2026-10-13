@@ -42,37 +42,12 @@ export class OTPService implements IOTPService {
     return crypto.createHash('sha256').update(code.trim()).digest('hex');
   }
 
-  public async sendOTP(identifier: string, channel: 'sms' | 'email' = 'sms'): Promise<{ success: boolean; error?: string; status?: string; debugCode?: string }> {
+  public async sendOTP(identifier: string, channel: 'sms' | 'email' = 'email'): Promise<{ success: boolean; error?: string; status?: string; debugCode?: string }> {
     const cleanId = identifier.trim().toLowerCase();
 
-    // If Twilio Verify Service is configured and channel is SMS
-    if (this.isConfigured() && channel === 'sms') {
-      try {
-        const authHeader = 'Basic ' + Buffer.from(`${this.accountSid}:${this.authToken}`).toString('base64');
-        const params = new URLSearchParams();
-        params.append('To', cleanId);
-        params.append('Channel', 'sms');
-
-        const url = `https://verify.twilio.com/v2/Services/${this.verifyServiceSid}/Verifications`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: params.toString()
-        });
-
-        const data = await response.json() as any;
-        if (!response.ok) {
-          return { success: false, error: data.message || 'Failed to dispatch verification code via Twilio Verify.' };
-        }
-
-        return { success: true, status: data.status };
-      } catch (err: any) {
-        console.error('[OTPService:TwilioError]', err.message);
-        return { success: false, error: err.message };
-      }
+    // SMS is disabled regardless of any legacy Twilio credentials.
+    if (channel === 'sms') {
+      return { success: false, error: 'SMS verification is disabled in AgentDesk. Use an email verification flow instead.' };
     }
 
     // In production, never create an OTP that cannot actually be delivered.
@@ -81,9 +56,7 @@ export class OTPService implements IOTPService {
     if (process.env.NODE_ENV === 'production') {
       return {
         success: false,
-        error: channel === 'sms'
-          ? 'SMS verification is not configured. Please configure Twilio Verify before enabling SMS 2FA.'
-          : 'OTP delivery is not configured for this channel.'
+        error: 'Email OTP delivery is not configured.'
       };
     }
 
