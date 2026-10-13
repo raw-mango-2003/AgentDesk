@@ -146,7 +146,13 @@ export function createRateLimiter(options: RateLimiterOptions) {
         }
       }
 
-      const key = `${effectiveKeyPrefix}:${identityKey}`;
+      // Read-only dashboard panels are independent endpoints. Give each GET route its own
+      // bucket so loading many sections in parallel cannot exhaust one shared session bucket
+      // and make unrelated panels fail. Mutating requests keep the shared API bucket.
+      const routeBucket = keyPrefix === 'api' && req.method === 'GET'
+        ? `:get:${(req.baseUrl || '')}${req.path}`
+        : '';
+      const key = `${effectiveKeyPrefix}:${identityKey}${routeBucket}`;
 
       const { allowed, currentCount, resetSeconds } = await checkSharedRateLimit(key, effectiveLimit, windowMs);
       const remaining = Math.max(0, effectiveLimit - currentCount);
