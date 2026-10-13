@@ -151,7 +151,7 @@ export const PLATFORM_ADMIN_KNOWLEDGE_ITEMS: KnowledgeItem[] = [
     title: '12-Step Managed Implementation & Deployment Process',
     category: 'Implementation',
     type: 'faq',
-    content: 'AgentDesk provides a complete 12-step white-glove setup:\n1. Business Discovery & Workflow Mapping\n2. AI Voice Persona Acoustic Engineering\n3. Semantic Knowledge Base Ingestion & Verification\n4. CRM Pipeline & Stage Customization\n5. Lead Qualification Scoring Calibration\n6. Multi-Touch Follow-Up Workflow Setup (SMS, Email, WhatsApp)\n7. Telephony & Twilio / WhatsApp Business Integration\n8. Multi-Currency & Regional Formatting Configuration\n9. Security Boundary & Tenant Isolation Testing\n10. Live Widget Embedding on Website\n11. Staff Onboarding & Dashboard Training\n12. Dedicated Launch Monitoring & Quality Assurance.',
+    content: 'AgentDesk provides a complete 12-step white-glove setup:\n1. Business Discovery & Workflow Mapping\n2. AI Voice Persona Acoustic Engineering\n3. Semantic Knowledge Base Ingestion & Verification\n4. CRM Pipeline & Stage Customization\n5. Lead Qualification Scoring Calibration\n6. Multi-Touch Follow-Up Workflow Setup (WhatsApp, Email)\n7. Telephony & Twilio / WhatsApp Business Integration\n8. Multi-Currency & Regional Formatting Configuration\n9. Security Boundary & Tenant Isolation Testing\n10. Live Widget Embedding on Website\n11. Staff Onboarding & Dashboard Training\n12. Dedicated Launch Monitoring & Quality Assurance.',
     status: 'active',
     active: true,
     createdAt: '2026-01-01T00:00:00Z',
