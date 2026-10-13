@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import {
   gmailService,
   emailService,
-  smsService,
   otpService,
   pushService,
   whatsAppService,
@@ -153,7 +152,7 @@ integrationsRouter.post(
         metadata: { retryOf: log.id }
       });
     } else if (log.channel === 'sms') {
-      result = await smsService.sendSMS(log.recipient || '', String(log.payload?.message || ''), log.tenantId);
+      return res.status(410).json({ success: false, error: 'SMS delivery is disabled in AgentDesk. Use WhatsApp messaging instead.' });
     } else if (log.channel === 'whatsapp') {
       result = await whatsAppService.sendWhatsAppMessage(log.recipient || '', String(log.payload?.message || ''), log.tenantId);
     } else {
@@ -175,7 +174,7 @@ integrationsRouter.post(
 // 1. PLATFORM ADMIN: TENANT-SCOPED INTEGRATIONS
 // ----------------------------------------------------------------------------
 
-const CUSTOM_INTEGRATION_CATEGORIES = ['AI', 'CRM', 'Voice', 'SMS', 'WhatsApp', 'Email', 'Calendar', 'Payments', 'Analytics', 'Other'];
+const CUSTOM_INTEGRATION_CATEGORIES = ['AI', 'CRM', 'Voice', 'WhatsApp', 'Email', 'Calendar', 'Payments', 'Analytics', 'Other'];
 const CUSTOM_AUTH_TYPES = ['none', 'bearer', 'api_key', 'custom_header', 'basic'];
 
 function safeCustomId(value: string): string {
@@ -330,7 +329,6 @@ integrationsRouter.delete('/tenant/integrations/:provider', requireTenantAccess,
 const TENANT_INTEGRATION_FIELDS: Record<string, string[]> = {
   google_calendar: ['client_id', 'client_secret', 'refresh_token'],
   twilio_voice: ['account_sid', 'auth_token', 'phone_number'],
-  twilio_sms: ['account_sid', 'auth_token', 'phone_number'],
   whatsapp_business: ['phone_number_id', 'business_account_id', 'access_token'],
   resend_email: ['api_key', 'from_email'],
   gemini_ai: ['api_key', 'model'],
@@ -731,20 +729,6 @@ integrationsRouter.get('/platform/integrations', requirePlatformAdmin, (req: Req
         maskedConfig: {
           keyId: process.env.RAZORPAY_KEY_ID ? `rzp_***${process.env.RAZORPAY_KEY_ID.slice(-4)}` : 'Not Set',
           hasWebhookSecret: !!process.env.RAZORPAY_WEBHOOK_SECRET
-        }
-      },
-      {
-        id: 'twilio_communications',
-        name: 'Twilio SMS & Verify 2FA',
-        category: 'SMS & 2FA',
-        status: (smsService.isConfigured() || otpService.isConfigured()) ? 'CONNECTED' : 'NOT_CONFIGURED',
-        isConfigured: smsService.isConfigured() || otpService.isConfigured(),
-        description: 'Two-factor authentication (2FA), phone verification OTPs, and instant SMS alerts.',
-        envVars: ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_PHONE_NUMBER', 'TWILIO_VERIFY_SERVICE_SID'],
-        maskedConfig: {
-          accountSid: process.env.TWILIO_ACCOUNT_SID ? `AC***${process.env.TWILIO_ACCOUNT_SID.slice(-4)}` : 'Not Set',
-          phoneNumber: process.env.TWILIO_PHONE_NUMBER ? `${process.env.TWILIO_PHONE_NUMBER.slice(0, 3)}***${process.env.TWILIO_PHONE_NUMBER.slice(-4)}` : 'Not Set',
-          hasVerifyService: !!process.env.TWILIO_VERIFY_SERVICE_SID
         }
       },
       {
@@ -1202,22 +1186,8 @@ integrationsRouter.post(
   }
 );
 
-integrationsRouter.post('/platform/integrations/test-sms', requirePlatformAdmin, async (req: Request, res: Response) => {
-  try {
-    const { phone } = req.body;
-    const recipient = phone || '+15551234567';
-    const result = await smsService.sendSMS(recipient, `AgentDesk Test SMS: Dispatch check at ${new Date().toISOString()}`);
-
-    return res.json({
-      success: result.success,
-      provider: smsService.isConfigured() ? 'twilio' : 'mock_logger',
-      sid: result.sid,
-      error: result.error,
-      message: result.success ? `Test SMS sent to ${recipient}` : `SMS failed: ${result.error}`
-    });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+integrationsRouter.post('/platform/integrations/test-sms', requirePlatformAdmin, (_req: Request, res: Response) => {
+  return res.status(410).json({ success: false, error: 'SMS delivery is disabled in AgentDesk. Use WhatsApp messaging instead.' });
 });
 
 integrationsRouter.post('/platform/integrations/test-otp', requirePlatformAdmin, async (req: Request, res: Response) => {
@@ -1368,13 +1338,6 @@ integrationsRouter.get('/platform/system-health', requirePlatformAdmin, (req: Re
         details: {
           isConfigured: emailService.isConfigured(),
           totalLogs: emailService.getDeliveryLogs().length
-        }
-      },
-      smsService: {
-        status: smsService.isConfigured() ? 'HEALTHY' : 'NOT_CONFIGURED',
-        label: 'Twilio SMS Communications',
-        details: {
-          isConfigured: smsService.isConfigured()
         }
       },
       otpService: {
@@ -1639,26 +1602,8 @@ integrationsRouter.get('/auth/security/2fa-status', requireAuth, (req: Request, 
   }
 });
 
-integrationsRouter.post('/auth/security/request-2fa-otp', requireAuth, async (req: Request, res: Response) => {
-  try {
-    const user = (req as any).user as UserRecord;
-    const { phone } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ success: false, error: 'Phone number is required.' });
-    }
-
-    const cleanPhone = phone.trim();
-    const result = await otpService.sendOTP(cleanPhone, 'sms');
-
-    return res.json({
-      success: result.success,
-      message: result.success ? `Verification code dispatched to ${cleanPhone}` : result.error,
-      debugCode: result.debugCode
-    });
-  } catch (err: any) {
-    return res.status(500).json({ success: false, error: err.message });
-  }
+integrationsRouter.post('/auth/security/request-2fa-otp', requireAuth, (_req: Request, res: Response) => {
+  return res.status(410).json({ success: false, error: 'Phone-based SMS verification is disabled. Configure an email-based security verification flow instead.' });
 });
 
 integrationsRouter.post('/auth/security/enable-2fa', requireAuth, async (req: Request, res: Response) => {
@@ -2352,9 +2297,8 @@ integrationsRouter.post('/platform/automations/test-suite', requirePlatformAdmin
 
   // 10. Non-mandatory Service Resilience
   try {
-    // Verify that SMS, Push, WhatsApp, and Resend are optional and unconfigured state does not break core operations
-    const smsConfigured = smsService.isConfigured();
-    const pushConfigured = pushService.isConfigured();
+    // Verify that Push, WhatsApp, and Resend are optional and unconfigured state does not break core operations
+        const pushConfigured = pushService.isConfigured();
     const waConfigured = whatsAppService.isConfigured();
 
     // Verify dispatch works gracefully even if optional services are unconfigured
@@ -2370,7 +2314,7 @@ integrationsRouter.post('/platform/automations/test-suite', requirePlatformAdmin
       name: 'Non-mandatory External Service Resilience',
       category: 'Architecture',
       passed: inAppWorked,
-      details: `SMS (${smsConfigured ? 'Configured' : 'Optional'}), Push (${pushConfigured ? 'Configured' : 'Optional'}), WhatsApp (${waConfigured ? 'Configured' : 'Optional'}) — Core app functions 100% autonomously.`
+      details: `SMS disabled, Push (${pushConfigured ? 'Configured' : 'Optional'}), WhatsApp (${waConfigured ? 'Configured' : 'Optional'}) — Core app functions 100% autonomously.`
     });
   } catch (e: any) {
     testResults.push({ name: 'Non-mandatory Service Resilience', category: 'Architecture', passed: false, details: e.message });
