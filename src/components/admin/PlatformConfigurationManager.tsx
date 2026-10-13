@@ -16,13 +16,12 @@ const PROVIDERS: Array<{ id: Provider; title: string; description: string; field
   },
   {
     id: 'twilio',
-    title: 'Voice & SMS',
-    description: 'Platform-level Twilio credentials used for voice, SMS and verification services.',
+    title: 'Voice Calling',
+    description: 'Platform-level Twilio credentials used for voice calling only. SMS messaging and SMS verification are disabled.',
     fields: [
       { key: 'accountSid', label: 'Account SID' },
       { key: 'authToken', label: 'Auth Token', secret: true },
-      { key: 'phoneNumber', label: 'Default Phone Number', placeholder: '+1...' },
-      { key: 'verifyServiceSid', label: 'Verify Service SID', secret: true }
+      { key: 'phoneNumber', label: 'Default Phone Number', placeholder: '+1...' }
     ]
   },
   {
