@@ -227,14 +227,14 @@ export const LocalizationSettings: React.FC<LocalizationSettingsProps> = ({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setPrimaryChannel('SMS')}
+                    onClick={() => setPrimaryChannel('WhatsApp')}
                     className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      primaryChannel === 'SMS'
+                      primaryChannel === 'WhatsApp'
                         ? 'bg-blue-50 border-blue-500 text-blue-700'
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <span>📱 SMS Text-Back</span>
+                    <span>💬 WhatsApp Text-Back</span>
                   </button>
                   <button
                     type="button"
