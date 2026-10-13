@@ -45,7 +45,7 @@ export const LocalizationSettings: React.FC<LocalizationSettingsProps> = ({
   const [locale, setLocale] = useState<string>(business.locale || 'en-US');
   const [phoneCountryCode, setPhoneCountryCode] = useState<string>(business.phoneCountryCode || '+1');
   const [dateFormat, setDateFormat] = useState<string>(business.dateFormat || 'MM/DD/YYYY');
-  const [primaryChannel, setPrimaryChannel] = useState<'SMS' | 'WhatsApp'>(business.primaryChannel || 'SMS');
+  const [primaryChannel, setPrimaryChannel] = useState<'WhatsApp'>(business.primaryChannel || 'WhatsApp');
   const [language, setLanguage] = useState<string>(business.language || 'English');
   const [saved, setSaved] = useState(false);
 
@@ -56,7 +56,7 @@ export const LocalizationSettings: React.FC<LocalizationSettingsProps> = ({
     setLocale(business.locale || 'en-US');
     setPhoneCountryCode(business.phoneCountryCode || '+1');
     setDateFormat(business.dateFormat || 'MM/DD/YYYY');
-    setPrimaryChannel(business.primaryChannel || (business.country === 'IN' || business.country === 'AE' || business.country === 'SA' ? 'WhatsApp' : 'SMS'));
+    setPrimaryChannel(business.primaryChannel || 'WhatsApp');
     setLanguage(business.language || 'English');
     setSaved(false);
   }, [business.id, business.country, business.currency, business.timezone]);
