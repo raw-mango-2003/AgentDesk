@@ -25,6 +25,23 @@ import {
 import { Business } from '../../types';
 
 
+
+async function getCsrfHeaders(): Promise<Record<string, string>> {
+  // The API uses double-submit CSRF protection for cookie-authenticated mutations.
+  // Fetching this endpoint ensures the cookie exists before sending the matching header.
+  const response = await fetch('/api/auth/csrf', { credentials: 'include' });
+  const payload = await response.json().catch(() => null);
+  const cookieMatch = typeof document !== 'undefined'
+    ? document.cookie.match(/(?:^|;\\s*)agentdesk_csrf=([^;]*)/)
+    : null;
+  const cookieToken = cookieMatch ? decodeURIComponent(cookieMatch[1]) : undefined;
+  const token = cookieToken || payload?.csrfToken;
+  if (!response.ok || !token) {
+    throw new Error('Could not establish a security token. Refresh the page and try again.');
+  }
+  return { 'x-csrf-token': token };
+}
+
 function getErrorMessage(error: unknown, fallback: string): string {
   if (typeof error === 'string' && error.trim()) return error;
   if (error && typeof error === 'object') {
@@ -175,7 +192,8 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(await getCsrfHeaders())
         },
         body: JSON.stringify({
           tenantId: createModalTenant.id,
@@ -223,7 +241,8 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(await getCsrfHeaders())
         },
         body: JSON.stringify({
           userId: resetModalItem.owner.id,
@@ -268,7 +287,8 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(await getCsrfHeaders())
         },
         body: JSON.stringify({
           userId: changeEmailItem.owner.id,
@@ -305,7 +325,8 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(await getCsrfHeaders())
         },
         body: JSON.stringify({
           userId: item.owner.id,
