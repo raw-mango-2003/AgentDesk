@@ -186,15 +186,7 @@ export const BillingDashboard: React.FC<BillingDashboardProps> = ({
       unit: 'mins',
       desc: 'Inbound & outbound AI voice calls'
     },
-    {
-      key: 'sms',
-      label: 'SMS Messages',
-      icon: <MessageSquare className="w-4 h-4 text-emerald-400" />,
-      used: billingInfo.usage.sms.used,
-      included: billingInfo.usage.sms.included,
-      unit: 'msgs',
-      desc: 'Missed-call text-back & lead drips'
-    },
+
     {
       key: 'whatsapp',
       label: 'WhatsApp Conversations',
