@@ -49,7 +49,6 @@ export class NotificationService implements INotificationService {
     const updated: UserNotificationPreferences = {
       ...current,
       ...prefs,
-      smsEnabled: false,
       securityNotifications: true, // Always enforce true
       updatedAt: new Date().toISOString()
     };
