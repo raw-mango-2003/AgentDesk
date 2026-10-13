@@ -1934,7 +1934,6 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
   ]);
 
   const voiceMinutesUsed = calls.reduce((acc, c) => acc + Math.ceil((c.durationSeconds || 60) / 60), 0);
-  const smsUsed = leads.length * 2 + appointments.length * 2;
   const whatsappUsed = 0;
   const emailUsed = campaigns.reduce((acc, c) => acc + (c.metrics?.sent || 0), 0);
   const aiOperationsUsed = (calls.length * 5) + (leads.length * 8);
@@ -2008,11 +2007,6 @@ export async function getBusinessBillingInfo(businessId: string): Promise<Billin
         used: voiceMinutesUsed,
         included: typeof planConfig.usageLimits.voiceMinutes === 'number' ? planConfig.usageLimits.voiceMinutes : 2500,
         unit: 'minutes'
-      },
-      sms: {
-        used: smsUsed,
-        included: typeof planConfig.usageLimits.smsMessages === 'number' ? planConfig.usageLimits.smsMessages : 2500,
-        unit: 'messages'
       },
       whatsapp: {
         used: whatsappUsed,
