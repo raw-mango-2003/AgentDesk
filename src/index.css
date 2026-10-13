@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Canonical fallback tokens. Component shells may override these locally, but no
+   component should end up with an invalid var() declaration when it misses a token. */
+:root {
+  --ad-danger: #ff5a5f;
+  --lux-bg: #111114;
+  --lux-border: #343238;
+  --lux-text: #f5f0e8;
+  --ad-background: #111114;
+  --ad-text: #f5f0e8;
+  --ad-surface: #19191e;
+  --ad-border: #343238;
+  --ad-primary: #ff2f86;
+  --ad-secondary: #aaa6ad;
+}
+
+
 html, body {
   background-color: #020617;
   color: #f8fafc;
