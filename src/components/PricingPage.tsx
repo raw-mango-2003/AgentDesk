@@ -281,6 +281,13 @@ export const PricingPage: React.FC<PricingPageProps> = ({
                           : 'Custom'}
                       </span>
                     </div>
+                  </div>
+
+                  {/* Feature Checklist */}
+                  <div className="mb-6">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3">
+                      Includes:
+                    </div>
                     <ul className="space-y-2">
                       {plan.features.map((feat, fidx) => (
                         <li key={fidx} className="flex items-start gap-2 text-xs text-slate-300">
