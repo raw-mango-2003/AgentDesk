@@ -3223,14 +3223,12 @@ input:disabled, select:disabled, textarea:disabled {
   color: #c8c1b8 !important;
 }
 
-/* PR #126: Single source of truth for the desktop business sidebar position.
-   Remove the accumulated PR #123-125 overrides above this point. The shell is offset
-   by the global app layout, so a negative top compensates for that containing-block
-   offset and aligns the sidebar's outer top edge with the content panel below the nav. */
+/* PR #127: Keep the sidebar below the global navbar and aligned with the content.
+   A negative top offset clips the sidebar brand beneath the fixed header. */
 @media (min-width: 1280px) {
   .agentdesk-console-shell > .agentdesk-sidebar {
     position: fixed !important;
-    top: -57px !important;
+    top: 14px !important;
     bottom: 16px !important;
     height: auto !important;
     min-height: 0 !important;
