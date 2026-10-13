@@ -3261,3 +3261,23 @@ input:disabled, select:disabled, textarea:disabled {
   transform: none !important;
   transition: none !important;
 }
+
+/* PR #124: Correct sidebar/content vertical alignment using a stable viewport anchor.
+   The prior fixed offsets accumulated across duplicate rules and a positioned ancestor,
+   leaving the sidebar lower than the main content. Normalize the final winning rule. */
+@media (min-width: 1280px) {
+  .agentdesk-console-shell {
+    padding-top: 0 !important;
+  }
+
+  .agentdesk-console-shell > .agentdesk-sidebar {
+    position: fixed !important;
+    top: 122px !important;
+    bottom: 16px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin-top: 0 !important;
+    align-self: start !important;
+  }
+}
