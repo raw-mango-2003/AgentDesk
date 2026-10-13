@@ -24,6 +24,19 @@ import {
 } from 'lucide-react';
 import { Business } from '../../types';
 
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'string' && error.trim()) return error;
+  if (error && typeof error === 'object') {
+    const value = error as { message?: unknown; error?: unknown; code?: unknown };
+    if (typeof value.message === 'string' && value.message.trim()) return value.message;
+    if (typeof value.error === 'string' && value.error.trim()) return value.error;
+    if (value.error && typeof value.error === 'object') return getErrorMessage(value.error, fallback);
+    if (typeof value.code === 'string' && value.code.trim()) return value.code;
+  }
+  return fallback;
+}
+
 interface TenantCredentialItem {
   tenantId: string;
   businessName: string;
@@ -174,7 +187,7 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to generate credentials.');
+        throw new Error(getErrorMessage(data.error, 'Failed to generate credentials.'));
       }
 
       setRevealedCredentials({
@@ -220,7 +233,7 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to reset credentials.');
+        throw new Error(getErrorMessage(data.error, 'Failed to reset credentials.'));
       }
 
       setRevealedCredentials({
@@ -265,7 +278,7 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to change login email.');
+        throw new Error(getErrorMessage(data.error, 'Failed to change login email.'));
       }
 
       setChangeEmailItem(null);
@@ -302,7 +315,7 @@ export const BusinessLoginManagement: React.FC<BusinessLoginManagementProps> = (
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to toggle account status.');
+        throw new Error(getErrorMessage(data.error, 'Failed to toggle account status.'));
       }
 
       setNotification({
