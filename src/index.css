@@ -3222,3 +3222,42 @@ input:disabled, select:disabled, textarea:disabled {
 [class*="text-neutral-700"], [class*="text-neutral-600"] {
   color: #c8c1b8 !important;
 }
+
+/* PR #123: Keep the business-console sidebar a stable, viewport-sized rail on every route.
+   Previously the fixed sidebar was constrained by the console shell's containing block,
+   so its height/top changed when route content had a different height or scroll position.
+   Anchor it to the viewport and scroll the navigation internally instead. */
+@media (min-width: 1280px) {
+  .agentdesk-console-shell > .agentdesk-sidebar {
+    position: fixed !important;
+    top: 82px !important;
+    bottom: auto !important;
+    height: calc(100dvh - 98px) !important;
+    min-height: 420px !important;
+    max-height: calc(100dvh - 98px) !important;
+    width: 252px !important;
+    box-sizing: border-box !important;
+  }
+
+  .agentdesk-console-shell > .agentdesk-sidebar > .agentdesk-sidebar-nav {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .agentdesk-console-shell > .agentdesk-sidebar > .agentdesk-sidebar-footer {
+    flex: 0 0 auto !important;
+  }
+
+  .agentdesk-console-shell {
+    padding-left: 280px !important;
+  }
+}
+
+/* Route changes must not animate or resize the sidebar rail itself. */
+.agentdesk-console-shell > .agentdesk-sidebar {
+  flex-shrink: 0 !important;
+  transform: none !important;
+  transition: none !important;
+}
