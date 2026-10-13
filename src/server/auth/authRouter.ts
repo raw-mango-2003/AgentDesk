@@ -1512,7 +1512,7 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, async (req
           passwordHash: hashPassword(plainTempPassword),
           mustChangePassword: true,
           name: ownerName.trim(),
-          role: 'BUSINESS_ADMIN',
+          role: 'BUSINESS_OWNER',
           status: 'ACTIVE',
           emailVerified: true
         });
@@ -1531,7 +1531,7 @@ authRouter.post('/platform/credentials/create', requirePlatformAdmin, async (req
         name: ownerName.trim(),
         email: cleanEmail,
         passwordPlain: plainTempPassword,
-        role: 'BUSINESS_ADMIN',
+        role: 'BUSINESS_OWNER',
         tenantId: cleanTenantId,
         status: 'ACTIVE',
         mustChangePassword: true,
