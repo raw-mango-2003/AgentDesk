@@ -323,7 +323,7 @@ export function FollowUpDashboard({ business }: FollowUpDashboardProps) {
                     onChange={e => setChannel(e.target.value as any)}
                     className="w-full bg-[#0c0c0f] border border-white/[0.08] rounded-xl p-2.5 text-slate-200 focus:outline-none focus:border-pink-400/60"
                   >
-                    <option value="SMS">SMS (US)</option>
+                    
                     <option value="WhatsApp">WhatsApp (India/Global)</option>
                     <option value="Email">Email</option>
                   </select>
