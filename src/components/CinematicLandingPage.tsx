@@ -546,9 +546,9 @@ export const CinematicLandingPage: React.FC<CinematicLandingPageProps> = ({
             </div>
             <div className="mt-12 grid lg:grid-cols-3 gap-4">
               {[
-                ['Starter', '₹14,999', '2,000 AI conversations', '250 voice minutes', '500 SMS / WhatsApp'],
-                ['Growth', '₹29,999', '7,500 AI conversations', '1,000 voice minutes', '2,500 SMS / WhatsApp'],
-                ['Scale', '₹59,999', '20,000 AI conversations', '3,000 voice minutes', '5,000 SMS / WhatsApp']
+                ['Starter', '₹14,999', '2,000 AI conversations', '250 voice minutes', '500 WhatsApp conversations'],
+                ['Growth', '₹29,999', '7,500 AI conversations', '1,000 voice minutes', '2,500 WhatsApp conversations'],
+                ['Scale', '₹59,999', '20,000 AI conversations', '3,000 voice minutes', '5,000 WhatsApp conversations']
               ].map(([name, price, a, b, c], index) => (
                 <div
                   key={name}
