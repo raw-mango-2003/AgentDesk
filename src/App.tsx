@@ -858,7 +858,7 @@ export default function App() {
                 ].map(item=>{const Icon=item.icon;const active=activeTab===item.id;return <button key={item.id} type="button" className="agentdesk-sidebar-item" data-active={active} onClick={()=>navigateTab(item.id as SaaSNavTab)}><Icon className="shrink-0"/><span className="truncate">{item.label}</span></button>})}
                 <div className="agentdesk-sidebar-section">Workspace Settings</div>
                 {[
-                  {id:'integrations',label:'Integrations',icon:Sliders},{id:'billing',label:'Billing & Usage',icon:CreditCard},{id:'localization',label:'Localization',icon:Globe},{id:'embed',label:'Deploy & Embed',icon:Code},{id:'account_credentials',label:'Account & Credentials',icon:KeyRound}
+                  {id:'billing',label:'Billing & Usage',icon:CreditCard},{id:'localization',label:'Localization',icon:Globe},{id:'embed',label:'Deploy & Embed',icon:Code},{id:'account_credentials',label:'Account & Credentials',icon:KeyRound}
                 ].map(item=>{const Icon=item.icon;const active=activeTab===item.id;return <button key={item.id} type="button" className="agentdesk-sidebar-item" data-active={active} onClick={()=>navigateTab(item.id as SaaSNavTab)}><Icon className="shrink-0"/><span className="truncate">{item.label}</span></button>})}
                 {currentUser?.role==='PLATFORM_ADMIN'&&<button type="button" className="agentdesk-sidebar-item" data-active={activeTab==='admin'} onClick={()=>navigateTab('admin')}><ShieldCheck className="shrink-0"/><span className="truncate">Platform Admin</span></button>}
               </div>
