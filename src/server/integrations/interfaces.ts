@@ -299,7 +299,6 @@ export type NotificationCategory = 'security' | 'billing' | 'product' | 'marketi
 export interface UserNotificationPreferences {
   userId: string;
   emailEnabled: boolean;
-  smsEnabled: boolean;
   pushEnabled: boolean;
   whatsappEnabled: boolean;
   securityNotifications: boolean; // Always true, not toggleable off
@@ -368,7 +367,7 @@ export interface AutomationRule {
   name: string;
   description: string;
   eventTrigger: EventTrigger;
-  channel: 'GMAIL' | 'IN_APP' | 'SMS' | 'PUSH' | 'MULTI_CHANNEL';
+  channel: 'GMAIL' | 'IN_APP' | 'PUSH' | 'MULTI_CHANNEL';
   emailTemplate?: EmailTemplateName | string;
   status: 'ACTIVE' | 'PAUSED';
   lastRun?: string;
@@ -419,7 +418,6 @@ export interface INotificationService {
 // ----------------------------------------------------
 export type JobType =
   | 'send_email'
-  | 'send_sms'
   | 'send_push'
   | 'send_whatsapp'
   | 'process_payment_webhook'
