@@ -32,7 +32,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
   const [showModal, setShowModal] = useState(false);
   const [name, setName] = useState('');
   const [segmentType, setSegmentType] = useState<any>('90_days_inactive');
-  const [channel, setChannel] = useState<'WhatsApp' | 'SMS' | 'Email'>('SMS');
+  const [channel, setChannel] = useState<'WhatsApp' | 'Email'>('WhatsApp');
   const [aiOffer, setAiOffer] = useState('');
   const [template, setTemplate] = useState('');
 
@@ -179,7 +179,7 @@ export function ReEngagementDashboard({ business }: ReEngagementDashboardProps) 
             {business.currency === 'INR' ? '₹0' : '$0.00'}
           </div>
           <div className="text-[10px] text-slate-400 mt-1">
-            <span>Direct SMS / WhatsApp / Email broadcast</span>
+            <span>WhatsApp / Email broadcast</span>
           </div>
         </div>
       </div>
